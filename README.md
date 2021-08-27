@@ -1,0 +1,2 @@
+This repo holds the source for both the API and frontend of manifests.io.  
+Theres a ton of room for improvements here, so like, open a PR if you'd like. I made this app in like an hour one night while I was bored so any improvements would be 100000% okay with me.
