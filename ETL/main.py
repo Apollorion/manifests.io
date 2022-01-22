@@ -22,7 +22,10 @@ def main():
         for rd in definitions:
             gvk = get_gvk_from_string(rd)
             value = parse_refs(definitions[rd], definitions)
-            product[gvk["kind"].lower()] = {"gvk": gvk, "properties": value}
+            required = []
+            if "required" in definitions[rd]:
+                required = definitions[rd]["required"]
+            product[gvk["kind"].lower()] = {"gvk": gvk, "properties": value, "required": required}
 
         filename = f"./dist/{file}"
         os.makedirs(os.path.dirname(filename), exist_ok=True)
