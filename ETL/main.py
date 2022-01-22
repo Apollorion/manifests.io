@@ -41,31 +41,45 @@ def parse_refs(values, definitions):
                 if k == "$ref":
                     if "JSONSchemaProps" in v:
                         continue
-                    new_item = {**new_item, **get_value_from_ref_link(v, definitions)}
+                    gvk = get_gvk_from_string(v)
+                    if gvk is not None:
+                        new_item = {"gvk": gvk, **new_item, **get_value_from_ref_link(v, definitions)}
+                    else:
+                        new_item = {**new_item, **get_value_from_ref_link(v, definitions)}
                 else:
                     new_item[k.lower()] = v
 
             # do this after getting ref material so we can parse the ref material for more refs
             item = parse_refs(new_item, definitions)
 
-        new[value] = item
+        new[value.lower()] = item
     return new
 
-def get_value_from_ref_link(refLink, definitions):
-    if type(refLink) == str:
-        refLink = refLink.split("/")[::-1]
-        refLink = refLink[0]
-        return definitions[refLink]
-    return refLink
+def get_gvk_from_ref_link(ref_link):
+    if type(ref_link) == str:
+        ref_link = ref_link.split("/")[::-1]
+        ref_link = ref_link[0]
+        return get_gvk_from_string(ref_link)
+    return None
+
+
+def get_value_from_ref_link(ref_link, definitions):
+    if type(ref_link) == str:
+        ref_link = ref_link.split("/")[::-1]
+        ref_link = ref_link[0]
+        return definitions[ref_link]
+    return ref_link
 
 def get_gvk_from_string(s):
-    resource = s.split(".")[::-1]
-    gvk = {
-        "group": resource[2],
-        "version": resource[1],
-        "kind": resource[0]
-    }
-    return gvk
+    if type(s) == str:
+        resource = s.split(".")[::-1]
+        gvk = {
+            "group": resource[2],
+            "version": resource[1],
+            "kind": resource[0]
+        }
+        return gvk
+    return None
 
 def print_keys(obj):
     for k, v in obj.items():
