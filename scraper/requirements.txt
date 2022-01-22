@@ -1,4 +1,0 @@
-beautifulsoup4==4.9.3
-fastapi==0.61.1
-mangum==0.10.0
-redis==3.5.3

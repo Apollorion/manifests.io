@@ -47,6 +47,14 @@ def parse_refs(values, definitions):
                     else:
                         new_item = {**new_item, **get_value_from_ref_link(v, definitions)}
                 else:
+
+                    # items just differentiates arrays from objects
+                    # we can tell the difference with "type" so lets just make it easy
+                    # and list everything under "properties"
+                    k = k.lower()
+                    if k == "items":
+                        k = "properties"
+
                     new_item[k.lower()] = v
 
             # do this after getting ref material so we can parse the ref material for more refs
