@@ -5,15 +5,10 @@ import redis
 import os
 import json
 
-origins = [
-    "https://manifests.io",
-    "http://localhost:3000",
-]
-
 app = FastAPI(title='Manifests.io API', description='Reads k8s manifests and returns helpful documents')
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,6 +1,16 @@
 # Manifests.io
 
+[![main](https://github.com/Apollorion/manifests.io/actions/workflows/main.yml/badge.svg)](https://github.com/Apollorion/manifests.io/actions/workflows/main.yml)
+
 Easy to use online kubernetes documentation.
+
+## Important URLS
+- Production
+  - app: manifests.io, www.manifests.io
+  - api: api.manifests.io
+- Staging
+  - app: stage.manifests.io, www.stage.manifests.io
+  - api: api.stage.manifests.io
 
 ## Devving this repo
 1. clone this repository

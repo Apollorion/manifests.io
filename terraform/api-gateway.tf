@@ -1,6 +1,6 @@
 resource "aws_api_gateway_rest_api" "manifests_io" {
-  name        = "manifests_io"
-  description = "manifests_io API"
+  name        = "manifests_io_${terraform.workspace}"
+  description = "manifests_io ${terraform.workspace} API"
   endpoint_configuration {
     types = ["EDGE"]
   }
@@ -17,7 +17,8 @@ resource "aws_api_gateway_deployment" "main" {
 
   depends_on = [
     aws_api_gateway_method.latest,
-    aws_api_gateway_method.k8Version
+    aws_api_gateway_method.k8Version,
+    aws_api_gateway_method.fieldPath,
   ]
 }
 
