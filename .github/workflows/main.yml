@@ -1,0 +1,167 @@
+name: 'main'
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [ labeled ]
+
+jobs:
+
+  stage:
+    name: 'stage'
+    runs-on: ubuntu-latest
+    if: ${{ github.event.label.name == 'safe-to-stage' }}
+
+    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+
+      # Checkout PR
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+
+      # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.1.4
+
+      # Install NPM/yarn
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16.13.2'
+
+      # Install dependencies
+      - name: Yarn Install
+        run: cd app && yarn install
+
+      # Build Application
+      - name: Yarn Build
+        run: cd app && API_URL="api.stage.manifests.io" yarn build
+
+      # ETL pipeline
+      - name: ETL
+        run: cd ETL && python3 main.py && cp -r ./dist ../lambda/.
+
+      # Build Lambda Function
+      - name: Build Lambda Function
+        run: cd lambda && python3 -m pip install --target ./python -r requirements.txt && zip -r payload.zip ./ && mv payload.zip ../.
+
+      # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
+      - name: Terraform Init
+        run: cd terraform && terraform init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # Use staging workspace
+      - name: Terraform Workspace Stage
+        run: cd terraform && terraform workspace select staging
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # Checks that all Terraform configuration files adhere to a canonical format
+      - name: Terraform Format
+        run: cd terraform && terraform fmt -check
+
+        # On push to main, build or change infrastructure according to Terraform configuration files
+        # Note: It is recommended to set up a required "strict" status check in your repository for "Terraform Cloud". See the documentation on "strict" required status checks for more information: https://help.github.com/en/github/administering-a-repository/types-of-required-status-checks
+      - name: Terraform Apply
+        run: cd terraform && terraform apply -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+#      # Create Cloudfront invalidation
+#      - run: aws cloudfront create-invalidation --distribution-id E11EQGN2YVT444 --paths "/*"
+#        env:
+#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          AWS_DEFAULT_REGION: "us-east-1"
+
+  push:
+    name: 'push'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.1.4
+
+      # Install NPM/yarn
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16.13.2'
+
+      # Install dependencies
+      - name: Yarn Install
+        run: cd app && yarn install
+
+      # Build Application
+      - name: Yarn Build
+        run: cd app && API_URL="api.manifests.io" yarn build
+
+      # ETL pipeline
+      - name: ETL
+        run: cd ETL && python3 main.py && cp -r ./dist ../lambda/.
+
+      # Build Lambda Function
+      - name: Build Lambda Function
+        run: cd lambda && python3 -m pip install --target ./python -r requirements.txt && zip -r payload.zip ./ && mv payload.zip ../.
+
+      # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
+      - name: Terraform Init
+        run: cd terraform && terraform init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # Use production workspace
+      - name: Terraform Workspace Production
+        run: cd terraform && terraform workspace select production
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # Checks that all Terraform configuration files adhere to a canonical format
+      - name: Terraform Format
+        run: cd terraform && terraform fmt -check
+
+        # On push to main, build or change infrastructure according to Terraform configuration files
+        # Note: It is recommended to set up a required "strict" status check in your repository for "Terraform Cloud". See the documentation on "strict" required status checks for more information: https://help.github.com/en/github/administering-a-repository/types-of-required-status-checks
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: cd terraform && terraform apply -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+#      # Create Cloudfront invalidation
+#      - run: aws cloudfront create-invalidation --distribution-id E32KLYQIQANAYH --paths "/*"
+#        if: github.ref == 'refs/heads/main'
+#        env:
+#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          AWS_DEFAULT_REGION: "us-east-1"

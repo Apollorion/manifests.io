@@ -13,7 +13,10 @@ import {CodeBlock, dracula} from "react-code-blocks";
 import {MeteorRainLoading} from 'react-loadingg';
 import k8s from './k8s_details';
 
-const apiUrl = "http://localhost:8000/"
+let apiUrl = "http://localhost:8000/";
+if(process.env?.API_URL){
+    apiUrl = process.env.API_URL;
+}
 
 function App() {
 

@@ -26,3 +26,4 @@ yarn-error.log*
 **/payload.zip
 **/__pycache__/*
 **/node_modules/*
+**/build/*
