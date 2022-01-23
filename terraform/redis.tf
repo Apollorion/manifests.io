@@ -10,8 +10,8 @@ resource "aws_route53_zone" "private" {
 }
 
 module "redis" {
-  source = "cloudposse/elasticache-redis/aws"
-  count = terraform.workspace == "production" ? 1 : 0
+  source  = "cloudposse/elasticache-redis/aws"
+  count   = terraform.workspace == "production" ? 1 : 0
   version = "0.41.6"
 
   transit_encryption_enabled = false

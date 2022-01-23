@@ -1,6 +1,6 @@
 module "vpc" {
   source  = "cloudposse/vpc/aws"
-  count = terraform.workspace == "production" ? 1 : 0
+  count   = terraform.workspace == "production" ? 1 : 0
   version = "0.28.0"
 
   cidr_block = "172.16.0.0/16"
@@ -10,7 +10,7 @@ module "vpc" {
 
 module "subnets" {
   source  = "cloudposse/dynamic-subnets/aws"
-  count = terraform.workspace == "production" ? 1 : 0
+  count   = terraform.workspace == "production" ? 1 : 0
   version = "0.39.7"
 
   availability_zones   = ["us-east-1a", "us-east-1b"]

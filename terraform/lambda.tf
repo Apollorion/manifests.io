@@ -25,7 +25,7 @@ resource "aws_iam_role_policy_attachment" "api" {
 
 resource "aws_iam_role_policy_attachment" "api_vpc_access" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-  role = aws_iam_role.api.name
+  role       = aws_iam_role.api.name
 }
 
 resource "aws_lambda_function" "api" {
@@ -38,8 +38,8 @@ resource "aws_lambda_function" "api" {
 
   runtime = "python3.9"
 
-  dynamic environment {
-    for_each  = terraform.workspace == "production" ? [0] : []
+  dynamic "environment" {
+    for_each = terraform.workspace == "production" ? [0] : []
     content {
       variables = {
         REDIS_HOST = module.redis[environment.value].endpoint
@@ -47,7 +47,7 @@ resource "aws_lambda_function" "api" {
     }
   }
 
-  dynamic vpc_config {
+  dynamic "vpc_config" {
     for_each = terraform.workspace == "production" ? [0] : []
     content {
       subnet_ids         = module.subnets[vpc_config.value].private_subnet_ids
