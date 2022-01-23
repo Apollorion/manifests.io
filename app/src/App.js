@@ -14,8 +14,8 @@ import {MeteorRainLoading} from 'react-loadingg';
 import k8s from './k8s_details';
 
 let apiUrl = "http://localhost:8000/";
-if(process.env?.API_URL){
-    apiUrl = process.env.API_URL;
+if(process.env?.REACT_APP_API_URL){
+    apiUrl = process.env.REACT_APP_API_URL;
 }
 
 function App() {
