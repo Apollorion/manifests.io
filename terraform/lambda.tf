@@ -1,8 +1,3 @@
-variable "REDIS_HOST" {
-  type = string
-  sensitive = true
-}
-
 resource "aws_iam_role" "api" {
   name = "manifests_io_api"
 
@@ -25,22 +20,38 @@ EOF
 
 resource "aws_iam_role_policy_attachment" "api" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  role       = aws_iam_role.api.name
+}
+
+resource "aws_iam_role_policy_attachment" "api_vpc_access" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
   role = aws_iam_role.api.name
 }
 
 resource "aws_lambda_function" "api" {
-  filename      = "../compiled/api_payload.zip"
-  function_name = "manifests_io_api"
-  role          = aws_iam_role.api.arn
-  handler       = "handler.handler"
+  filename         = "../payload.zip"
+  function_name    = "manifests_io_api"
+  role             = aws_iam_role.api.arn
+  handler          = "main.handler"
   source_code_hash = filebase64sha256("../payload.zip")
-  timeout = 10
+  timeout          = 10
 
   runtime = "python3.9"
 
-  environment {
-    variables = {
-      REDIS_HOST = var.REDIS_HOST
+  dynamic environment {
+    for_each  = terraform.workspace == "production" ? [0] : []
+    content {
+      variables = {
+        REDIS_HOST = module.redis[environment.value].endpoint
+      }
+    }
+  }
+
+  dynamic vpc_config {
+    for_each = terraform.workspace == "production" ? [0] : []
+    content {
+      subnet_ids         = module.subnets[vpc_config.value].private_subnet_ids
+      security_group_ids = [module.redis[vpc_config.value].security_group_id]
     }
   }
 }
