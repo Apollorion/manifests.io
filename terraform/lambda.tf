@@ -1,5 +1,5 @@
 resource "aws_iam_role" "api" {
-  name = "manifests_io_api"
+  name = "manifests_io_api_${terraform.workspace}"
 
   assume_role_policy = <<EOF
 {
@@ -30,7 +30,7 @@ resource "aws_iam_role_policy_attachment" "api_vpc_access" {
 
 resource "aws_lambda_function" "api" {
   filename         = "../payload.zip"
-  function_name    = "manifests_io_api"
+  function_name    = "manifests_io_api_${terraform.workspace}"
   role             = aws_iam_role.api.arn
   handler          = "main.handler"
   source_code_hash = filebase64sha256("../payload.zip")
