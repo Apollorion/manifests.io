@@ -57,6 +57,25 @@ function App() {
     }, []);
 
     useEffect(() => {
+        const search = async () => {
+            setLoading(true);
+            setError("");
+            try {
+                const response = await axios.get(`${apiUrl}${k8s.choices[k8sVersion]}/${query}`);
+                setDetails(response.data);
+                if (response.data?.required) {
+                    setRequiredList(response.data.required);
+                }
+            } catch (error) {
+                if (error?.response?.data?.detail) {
+                    setDetails("")
+                    setError(error.response.data.detail);
+                }
+            }
+            window.history.pushState(null, null, `/${k8s.choices[k8sVersion]}/${query}`)
+            setLoading(false);
+        };
+
         const timeOutId = setTimeout(async () => {
             if (query !== "") {
                 await search();
@@ -206,25 +225,6 @@ function App() {
         if (details?.description) {
             return details.description.split('\n').map((str, index) => <p key={index}>{str}</p>);
         }
-    };
-
-    const search = async () => {
-        setLoading(true);
-        setError("");
-        try {
-            const response = await axios.get(`${apiUrl}${k8s.choices[k8sVersion]}/${query}`);
-            setDetails(response.data);
-            if (response.data?.required) {
-                setRequiredList(response.data.required);
-            }
-        } catch (error) {
-            if (error?.response?.data?.detail) {
-                setDetails("")
-                setError(error.response.data.detail);
-            }
-        }
-        window.history.pushState(null, null, `/${k8s.choices[k8sVersion]}/${query}`)
-        setLoading(false);
     };
 
     return (
