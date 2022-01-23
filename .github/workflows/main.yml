@@ -53,7 +53,14 @@ jobs:
 
       # Build Lambda Function
       - name: Build Lambda Function
-        run: cd lambda && python3 -m pip install --target ./python -r requirements.txt && zip -r payload.zip ./ && mv payload.zip ../.
+        uses: docker://lambci/lambda:build-python3.8
+        working-directory: ./lambda
+        with:
+          entrypoint: pip
+          args: install -r requirements.txt --target .
+
+      - name: Bundle layer with dependencies
+        run: cd lamda && zip -r payload.zip . && mv payload.zip ../
 
       # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
       - name: Terraform Init
