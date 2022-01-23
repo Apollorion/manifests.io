@@ -25,6 +25,7 @@ module "subnets" {
 
 module "sg" {
   source = "cloudposse/security-group/aws"
+  count   = terraform.workspace == "production" ? 1 : 0
   # Cloud Posse recommends pinning every module to a specific version
   # version = "x.x.x"
 
@@ -39,7 +40,7 @@ module "sg" {
   # Allow unlimited egress
   allow_all_egress = true
 
-  vpc_id = module.vpc.vpc_id
+  vpc_id = module.vpc[count.index].vpc_id
 
   context = module.this.context
 }
