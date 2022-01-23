@@ -25,7 +25,7 @@ module "subnets" {
 
 module "sg" {
   source = "cloudposse/security-group/aws"
-  count   = terraform.workspace == "production" ? 1 : 0
+  count  = terraform.workspace == "production" ? 1 : 0
   # Cloud Posse recommends pinning every module to a specific version
   # version = "x.x.x"
 
