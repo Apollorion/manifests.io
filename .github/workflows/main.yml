@@ -123,9 +123,9 @@ jobs:
       - name: Yarn Build
         run: cd app && API_URL="api.manifests.io" yarn build
 
-      # ETL pipeline
-      - name: ETL
-        run: cd ETL && python3 main.py && cp -r ./dist ../lambda/.
+#      # ETL pipeline
+#      - name: ETL
+#        run: cd ETL && python3 main.py && cp -r ./dist ../lambda/.
 
       # Build Lambda Function
       - name: Build Lambda Function
