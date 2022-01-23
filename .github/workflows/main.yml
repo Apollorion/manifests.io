@@ -53,9 +53,9 @@ jobs:
 
       # Build Lambda Function
       - name: Build Lambda Function
-        working-directory: ./lambda
         uses: docker://lambci/lambda:build-python3.8
         with:
+          working-directory: ./lambda
           entrypoint: pip
           args: install -r requirements.txt --target .
 
