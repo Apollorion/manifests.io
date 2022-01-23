@@ -6,7 +6,7 @@ module "redis" {
   transit_encryption_enabled = false
   availability_zones         = ["us-east-1a", "us-east-1b"]
   vpc_id                     = module.vpc[count.index].vpc_id
-  allowed_security_group_ids = [module.vpc[count.index].vpc_default_security_group_id]
+  allowed_security_group_ids = [module.sg[count.index].id]
   subnets                    = module.subnets[count.index].private_subnet_ids
   apply_immediately          = true
   automatic_failover_enabled = false

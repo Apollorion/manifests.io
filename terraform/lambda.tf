@@ -51,7 +51,7 @@ resource "aws_lambda_function" "api" {
     for_each = terraform.workspace == "production" ? [0] : []
     content {
       subnet_ids         = module.subnets[vpc_config.value].private_subnet_ids
-      security_group_ids = [module.vpc[vpc_config.value].vpc_default_security_group_id]
+      security_group_ids = [module.sg[vpc_config.value].id]
     }
   }
 }
