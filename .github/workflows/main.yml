@@ -138,12 +138,11 @@ jobs:
       - name: Build Lambda Function
         uses: docker://lambci/lambda:build-python3.8
         with:
-          working-directory: ./lambda
           entrypoint: pip
-          args: install -r requirements.txt --target .
+          args: install -r ./lambda/requirements.txt --target ./python
 
       - name: Bundle layer with dependencies
-        run: cd lamda && zip -r payload.zip . && mv payload.zip ../
+        run: mv ./python ./lambda/ && cd lamda && zip -r payload.zip . && mv payload.zip ../
 
       # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
       - name: Terraform Init
