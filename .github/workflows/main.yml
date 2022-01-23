@@ -139,7 +139,7 @@ jobs:
         uses: docker://lambci/lambda:build-python3.8
         with:
           entrypoint: pip
-          args: install -r ./lambda/requirements.txt --target ./python && chmod -R 777 ./python
+          args: install -r ./lambda/requirements.txt --target ./python && chmod -r 777 ./python
 
       - name: Bundle layer with dependencies
         run: mv ./python ./lambda/ && cd lamda && zip -r payload.zip . && mv payload.zip ../
