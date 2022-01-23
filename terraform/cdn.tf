@@ -15,11 +15,11 @@ module "cdn" {
   dns_alias_enabled   = true
   website_enabled     = true
 
-  custom_error_responses = {
+  custom_error_response = [{
     error_code         = 404
     response_code      = 200
     response_page_path = "index.html"
-  }
+  }]
 }
 
 resource "aws_s3_bucket_object" "websitefiles" {

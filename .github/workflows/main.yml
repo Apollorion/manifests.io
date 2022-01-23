@@ -45,7 +45,7 @@ jobs:
 
       # Build Application
       - name: Yarn Build
-        run: cd app && echo "REACT_APP_API_URL=\"https://api.stage.manifests.io\"" > .env && yarn build
+        run: cd app && REACT_APP_API_URL="https://api.stage.manifests.io" yarn build
 
       # ETL pipeline
       - name: ETL
@@ -121,7 +121,7 @@ jobs:
 
       # Build Application
       - name: Yarn Build
-        run: cd app && echo "REACT_APP_API_URL=\"https://api.manifests.io\"" > .env && yarn build
+        run: cd app && REACT_APP_API_URL="https://api.manifests.io" yarn build
 
       # ETL pipeline
       - name: ETL
@@ -158,10 +158,10 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-#      # Create Cloudfront invalidation
-#      - run: aws cloudfront create-invalidation --distribution-id E32KLYQIQANAYH --paths "/*"
-#        if: github.ref == 'refs/heads/main'
-#        env:
-#          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          AWS_DEFAULT_REGION: "us-east-1"
+      # Create Cloudfront invalidation
+      - run: aws cloudfront create-invalidation --distribution-id E163KJ0CXL1KOA --paths "/*"
+        if: github.ref == 'refs/heads/main'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: "us-east-1"
