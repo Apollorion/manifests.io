@@ -83,6 +83,7 @@ def search(k8s_version, search):
     if "REDIS_HOST" in os.environ:
         r.set(f"manifest.io:{k8s_version}:{search}", json.dumps(result))
 
+    print("from disk")
     return result
 
 
