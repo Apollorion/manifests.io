@@ -7,7 +7,7 @@ module "cdn" {
   version = "0.40.0"
 
   aliases             = [local.tld, "www.${local.tld}"]
-  acm_certificate_arn = local.acm_cert
+  acm_certificate_arn = data.aws_acm_certificate.main.arn
   allowed_methods     = ["HEAD", "GET"]
   name                = local.tld
   parent_zone_id      = data.aws_route53_zone.manifests_io.zone_id

@@ -99,7 +99,7 @@ resource "aws_api_gateway_method" "fieldPath" {
 }
 
 resource "aws_api_gateway_domain_name" "api" {
-  certificate_arn = local.acm_cert
+  certificate_arn = data.aws_acm_certificate.main.arn
   domain_name     = local.api_tld
 }
 
