@@ -18,8 +18,9 @@ locals {
   stage_cert = "arn:aws:acm:us-east-1:874575230586:certificate/e414cda4-1c68-4c6c-8f10-06ab396e8546"
 
   prod_api_tld  = "api.manifests.io"
-  prod_api_cert = "arn:aws:acm:us-east-1:874575230586:certificate/9bb1e798-cd45-4f68-a542-379b0e6459c9"
+  stage_api_tld = "api.stage.manifests.io"
 
+  api_tld  = terraform.workspace == "production" ? local.prod_api_tld : local.stage_api_tld
   tld      = terraform.workspace == "production" ? local.prod_tld : local.stage_tld
   acm_cert = terraform.workspace == "production" ? local.prod_cert : local.stage_cert
 

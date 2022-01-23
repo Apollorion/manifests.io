@@ -39,7 +39,7 @@ module "sg" {
   # Allow unlimited egress
   allow_all_egress = true
 
-  vpc_id  = module.vpc.vpc_id
+  vpc_id = module.vpc.vpc_id
 
   context = module.this.context
 }

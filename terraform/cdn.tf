@@ -12,7 +12,7 @@ module "cdn" {
   name                = local.tld
   parent_zone_id      = data.aws_route53_zone.manifests_io.zone_id
   dns_alias_enabled   = true
-  website_enabled = true
+  website_enabled     = true
 }
 
 resource "aws_s3_bucket_object" "websitefiles" {
