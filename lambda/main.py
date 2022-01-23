@@ -101,4 +101,4 @@ def get_resource_and_field_path_from_search_string(s):
     return resource, field_path
 
 
-# handler = Mangum(app=app)
+handler = Mangum(app=app)
