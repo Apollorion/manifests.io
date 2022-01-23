@@ -45,7 +45,7 @@ jobs:
 
       # Build Application
       - name: Yarn Build
-        run: cd app && REACT_APP_API_URL="https://api.stage.manifests.io" yarn build
+        run: cd app && REACT_APP_API_URL="https://api.stage.manifests.io/" yarn build
 
       # ETL pipeline
       - name: ETL
@@ -121,7 +121,7 @@ jobs:
 
       # Build Application
       - name: Yarn Build
-        run: cd app && REACT_APP_API_URL="https://api.manifests.io" yarn build
+        run: cd app && REACT_APP_API_URL="https://api.manifests.io/" yarn build
 
       # ETL pipeline
       - name: ETL

@@ -11,7 +11,6 @@ module "cdn" {
   allowed_methods     = ["HEAD", "GET"]
   name                = local.tld
   parent_zone_id      = data.aws_route53_zone.manifests_io.zone_id
-  error_document      = "index.html"
   dns_alias_enabled   = true
   website_enabled     = true
 
