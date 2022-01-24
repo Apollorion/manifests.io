@@ -38,11 +38,25 @@ resource "aws_lambda_function" "api" {
 
   runtime = "python3.9"
 
+  # Environment variables for production
   dynamic "environment" {
     for_each = terraform.workspace == "production" ? [0] : []
     content {
       variables = {
-        REDIS_HOST = module.redis[environment.value].endpoint
+        REDIS_HOST         = module.redis[environment.value].endpoint,
+        SENTRY_INGEST      = local.secrets["SENTRY_INGEST"]
+        SENTRY_ENVIRONMENT = "production"
+      }
+    }
+  }
+
+  # Environment variables for staging
+  dynamic "environment" {
+    for_each = terraform.workspace == "staging" ? [0] : []
+    content {
+      variables = {
+        SENTRY_INGEST      = local.secrets["SENTRY_INGEST"]
+        SENTRY_ENVIRONMENT = "staging"
       }
     }
   }
