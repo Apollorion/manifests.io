@@ -11,6 +11,8 @@ import {useState, useEffect} from 'react';
 import axios from 'axios';
 import {CodeBlock, dracula} from "react-code-blocks";
 import {MeteorRainLoading} from 'react-loadingg';
+import ReactGA from 'react-ga';
+
 import k8s from './k8s_details';
 
 let apiUrl = "http://localhost:8000/";
@@ -18,6 +20,10 @@ if(process.env?.REACT_APP_API_URL){
     apiUrl = process.env.REACT_APP_API_URL;
 }
 console.log("Using API", apiUrl);
+
+if(process.env?.REACT_APP_GA_ID){
+    ReactGA.initialize(process.env.REACT_APP_GA_ID);
+}
 
 function App() {
 
@@ -74,6 +80,9 @@ function App() {
                 }
             }
             window.history.pushState(null, null, `/${k8s.choices[k8sVersion]}/${query}`)
+            if(process.env?.REACT_APP_GA_ID){
+                ReactGA.pageview(`/${k8s.choices[k8sVersion]}/${query}`);
+            }
             setLoading(false);
         };
 

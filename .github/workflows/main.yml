@@ -49,7 +49,10 @@ jobs:
 
       # Build Application
       - name: Yarn Build
-        run: cd app && REACT_APP_API_URL="https://api.stage.manifests.io/" yarn build
+        run: cd app && yarn build
+        env:
+          REACT_APP_API_URL: "https://api.stage.manifests.io/"
+          REACT_APP_GA_ID: "UA-217852147-1"
 
       # ETL pipeline
       - name: ETL
@@ -125,7 +128,10 @@ jobs:
 
       # Build Application
       - name: Yarn Build
-        run: cd app && REACT_APP_API_URL="https://api.manifests.io/" yarn build
+        run: cd app && yarn build
+        env:
+          REACT_APP_API_URL: "https://api.manifests.io/"
+          REACT_APP_GA_ID: "UA-217852147-2"
 
       # ETL pipeline
       - name: ETL
