@@ -1,9 +1,14 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from mangum import Mangum
 from fastapi.middleware.cors import CORSMiddleware
 import redis
 import os
 import json
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
+import sentry_sdk
 
 app = FastAPI(title='Manifests.io API', description='Reads k8s manifests and returns helpful documents')
 app.add_middleware(
@@ -14,11 +19,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-if "REDIS_HOST" in os.environ:
-    r = redis.Redis(host=os.environ["REDIS_HOST"], port=6379, db=0, ssl_cert_reqs=None)
+if "SENTRY_INGEST" in os.environ:
+    sentry_sdk.init(
+        os.environ["SENTRY_INGEST"],
+        traces_sample_rate=0.05,
+        integrations=[AwsLambdaIntegration()],
+        ignore_errors=[HTTPException]
+    )
+
+    app.add_middleware(SentryAsgiMiddleware)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, e):
+    if "SENTRY_INGEST" in os.environ:
+        with sentry_sdk.configure_scope() as scope:
+            scope.set_context("request", request)
+            sentry_sdk.capture_exception(e)
+    return await request_validation_exception_handler(request, e)
+
 
 @app.get("/{k8s_version}/{search}")
 def search(k8s_version, search):
+    r = None
+    if "REDIS_HOST" in os.environ:
+        r = redis.Redis(host=os.environ["REDIS_HOST"], port=6379, db=0, ssl_cert_reqs=None)
+
     files = os.listdir("dist")
     supported_versions = []
     for file in files:
