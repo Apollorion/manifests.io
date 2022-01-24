@@ -69,6 +69,7 @@ function App() {
         const search = async () => {
             setLoading(true);
             setError("");
+            setDetails("");
             try {
                 const response = await axios.get(`${apiUrl}${k8s.choices[k8sVersion]}/${query}`);
                 setDetails(response.data);
@@ -159,7 +160,9 @@ function App() {
         } else if (error !== "") {
             return (
                 <div style={{textAlign: "center"}}>
-                    {error}
+                    <p>{error}</p>
+                    <p>If you think this error was thrown... in error... let me know!</p>
+                    <p style={{fontWeight: "bold"}}>Open an issue on <a href="https://github.com/Apollorion/manifests.io/issues/new">github</a>!</p>
                 </div>
             )
         } else {
