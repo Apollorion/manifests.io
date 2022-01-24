@@ -7,6 +7,8 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableCell from '@mui/material/TableCell';
 import TableRow from '@mui/material/TableRow';
+import Link from '@mui/material/Link';
+import InputIcon from '@mui/icons-material/Input';
 import {useState, useEffect} from 'react';
 import axios from 'axios';
 import {CodeBlock, dracula} from "react-code-blocks";
@@ -16,12 +18,12 @@ import ReactGA from 'react-ga';
 import k8s from './k8s_details';
 
 let apiUrl = "http://localhost:8000/";
-if(process.env?.REACT_APP_API_URL){
+if (process.env?.REACT_APP_API_URL) {
     apiUrl = process.env.REACT_APP_API_URL;
 }
 console.log("Using API", apiUrl);
 
-if(process.env?.REACT_APP_GA_ID){
+if (process.env?.REACT_APP_GA_ID) {
     ReactGA.initialize(process.env.REACT_APP_GA_ID);
 }
 
@@ -80,7 +82,7 @@ function App() {
                 }
             }
             window.history.pushState(null, null, `/${k8s.choices[k8sVersion]}/${query}`)
-            if(process.env?.REACT_APP_GA_ID){
+            if (process.env?.REACT_APP_GA_ID) {
                 ReactGA.pageview(`/${k8s.choices[k8sVersion]}/${query}`);
             }
             setLoading(false);
@@ -136,7 +138,7 @@ function App() {
                     }
                 }
 
-                if(value?.oname){
+                if (value?.oname) {
                     result["oname"] = value.oname
                 }
 
@@ -174,11 +176,7 @@ function App() {
                             {renderDetails().map((row) => (
                                 <TableRow key={row.title}>
                                     <TableCell component="th" scope="row">
-                    <span style={{whiteSpace: "nowrap"}}><b>{renderCellTitle(row)}</b> {row.links ? (
-                        <button onClick={() => {
-                            setQuery(`${query}.${row.title}`)
-                            setDetails("");
-                        }}>↑</button>) : ""}</span>
+                                        <span style={{whiteSpace: "nowrap"}}><b>{renderCellTitle(row)}</b></span>
                                     </TableCell>
                                     <TableCell>{row.description}</TableCell>
                                 </TableRow>
@@ -190,21 +188,53 @@ function App() {
         }
     }
 
+    const navigateToItem = (row) => {
+        if(row?.links){
+            setQuery(`${query}.${row.title}`);
+            setDetails("");
+        }
+    };
+
     const renderCellTitle = (row) => {
         let type = "";
         if (row?.type) {
             type = row.type
         }
 
-        if(row?.oname){
+        if (row?.oname) {
             row.title = row.oname;
         }
 
-        let title = (<div>{row.title}<br/><span style={{fontSize: "xxsmall", fontWeight: "normal"}}>{type}</span></div>)
+        const CustomLink = row?.links ? Link : "span"
+        const CustomInputIcon = row?.links ? InputIcon : "span";
+
+        let title = (
+            <div>
+                <CustomLink onClick={() => navigateToItem(row)} component="button" style={{fontWeight: "bold", color: "black"}}>
+                    {row.title} <CustomInputIcon fontSize="xxsmall" style={{marginBottom: -2}}/>
+                </CustomLink>
+                <br/>
+                <span style={{fontSize: "8pt", fontWeight: "normal"}}>
+                    {type}
+                </span>
+            </div>
+        );
 
         if (row.required) {
-            title = (<div>{row.title}<span style={{color: 'red'}}>*</span><br/><span
-                style={{fontSize: "xxsmall", fontWeight: "normal"}}>{type}</span></div>)
+            title = (
+                <div>
+                    <CustomLink onClick={() => navigateToItem(row)} component="button" style={{fontWeight: "bold", color: "black"}}>
+                        {row.title} <CustomInputIcon fontSize="xxsmall" style={{marginBottom: -2}}/>
+                    </CustomLink>
+                    <br/>
+                    <span style={{fontSize: "8pt", fontWeight: "normal"}}>
+                        {type}
+                    </span>
+                    <span style={{color: 'red'}}>
+                        *
+                    </span>
+                </div>
+            );
         }
         return title;
     };
@@ -249,7 +279,8 @@ function App() {
     return (
         <div className="App" style={{marginBottom: "50px"}}>
             <div style={{textAlign: "center", marginTop: "50px", marginBottom: "50px"}}>
-                K8s Is Awesome. Made with ❤, <a href="https://github.com/apollorion/manifests.io">apollorion</a>.<br/><br/>
+                K8s Is Awesome. Made with ❤, <a
+                href="https://github.com/apollorion/manifests.io">apollorion</a>.<br/><br/>
                 <div style={{flexDirection: "row", justifyContent: "center"}}>
                     <FormControl style={{flexDirection: "row"}}>
                         <TextField
@@ -267,11 +298,11 @@ function App() {
                                 return <MenuItem key={index} value={index}>{item}</MenuItem>
                             })}
                         </TextField>
-                    <TextField
-                        id="search" value={query} label="search" placeholder="<resource>.<fieldPath>.[<fieldPath>]"
-                        sx={{ width: '50ch' }}
-                        variant="standard"
-                        onChange={event => setQuery(event.target.value)}/>
+                        <TextField
+                            id="search" value={query} label="search" placeholder="<resource>.<fieldPath>.[<fieldPath>]"
+                            sx={{width: '50ch'}}
+                            variant="standard"
+                            onChange={event => setQuery(event.target.value)}/>
                     </FormControl>
                 </div>
             </div>
