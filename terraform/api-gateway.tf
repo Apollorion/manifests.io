@@ -15,6 +15,14 @@ resource "aws_api_gateway_stage" "main" {
 resource "aws_api_gateway_deployment" "main" {
   rest_api_id = aws_api_gateway_rest_api.manifests_io.id
 
+  variables = {
+    deployed_at = timestamp()
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
   depends_on = [
     aws_api_gateway_method.latest,
     aws_api_gateway_method.k8Version,
