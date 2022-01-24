@@ -54,11 +54,13 @@ def parse_refs(values, definitions):
                     # items just differentiates arrays from objects
                     # we can tell the difference with "type" so lets just make it easy
                     # and list everything under "properties"
-                    k = k.lower()
                     if k == "items":
                         k = "properties"
 
-                    new_item[k.lower()] = v
+                    if type(v) == dict:
+                        new_item[k.lower()] = {"oname": k, **v}
+                    else:
+                        new_item[k.lower()] = v
 
             # do this after getting ref material so we can parse the ref material for more refs
             item = parse_refs(new_item, definitions)

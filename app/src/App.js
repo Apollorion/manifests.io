@@ -135,6 +135,11 @@ function App() {
                         }
                     }
                 }
+
+                if(value?.oname){
+                    result["oname"] = value.oname
+                }
+
                 rows.push(result)
             }
         }
@@ -189,6 +194,10 @@ function App() {
         let type = "";
         if (row?.type) {
             type = row.type
+        }
+
+        if(row?.oname){
+            row.title = row.oname;
         }
 
         let title = (<div>{row.title}<br/><span style={{fontSize: "xxsmall", fontWeight: "normal"}}>{type}</span></div>)
