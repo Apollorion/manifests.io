@@ -19,3 +19,13 @@ Easy to use online kubernetes documentation.
 4. `./scripts/startReactDev.sh` to start the web app.
 
 You can support more kubernetes versions by dropping any k8s version's [Open API spec](https://github.com/kubernetes/kubernetes/blob/master/api/openapi-spec/swagger.json) into `ETL/k8s_versions` and updating `app/k8s_details.js`.
+
+## load_redis.py
+You can test the load_redis.py script by:
+1. `./scripts/startLambaDev.sh --redis` (docker is required for this step)
+2. `./scripts/testLoadingRedisKeys.sh`
+
+You can then hit the API locally and most keys should be loaded
+
+In production, terraform will create a lambda function called `manifests_io_api_lambda_load_production`.
+You can run this function to seed redis with all the keys (just use the lambda UI to "test" the function with any payload). There is no staging equivalent.
