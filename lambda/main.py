@@ -10,6 +10,7 @@ from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 import sentry_sdk
 from manifests_io_shared import parser
+import random
 
 app = FastAPI(title='Manifests.io API', description='Reads k8s manifests and returns helpful documents')
 app.add_middleware(
@@ -76,6 +77,28 @@ def search(k8s_version, search):
 
     print("from disk")
     return result
+
+@app.get("/keys/{k8s_version}/{search}")
+def search(k8s_version, search):
+    if search == "":
+        return []
+
+    if "REDIS_HOST" in os.environ:
+        r = redis.StrictRedis(host=os.environ["REDIS_HOST"], port=6379, db=0, ssl_cert_reqs=None)
+        search = search.lower()
+        scan = r.scan_iter(f"manifests.io:{k8s_version}:{search}*", count=500)
+        new_scan = []
+
+        for key in scan:
+            new_scan.append(key.decode("utf-8").replace(f"manifests.io:{k8s_version}:", ""))
+
+        if len(new_scan) > 10:
+            new_scan = random.sample(new_scan, 10)
+
+        return sorted(new_scan)
+    else:
+        return []
+
 
 
 handler = Mangum(app=app)
