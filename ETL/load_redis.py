@@ -35,6 +35,10 @@ def main():
             redis_key = f"manifests.io:{k8s_version}:{resource}"
             walk_spec(rd, redis_key, swagger, k8s_version)
 
+        if "REDIS_HOST" in os.environ:
+            print(f"loading: manifests.io:{k8s_version}.json")
+            r.set(f"manifests.io:{k8s_version}.json", json.dumps(swagger))
+
 
 def walk_spec(rd, start_key, swagger, k8s_version):
     if "properties" in rd:
