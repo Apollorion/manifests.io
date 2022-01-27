@@ -24,9 +24,12 @@ resource "aws_api_gateway_deployment" "main" {
   }
 
   depends_on = [
-    aws_api_gateway_method.latest,
-    aws_api_gateway_method.k8Version,
-    aws_api_gateway_method.fieldPath,
+    aws_api_gateway_integration.latest,
+    module.keys_keys_RMI,
+    module.keys_fieldPath_RMI,
+    module.keys_k8sVersion_RMI,
+    module.search_k8sVersion_RMI,
+    module.search_fieldPath_RMI,
   ]
 }
 
@@ -55,56 +58,49 @@ resource "aws_api_gateway_method" "latest" {
   authorization = "NONE"
 }
 
-resource "aws_api_gateway_resource" "k8Version" {
-  parent_id   = aws_api_gateway_rest_api.manifests_io.root_resource_id
-  path_part   = "{k8Version}"
-  rest_api_id = aws_api_gateway_rest_api.manifests_io.id
+module "search_k8sVersion_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = aws_api_gateway_rest_api.manifests_io.root_resource_id
+  path_part         = "{k8sVersion}"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
 }
 
-resource "aws_api_gateway_integration" "k8Version" {
-  rest_api_id             = aws_api_gateway_rest_api.manifests_io.id
-  resource_id             = aws_api_gateway_resource.k8Version.id
-  http_method             = aws_api_gateway_method.k8Version.http_method
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
-  content_handling        = "CONVERT_TO_TEXT"
+module "search_fieldPath_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = module.search_k8sVersion_RMI.resource_id
+  path_part         = "{fieldPath}"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
 }
 
-resource "aws_api_gateway_method" "k8Version" {
-  rest_api_id   = aws_api_gateway_rest_api.manifests_io.id
-  http_method   = "GET"
-  authorization = "NONE"
-  resource_id   = aws_api_gateway_resource.k8Version.id
-  request_parameters = {
-    "method.request.path.k8Version" = true
-  }
+module "keys_keys_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = aws_api_gateway_rest_api.manifests_io.root_resource_id
+  path_part         = "keys"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
 }
 
-resource "aws_api_gateway_resource" "fieldPath" {
-  parent_id   = aws_api_gateway_resource.k8Version.id
-  path_part   = "{fieldPath}"
-  rest_api_id = aws_api_gateway_rest_api.manifests_io.id
+module "keys_k8sVersion_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = module.keys_keys_RMI.resource_id
+  path_part         = "{k8sVersion}"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
 }
 
-resource "aws_api_gateway_integration" "fieldPath" {
-  rest_api_id             = aws_api_gateway_rest_api.manifests_io.id
-  resource_id             = aws_api_gateway_resource.fieldPath.id
-  http_method             = aws_api_gateway_method.fieldPath.http_method
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
-  content_handling        = "CONVERT_TO_TEXT"
-}
-
-resource "aws_api_gateway_method" "fieldPath" {
-  rest_api_id   = aws_api_gateway_rest_api.manifests_io.id
-  http_method   = "GET"
-  authorization = "NONE"
-  resource_id   = aws_api_gateway_resource.fieldPath.id
-  request_parameters = {
-    "method.request.path.fieldPath" = true
-  }
+module "keys_fieldPath_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = module.keys_k8sVersion_RMI.resource_id
+  path_part         = "{fieldPath}"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
 }
 
 resource "aws_api_gateway_domain_name" "api" {

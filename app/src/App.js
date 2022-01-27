@@ -7,9 +7,11 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableCell from '@mui/material/TableCell';
 import TableRow from '@mui/material/TableRow';
+import Autocomplete from '@mui/material/Autocomplete';
+import CircularProgress from '@mui/material/CircularProgress'
 import Link from '@mui/material/Link';
 import InputIcon from '@mui/icons-material/Input';
-import {useState, useEffect} from 'react';
+import {useState, useEffect, Fragment} from 'react';
 import axios from 'axios';
 import {CodeBlock, dracula} from "react-code-blocks";
 import {MeteorRainLoading} from 'react-loadingg';
@@ -31,28 +33,34 @@ function App() {
 
     // keep query inital state as empty string as to not hit the API with a dumb, unnessary request.
     const [query, setQuery] = useState("");
+    const [textBoxQuery, setTextBoxQuery] = useState("");
     const [k8sVersion, setk8sVersion] = useState(0);
     const [details, setDetails] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [requiredList, setRequiredList] = useState([]);
+    const [autocomplete, setAutocomplete] = useState([]);
+    const [autocompleteLoading, setAutocompleteLoading] = useState(false);
 
     useEffect(() => {
         function setPathStates() {
             if (window.location.pathname === "/") {
                 // Handle naked domais
-                setQuery(`pod.spec`)
-                setk8sVersion(k8s.choices.length - 1)
+                setQuery('pod.spec')
+                setTextBoxQuery('pod.spec')
+                setk8sVersion(k8s.choices.indexOf(k8s.default))
             } else if (window.location.pathname.split("/").length !== 3) {
                 // handle incorrect length (assume the k8s version wasnt in the URL)
                 const item = window.location.pathname.replace("/", "")
                 setQuery(item)
+                setTextBoxQuery(item)
                 setk8sVersion(k8s.choices.indexOf(k8s.default));
             } else {
                 // handle correct URL's
                 const pathArr = window.location.pathname.split("/");
                 if (pathArr.length === 3) {
                     setQuery(pathArr[2])
+                    setTextBoxQuery(pathArr[2])
                     setk8sVersion(k8s.choices.indexOf(pathArr[1]));
                 }
             }
@@ -67,35 +75,49 @@ function App() {
 
     useEffect(() => {
         const search = async () => {
-            setLoading(true);
-            setError("");
-            setDetails("");
-            try {
-                const response = await axios.get(`${apiUrl}${k8s.choices[k8sVersion]}/${query}`);
-                setDetails(response.data);
-                if (response.data?.required) {
-                    setRequiredList(response.data.required);
+            if (query !== "") {
+                setLoading(true);
+                setError("");
+                setDetails("");
+                try {
+                    const response = await axios.get(`${apiUrl}${k8s.choices[k8sVersion]}/${query}`);
+                    setDetails(response.data);
+                    if (response.data?.required) {
+                        setRequiredList(response.data.required);
+                    }
+                } catch (error) {
+                    if (error?.response?.data?.detail) {
+                        setDetails("")
+                        setError(error.response.data.detail);
+                    }
                 }
-            } catch (error) {
-                if (error?.response?.data?.detail) {
-                    setDetails("")
-                    setError(error.response.data.detail);
+                window.history.pushState(null, null, `/${k8s.choices[k8sVersion]}/${query}`)
+                if (process.env?.REACT_APP_GA_ID) {
+                    ReactGA.pageview(`/${k8s.choices[k8sVersion]}/${query}`);
                 }
+                setLoading(false);
             }
-            window.history.pushState(null, null, `/${k8s.choices[k8sVersion]}/${query}`)
-            if (process.env?.REACT_APP_GA_ID) {
-                ReactGA.pageview(`/${k8s.choices[k8sVersion]}/${query}`);
+        };
+        search()
+    }, [query, k8sVersion]);
+
+    useEffect(() => {
+        const getAutoComplete = async () => {
+            if (textBoxQuery !== ""){
+                setAutocompleteLoading(true);
+                const response = await axios.get(`${apiUrl}keys/${k8s.choices[k8sVersion]}/${textBoxQuery}`);
+                setAutocomplete(response.data);
+                setAutocompleteLoading(false);
             }
-            setLoading(false);
         };
 
         const timeOutId = setTimeout(async () => {
-            if (query !== "") {
-                await search();
+            if (textBoxQuery !== "") {
+                await getAutoComplete();
             }
-        }, 500);
+        }, 1000);
         return () => clearTimeout(timeOutId);
-    }, [query, k8sVersion]);
+    }, [textBoxQuery, k8sVersion])
 
     const renderDetails = () => {
         let rows = [];
@@ -162,7 +184,8 @@ function App() {
                 <div style={{textAlign: "center"}}>
                     <p>{error}</p>
                     <p>If you think this error was thrown... in error... let me know!</p>
-                    <p style={{fontWeight: "bold"}}>Open an issue on <a href="https://github.com/Apollorion/manifests.io/issues/new">github</a>!</p>
+                    <p style={{fontWeight: "bold"}}>Open an issue on <a
+                        href="https://github.com/Apollorion/manifests.io/issues/new">github</a>!</p>
                 </div>
             )
         } else {
@@ -192,7 +215,7 @@ function App() {
     }
 
     const navigateToItem = (row) => {
-        if(row?.links){
+        if (row?.links) {
             setQuery(`${query}.${row.title}`);
             setDetails("");
         }
@@ -213,7 +236,8 @@ function App() {
 
         let title = (
             <div>
-                <CustomLink onClick={() => navigateToItem(row)} component="button" style={{fontWeight: "bold", color: "black"}}>
+                <CustomLink onClick={() => navigateToItem(row)} component="button"
+                            style={{fontWeight: "bold", color: "black"}}>
                     {row.title} <CustomInputIcon fontSize="xxsmall" style={{marginBottom: -2}}/>
                 </CustomLink>
                 <br/>
@@ -226,7 +250,8 @@ function App() {
         if (row.required) {
             title = (
                 <div>
-                    <CustomLink onClick={() => navigateToItem(row)} component="button" style={{fontWeight: "bold", color: "black"}}>
+                    <CustomLink onClick={() => navigateToItem(row)} component="button"
+                                style={{fontWeight: "bold", color: "black"}}>
                         {row.title} <CustomInputIcon fontSize="xxsmall" style={{marginBottom: -2}}/>
                     </CustomLink>
                     <br/>
@@ -301,11 +326,40 @@ function App() {
                                 return <MenuItem key={index} value={index}>{item}</MenuItem>
                             })}
                         </TextField>
-                        <TextField
-                            id="search" value={query} label="search" placeholder="<resource>.<fieldPath>.[<fieldPath>]"
+                        <Autocomplete
+                            id="search"
+                            value={query}
+                            onChange={(event, value) => {
+                                if(value !== null){
+                                    setQuery(value)
+                                }
+                            }}
+                            inputValue={textBoxQuery}
+                            onInputChange={(event, value) => {
+                                if(value !== null){
+                                    setTextBoxQuery(value)
+                                }
+                            }}
                             sx={{width: '50ch'}}
-                            variant="standard"
-                            onChange={event => setQuery(event.target.value)}/>
+                            freeSolo
+                            options={autocomplete}
+                            renderInput={(params) => {
+                                return (<TextField {...params}
+                                                   variant="standard"
+                                                   label="search"
+                                                   placeholder="<resource>.<fieldPath>.[<fieldPath>]"
+                                                   InputProps={{
+                                                       ...params.InputProps,
+                                                       endAdornment: (
+                                                           <Fragment>
+                                                               {autocompleteLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                               {params.InputProps.endAdornment}
+                                                           </Fragment>
+                                                       ),
+                                                   }}
+                                />);
+                            }}
+                        />
                     </FormControl>
                 </div>
             </div>
