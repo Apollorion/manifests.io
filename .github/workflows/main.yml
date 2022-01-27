@@ -139,7 +139,7 @@ jobs:
 
       # ETL pipeline
       - name: ETL
-        run: cd ETL && python3 main.py && cp -r ./dist ../lambda/.
+        run: cd ETL && python3 main.py
 
       # Build Lambda Load Lambda Function
       - name: Build Lambd Load Lambda Function
