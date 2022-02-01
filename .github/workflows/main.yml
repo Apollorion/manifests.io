@@ -58,10 +58,6 @@ jobs:
       - name: ETL
         run: ./scripts/runETL.sh && cp -r ./ETL/dist ./lambda/.
 
-      # Build Lambda Load Lambda Function
-      - name: Build Lambd Load Lambda Function
-        run: cd ETL && python3 -m pip install --target ./ -r requirements.txt && zip -r lambda_load_payload.zip ./ && mv lambda_load_payload.zip ../.
-
       # Build Lambda Function
       - name: Build Lambda Function
         run: cd lambda && python3 -m pip install --target ./ -r requirements.txt && zip -r payload.zip ./ && mv payload.zip ../.
@@ -139,11 +135,7 @@ jobs:
 
       # ETL pipeline
       - name: ETL
-        run: ./scripts/runETL.sh
-
-      # Build Lambda Load Lambda Function
-      - name: Build Lambd Load Lambda Function
-        run: cd ETL && python3 -m pip install --target ./ -r requirements.txt && zip -r lambda_load_payload.zip ./ && mv lambda_load_payload.zip ../.
+        run: ./scripts/runETL.sh && cp -r ./ETL/dist ./lambda/.
 
       # Build Lambda Function
       - name: Build Lambda Function
