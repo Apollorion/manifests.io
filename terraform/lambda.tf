@@ -35,6 +35,7 @@ resource "aws_lambda_function" "api" {
   handler          = "main.handler"
   source_code_hash = filebase64sha256("../payload.zip")
   timeout          = 10
+  memory_size      = 512
 
   runtime = "python3.9"
 
