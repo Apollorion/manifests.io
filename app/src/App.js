@@ -132,37 +132,7 @@ function App() {
                 }
 
                 if (value?.type) {
-                    let newType;
-                    switch (value.type) {
-                        case "string":
-                            newType = "str"
-                            break;
-                        case "array":
-                            newType = "[]"
-                            break;
-                        case "integer":
-                            newType = "int"
-                            break;
-                        case "object":
-                            newType = "obj"
-                            break;
-                        default:
-                            newType = value.type
-                            break;
-                    }
-
-                    result["type"] = newType
-                    if ((value?.properties?.gvk || value?.gvk) && ["array", "object"].includes(value.type)) {
-                        if (value?.properties?.gvk) {
-                            result["type"] = `${newType.replace("obj", "")}${value.properties.gvk.kind}`
-                        } else {
-                            result["type"] = `${newType.replace("obj", "")}${value.gvk.kind}`
-                        }
-                    }
-                }
-
-                if (value?.oname) {
-                    result["oname"] = value.oname
+                    result["type"] = value.type;
                 }
 
                 rows.push(result)
@@ -227,10 +197,6 @@ function App() {
             type = row.type
         }
 
-        if (row?.oname) {
-            row.title = row.oname;
-        }
-
         const CustomLink = row?.links ? Link : "span"
         const CustomInputIcon = row?.links ? InputIcon : "span";
 
@@ -274,14 +240,14 @@ function App() {
     };
 
     const renderGVK = () => {
-        if (details?.gvk) {
+        if (details["x-kubernetes-group-version-kind"]) {
 
-            let apiVersion = details.gvk.version;
-            if (details.gvk.group !== "core") {
-                apiVersion = `${details.gvk.group}/${apiVersion}`
+            let apiVersion = details["x-kubernetes-group-version-kind"][0].version;
+            if (details["x-kubernetes-group-version-kind"][0].group !== "core") {
+                apiVersion = `${details["x-kubernetes-group-version-kind"][0].group}/${apiVersion}`
             }
 
-            const gvkYaml = `apiVersion: ${apiVersion}\nkind: ${details.gvk.kind}`.trim();
+            const gvkYaml = `apiVersion: ${apiVersion}\nkind: ${details["x-kubernetes-group-version-kind"][0].kind}`.trim();
 
             return (
                 <div>

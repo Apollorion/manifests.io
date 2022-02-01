@@ -1,9 +1,7 @@
 #!/bin/bash
 
 cd ETL
-mkdir processable
-cp k8s_versions/* processable/.
-
 python3 main.py
+cp ./k8s_versions/* ./dist/.
 cp -r ./dist ../lambda/.
 cd -

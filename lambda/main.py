@@ -9,7 +9,6 @@ import json
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 import sentry_sdk
-from manifests_io_shared import parser
 import random
 
 app = FastAPI(title='Manifests.io API', description='Reads k8s manifests and returns helpful documents')
@@ -34,6 +33,11 @@ if "SENTRY_INGEST" in os.environ:
 if "REDIS_HOST" in os.environ:
     r = redis.Redis(host=os.environ["REDIS_HOST"], port=6379, db=0, ssl_cert_reqs=None)
 
+files = os.listdir("dist")
+supported_versions = []
+for file in files:
+    supported_versions.append(file.replace(".json", ""))
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, e):
@@ -47,14 +51,8 @@ async def validation_exception_handler(request, e):
 @app.get("/{k8s_version}/{search}")
 def search(k8s_version, search):
 
-    if "REDIS_HOST" not in os.environ:
-        files = os.listdir("dist")
-        supported_versions = []
-        for file in files:
-            supported_versions.append(file.replace(".json", ""))
-
-        if k8s_version not in supported_versions:
-            raise HTTPException(status_code=404, detail="K8s version not found.")
+    if k8s_version not in supported_versions:
+        raise HTTPException(status_code=404, detail="K8s version not found.")
 
     # lowercase the entire search string
     search = search.lower()
@@ -65,19 +63,11 @@ def search(k8s_version, search):
             print("from cache")
             return json.loads(redis_result)
 
-        try:
-            swagger = json.loads(r.get(f"manifests.io:{k8s_version}.json"))
-        except:
-            raise HTTPException(status_code=404, detail="K8s version not found.")
-    else:
-        f = open(f"./dist/{k8s_version}.json", "r")
-        swagger = json.loads(f.read())
-        f.close()
+    f = open(f"./dist/{k8s_version}.json", "r")
+    swagger = json.loads(f.read())
+    f.close()
 
-    try:
-        result = parser.get_result_from_disk(search, swagger)
-    except parser.PassableHTTPException as e:
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    result = get_result_from_swagger(search, swagger)
 
     if "REDIS_HOST" in os.environ:
         r.set(f"manifests.io:{k8s_version}:{search}", json.dumps(result))
@@ -106,6 +96,75 @@ def search(k8s_version, search):
     else:
         return []
 
+
+def get_result_from_swagger(search, swagger):
+
+    swagger = swagger["definitions"]
+    search = search.split(".")
+
+    key, resource = get_resource_key(search[0], swagger)
+    if resource is None:
+        raise HTTPException(status_code=404, detail=f"Resource {search[0]} not found.")
+
+    # Return the resource if its all that was searched
+    if len(search) == 1:
+        return replace_top_level_refs(resource, swagger)
+    else:
+
+        # find item based off search term
+        del search[0]
+        for term in search:
+            key, resource = get_resource_key(term, resource["properties"])
+
+            if "$ref" in resource or ("items" in resource and "$ref" in resource["items"]):
+                if "items" in resource:
+                    resource = get_next_resource(search, resource["items"]["$ref"], swagger)
+                else:
+                    resource = get_next_resource(search, resource["$ref"], swagger)
+
+        return replace_top_level_refs(resource, swagger)
+
+
+def replace_top_level_refs(resource, swagger):
+    i = "properties"
+    if "items" in resource:
+        i = "items"
+
+    if i not in resource:
+        return resource
+
+    new_resource = resource.copy()
+    new_resource[i] = {}
+
+    for key, value in resource[i].items():
+        if "$ref" in value or ("items" in value and "$ref" in value["items"]):
+            if "items" in value:
+                next_resource = get_next_resource(search, value["items"]["$ref"], swagger)
+            else:
+                next_resource = get_next_resource(search, value["$ref"], swagger)
+            new_resource[i][key] = next_resource
+        else:
+            new_resource[i][key] = value
+
+    return new_resource
+
+
+def get_next_resource(search, key, swagger):
+    key = key.replace("#/definitions/", "")
+    if key in swagger:
+        return swagger[key]
+    else:
+        raise HTTPException(status_code=404, detail=f"FieldRef {'.'.join(search)} not found.")
+
+
+def get_resource_key(resource_search_term, swagger):
+    # Find the resource
+    for key, value in swagger.items():
+        search_key = key.lower().split(".")[-1]
+        if search_key == resource_search_term:
+            return key, swagger[key]
+
+    return None, None
 
 
 handler = Mangum(app=app)
