@@ -1,9 +1,6 @@
 #!/bin/bash
 
-cd ETL
-python3 main.py
-cp -r ./dist ../lambda/.
-cd -
+./scripts/runETL.sh
 
 if [[ "$1" == "--redis" ]]; then
   docker run --name manifests-io-redis -p 6379:6379 -d redis

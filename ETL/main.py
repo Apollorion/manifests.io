@@ -1,18 +1,29 @@
 import json
 import sys
 import os
+from kubeconform import openapi2jsonschema
 
 sys.setrecursionlimit(3500)
 
 def main():
 
-    files = os.listdir("k8s_versions")
+    crds = os.listdir("crds")
+    if len(crds) > 0:
+        for resource in crds:
+            requests = os.listdir(f"./crds/{resource}")
 
+            full_path_requests = []
+            for request in requests:
+                full_path_requests.append(f"./crds/{resource}/{request}")
+
+            openapi2jsonschema.process_files(full_path_requests, f"./processable/{resource}.json")
+
+    files = os.listdir("processable")
     for file in files:
 
         print(f"Generating {file}...")
 
-        f = open(f"./k8s_versions/{file}", "r")
+        f = open(f"./processable/{file}", "r")
         swagger = json.loads(f.read())
         f.close()
 

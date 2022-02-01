@@ -313,11 +313,11 @@ function App() {
                     <FormControl style={{flexDirection: "row"}}>
                         <TextField
                             select
-                            sx={{width: '10ch'}}
+                            sx={{width: '20ch'}}
                             id="k8s-select"
                             value={k8sVersion}
                             variant="standard"
-                            label="k8s version"
+                            label="k8s/product version"
                             onChange={(event) => {
                                 setk8sVersion(event.target.value);
                             }}

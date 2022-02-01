@@ -29,3 +29,21 @@ You can then hit the API locally and most keys should be loaded
 
 In production, terraform will create a lambda function called `manifests_io_api_lambda_load_production`.
 You can run this function to seed redis with all the keys (just use the lambda UI to "test" the function with any payload). There is no staging equivalent.
+
+# Supporting new k8s/product versions
+
+### New kubernetes versions
+Kubernetes versions are easily updated.
+1. Clone the kubernetes project `git clone git@github.com:kubernetes/kubernetes.git`
+2. Change to the branch of the version in kubernetes project `git checkout release-1.22`
+3. Copy the open API spec from the kubernetes project in `api/openapi-spec/swagger.json` to this project at `ETL/k8s_versions/<k8s_version>.json`
+4. Add the version to the frontend application at `./app/src/k8s_details.js`
+
+
+### New CRD versions
+CRDs copied into `./ETL/crds/*/*.yaml` will be combined into a product version based off the directory name under `./ETL/crds`
+So for instance `./ETC/crds/certmanager-1.7/*.yaml` will generate a product name called `certmanager-1.7` that supports any of the CRDs under its directory.
+
+1. Create a new directory under `./ETL/crds/` and name it appropriately.
+2. Copy all supported CRD YAML files under the new directory
+3. Add the version to the frontend application at `./app/src/k8s_details.js` (use the directory name)
