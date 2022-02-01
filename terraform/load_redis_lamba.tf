@@ -5,7 +5,8 @@ resource "aws_lambda_function" "lambda_load" {
   role             = aws_iam_role.api.arn
   handler          = "load_redis.lambda_handler"
   source_code_hash = filebase64sha256("../lambda_load_payload.zip")
-  timeout          = 300
+  timeout          = 900
+  memory_size      = 1024
 
   runtime = "python3.9"
 
