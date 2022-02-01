@@ -56,7 +56,7 @@ jobs:
 
       # ETL pipeline
       - name: ETL
-        run: cd ETL && python3 main.py && cp -r ./dist ../lambda/.
+        run: ./scripts/runETL.sh && cp -r ./ETL/dist ./lambda/.
 
       # Build Lambda Load Lambda Function
       - name: Build Lambd Load Lambda Function
@@ -139,7 +139,7 @@ jobs:
 
       # ETL pipeline
       - name: ETL
-        run: cd ETL && python3 main.py
+        run: ./scripts/runETL.sh
 
       # Build Lambda Load Lambda Function
       - name: Build Lambd Load Lambda Function

@@ -24,6 +24,13 @@ def get_result_from_disk(search, swagger):
                         result = get_result(result)
                         if "description" in result:
                             description = result["description"]
+                        if "properties" not in result:
+
+                            # CRDs are fun
+                            if "oname" in result:
+                                del result["oname"]
+
+                            result = {"properties": result}
                 except KeyError:
                     raise PassableHTTPException(status_code=404, detail=f"Field path {'.'.join(field_path)} not found in resource {resource}.", search=search)
             else:
