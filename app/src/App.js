@@ -128,11 +128,34 @@ function App() {
                 result["required"] = !!requiredList.includes(key);
 
                 if (value?.description) {
-                    result["description"] = value.description.split('\n').map((str, index) => <p key={index}>{str}</p>)
+                    result["description"] = value.description.split('\n').map((str, index) => {
+                        const desc = str.split("More info: ")
+
+                        let link = "";
+                        if(desc.length === 2){
+                            link = <a href={desc[1]}>More Info</a>
+                        }
+
+                        return <p key={index}>{desc[0]} {link}</p>
+                    })
                 }
 
                 if (value?.type) {
                     result["type"] = value.type;
+                    if (value?.subtype && ["array", "object"].includes(value.type)) {
+                        result["type"] = `${value.type.replace("object", "").replace("array", "[]")}${value.subtype}`
+                    } else if(value?.items?.type) {
+                        result["type"] = `${value.type.replace("object", "").replace("array", "[]")}${value.items.type}`
+                    }
+
+                    if(value?.enum) {
+                        result["type"] = (
+                            <div>
+                                Enum: {value.enum.map((str, index) => <div key={index}>&nbsp;&nbsp;- {str}</div>)}
+                            </div>
+                        )
+                    }
+
                 }
 
                 rows.push(result)
@@ -266,7 +289,16 @@ function App() {
 
     const renderDescription = () => {
         if (details?.description) {
-            return details.description.split('\n').map((str, index) => <p key={index}>{str}</p>);
+            return details.description.split('\n').map((str, index) => {
+                const desc = str.split("More info: ")
+
+                let link = "";
+                if(desc.length === 2){
+                    link = <a href={desc[1]}>More Info</a>
+                }
+
+                return <p key={index}>{desc[0]} {link}</p>
+            })
         }
     };
 
@@ -336,6 +368,9 @@ function App() {
                     {renderDescription()}
                 </div>
                 {renderBottom()}
+            </div>
+            <div style={{textAlign: "center", marginTop: "50px", marginBottom: "50px"}}>
+                <a href={`https://github.com/Apollorion/manifests.io/issues/new?title=Issue%20on%20page${encodeURIComponent(` ${k8s.choices[k8sVersion]}/${query}`)}&body=%23%23%20Description%20of%20issue%0A`}>See an issue here?</a>
             </div>
         </div>
     );

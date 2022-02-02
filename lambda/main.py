@@ -116,11 +116,12 @@ def get_result_from_swagger(search, swagger):
         for term in search:
             key, resource = get_resource_key(term, resource["properties"])
 
+            hold = get_hold_object(resource)
             if "$ref" in resource or ("items" in resource and "$ref" in resource["items"]):
                 if "items" in resource:
-                    resource = get_next_resource(search, resource["items"]["$ref"], swagger)
+                    resource = {**get_next_resource(search, resource["items"]["$ref"], swagger), **hold}
                 else:
-                    resource = get_next_resource(search, resource["$ref"], swagger)
+                    resource = {**get_next_resource(search, resource["$ref"], swagger), **hold}
 
         return replace_top_level_refs(resource, swagger)
 
@@ -137,11 +138,13 @@ def replace_top_level_refs(resource, swagger):
     new_resource[i] = {}
 
     for key, value in resource[i].items():
+
+        hold = get_hold_object(value)
         if "$ref" in value or ("items" in value and "$ref" in value["items"]):
             if "items" in value:
-                next_resource = get_next_resource(search, value["items"]["$ref"], swagger)
+                next_resource = {**get_next_resource(search, value["items"]["$ref"], swagger), **hold}
             else:
-                next_resource = get_next_resource(search, value["$ref"], swagger)
+                next_resource = {**get_next_resource(search, value["$ref"], swagger), **hold}
             new_resource[i][key] = next_resource
         else:
             new_resource[i][key] = value
@@ -149,10 +152,26 @@ def replace_top_level_refs(resource, swagger):
     return new_resource
 
 
+def get_hold_object(resource):
+    # We need to "hold" the description and type of the original resource
+    # so it doesnt get overwritten in the documentation
+    hold = {}
+    if "description" in resource:
+        hold["description"] = resource["description"]
+    if "type" in resource:
+        hold["type"] = resource["type"]
+    if "x-kubernetes-group-version-kind" in resource:
+        hold["x-kubernetes-group-version-kind"] = resource["x-kubernetes-group-version-kind"]
+    if "enum" in resource:
+        hold["enum"] = resource["enum"]
+
+    return hold
+
 def get_next_resource(search, key, swagger):
     key = key.replace("#/definitions/", "")
     if key in swagger:
-        return swagger[key]
+        subtype = key.split(".")[::-1][0]
+        return {**swagger[key], "subtype": subtype}
     else:
         raise HTTPException(status_code=404, detail=f"FieldRef {'.'.join(search)} not found.")
 
@@ -165,6 +184,8 @@ def get_resource_key(resource_search_term, swagger):
             return key, swagger[key]
 
     return None, None
+
+
 
 
 handler = Mangum(app=app)
