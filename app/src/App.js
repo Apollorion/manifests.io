@@ -302,6 +302,16 @@ function App() {
         }
     };
 
+    const renderIssueLink = () => {
+      if(!loading){
+          return (
+              <div style={{textAlign: "center", marginTop: "50px", marginBottom: "50px"}}>
+                  <a href={`https://github.com/Apollorion/manifests.io/issues/new?title=Issue%20on%20page${encodeURIComponent(` ${k8s.choices[k8sVersion]}/${query}`)}&body=%23%23%20Description%20of%20issue%0A`}>See an issue here?</a>
+              </div>
+          )
+      }
+    };
+
     return (
         <div className="App" style={{marginBottom: "50px"}}>
             <div style={{textAlign: "center", marginTop: "50px", marginBottom: "50px"}}>
@@ -369,9 +379,7 @@ function App() {
                 </div>
                 {renderBottom()}
             </div>
-            <div style={{textAlign: "center", marginTop: "50px", marginBottom: "50px"}}>
-                <a href={`https://github.com/Apollorion/manifests.io/issues/new?title=Issue%20on%20page${encodeURIComponent(` ${k8s.choices[k8sVersion]}/${query}`)}&body=%23%23%20Description%20of%20issue%0A`}>See an issue here?</a>
-            </div>
+            {renderIssueLink()}
         </div>
     );
 }
