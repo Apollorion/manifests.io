@@ -303,7 +303,7 @@ function App() {
     };
 
     const renderIssueLink = () => {
-      if(!loading){
+      if(!loading && error === ""){
           return (
               <div style={{textAlign: "center", marginTop: "50px", marginBottom: "50px"}}>
                   <a href={`https://github.com/Apollorion/manifests.io/issues/new?title=Issue%20on%20page${encodeURIComponent(` ${k8s.choices[k8sVersion]}/${query}`)}&body=%23%23%20Description%20of%20issue%0A`}>See an issue here?</a>
@@ -335,6 +335,9 @@ function App() {
                             })}
                         </TextField>
                         <Autocomplete
+                            // This autocomplete has an annoying bug where deleted text is searched if there is a match
+                            // https://github.com/mui-org/material-ui/issues/27137
+                            // Hopefully it is corrected soon and we can get that fix in here.
                             id="search"
                             value={query}
                             onChange={(event, value) => {
