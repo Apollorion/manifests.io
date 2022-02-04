@@ -55,7 +55,7 @@ def search(k8s_version, search):
         raise HTTPException(status_code=404, detail="K8s version not found.")
 
     # lowercase the entire search string
-    search = search.lower()
+    search = expand_search_string(search)
 
     if "REDIS_HOST" in os.environ:
         redis_result = r.get(f"manifests.io:{k8s_version}:{search}")
@@ -82,7 +82,8 @@ def search(k8s_version, search):
 
     if "REDIS_HOST" in os.environ:
         r = redis.StrictRedis(host=os.environ["REDIS_HOST"], port=6379, db=0, ssl_cert_reqs=None)
-        search = search.lower()
+        search = expand_search_string(search)
+
         scan = r.scan_iter(f"manifests.io:{k8s_version}:{search}*", count=500)
         new_scan = []
 
@@ -95,6 +96,12 @@ def search(k8s_version, search):
         return sorted(new_scan)
     else:
         return []
+
+
+def expand_search_string(search):
+    search = search.lower().split(".")
+    search[0] = expand_shortened_resource_name(search[0])
+    return '.'.join(search)
 
 
 def expand_shortened_resource_name(resource):
@@ -131,10 +138,11 @@ def get_result_from_swagger(search, swagger):
 
     swagger = swagger["definitions"]
     search = search.split(".")
+    original_resource = search[0]
 
-    key, resource = get_resource_key(expand_shortened_resource_name(search[0]), swagger)
+    resource = get_resource(original_resource, swagger)
     if resource is None:
-        raise HTTPException(status_code=404, detail=f"Resource {search[0]} not found.")
+        raise HTTPException(status_code=404, detail=f"Resource {original_resource} not found.")
 
     # Return the resource if its all that was searched
     if len(search) == 1:
@@ -144,7 +152,9 @@ def get_result_from_swagger(search, swagger):
         # find item based off search term
         del search[0]
         for term in search:
-            key, resource = get_resource_key(term, resource["properties"])
+            resource = get_resource(term, resource["properties"])
+            if resource is None:
+                raise HTTPException(status_code=404, detail=f"FieldPath {'.'.join(search)} not found in {original_resource}.")
 
             hold = get_hold_object(resource)
             if "$ref" in resource or ("items" in resource and "$ref" in resource["items"]):
@@ -203,17 +213,17 @@ def get_next_resource(search, key, swagger):
         subtype = key.split(".")[::-1][0]
         return {**swagger[key], "subtype": subtype}
     else:
-        raise HTTPException(status_code=404, detail=f"FieldRef {'.'.join(search)} not found.")
+        raise HTTPException(status_code=404, detail=f"FieldPath {'.'.join(search)} not found.")
 
 
-def get_resource_key(resource_search_term, swagger):
+def get_resource(resource_search_term, swagger):
     # Find the resource
     for key, value in swagger.items():
         search_key = key.lower().split(".")[-1]
         if search_key == resource_search_term:
-            return key, swagger[key]
+            return swagger[key]
 
-    return None, None
+    return None
 
 
 
