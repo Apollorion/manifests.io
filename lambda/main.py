@@ -97,12 +97,42 @@ def search(k8s_version, search):
         return []
 
 
+def expand_shortened_resource_name(resource):
+    shortened_map = {
+        "csr": "certificatesigningrequest",
+        "cs": "componentstatus",
+        "cm": "configmap",
+        "ds": "daemonset",
+        "deploy": "deployment",
+        "ep": "endpoint",
+        "ev": "event",
+        "hpa": "horizontalpodautoscaler",
+        "ing": "ingress",
+        "limits": "limitrange",
+        "ns": "namespace",
+        "no": "node",
+        "pvc": "persistentvolumeclaim",
+        "pv": "persistentvolume",
+        "po": "pod",
+        "pdb": "poddisruptionbudget",
+        "psp": "podsecuritypolicy",
+        "rs": "replicaset",
+        "rc": "replicationcontroller",
+        "quota": "resourcequota",
+        "sa": "serviceaccount",
+        "svc": "service"
+    }
+
+    if resource in shortened_map:
+        return shortened_map[resource]
+    return resource
+
 def get_result_from_swagger(search, swagger):
 
     swagger = swagger["definitions"]
     search = search.split(".")
 
-    key, resource = get_resource_key(search[0], swagger)
+    key, resource = get_resource_key(expand_shortened_resource_name(search[0]), swagger)
     if resource is None:
         raise HTTPException(status_code=404, detail=f"Resource {search[0]} not found.")
 
