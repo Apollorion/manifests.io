@@ -39,37 +39,10 @@ resource "aws_lambda_function" "api" {
 
   runtime = "python3.9"
 
-  # Environment variables for production
-  dynamic "environment" {
-    for_each = terraform.workspace == "production" ? [0] : []
-    content {
-      variables = {
-        REDIS_HOST         = module.redis[environment.value].endpoint,
-        SENTRY_INGEST      = local.secrets["SENTRY_INGEST"]
-        SENTRY_ENVIRONMENT = "production"
-      }
-    }
-  }
-
-  # Environment variables for staging
-  dynamic "environment" {
-    for_each = terraform.workspace == "staging" ? [0] : []
-    content {
-      variables = {
-        SENTRY_INGEST      = local.secrets["SENTRY_INGEST"]
-        SENTRY_ENVIRONMENT = "staging"
-      }
-    }
-  }
-
-  dynamic "vpc_config" {
-    for_each = terraform.workspace == "production" ? [0] : []
-    content {
-
-      # put the function in the public subnets so I dont have to pay for a NAT gateway
-      # has routes to private subnet for redis
-      subnet_ids         = module.subnets[vpc_config.value].public_subnet_ids
-      security_group_ids = [module.sg[vpc_config.value].id]
+  environment {
+    variables = {
+      SENTRY_INGEST      = local.secrets["SENTRY_INGEST"]
+      SENTRY_ENVIRONMENT = terraform.workspace
     }
   }
 }

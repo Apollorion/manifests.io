@@ -25,9 +25,6 @@ resource "aws_api_gateway_deployment" "main" {
 
   depends_on = [
     aws_api_gateway_integration.latest,
-    module.keys_keys_RMI,
-    module.keys_fieldPath_RMI,
-    module.keys_k8sVersion_RMI,
     module.search_k8sVersion_RMI,
     module.search_fieldPath_RMI,
     module.examples_examples_RMI,
@@ -75,33 +72,6 @@ module "search_fieldPath_RMI" {
   http_methods      = ["GET"]
   lambda_invoke_arn = aws_lambda_function.api.invoke_arn
   parent_id         = module.search_k8sVersion_RMI.resource_id
-  path_part         = "{fieldPath}"
-  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
-}
-
-module "keys_keys_RMI" {
-  source            = "./modules/RMI"
-  http_methods      = ["GET"]
-  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
-  parent_id         = aws_api_gateway_rest_api.manifests_io.root_resource_id
-  path_part         = "keys"
-  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
-}
-
-module "keys_k8sVersion_RMI" {
-  source            = "./modules/RMI"
-  http_methods      = ["GET"]
-  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
-  parent_id         = module.keys_keys_RMI.resource_id
-  path_part         = "{k8sVersion}"
-  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
-}
-
-module "keys_fieldPath_RMI" {
-  source            = "./modules/RMI"
-  http_methods      = ["GET"]
-  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
-  parent_id         = module.keys_k8sVersion_RMI.resource_id
   path_part         = "{fieldPath}"
   rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
 }

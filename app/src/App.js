@@ -7,12 +7,10 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableCell from '@mui/material/TableCell';
 import TableRow from '@mui/material/TableRow';
-import Autocomplete from '@mui/material/Autocomplete';
-import CircularProgress from '@mui/material/CircularProgress'
 import Link from '@mui/material/Link';
 import InputIcon from '@mui/icons-material/Input';
 import Button from "@mui/material/Button";
-import {useState, useEffect, Fragment} from 'react';
+import {useState, useEffect} from 'react';
 import axios from 'axios';
 import {MeteorRainLoading} from 'react-loadingg';
 import ReactGA from 'react-ga';
@@ -41,8 +39,6 @@ function App() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [requiredList, setRequiredList] = useState([]);
-    const [autocomplete, setAutocomplete] = useState([]);
-    const [autocompleteLoading, setAutocompleteLoading] = useState(false);
 
     useEffect(() => {
         function setPathStates() {
@@ -120,24 +116,6 @@ function App() {
         };
         search()
     }, [query, k8sVersion]);
-
-    useEffect(() => {
-        const getAutoComplete = async () => {
-            if (textBoxQuery !== ""){
-                setAutocompleteLoading(true);
-                const response = await axios.get(`${apiUrl}keys/${k8s.choices[k8sVersion]}/${textBoxQuery}`);
-                setAutocomplete(response.data);
-                setAutocompleteLoading(false);
-            }
-        };
-
-        const timeOutId = setTimeout(async () => {
-            if (textBoxQuery !== "") {
-                await getAutoComplete();
-            }
-        }, 1000);
-        return () => clearTimeout(timeOutId);
-    }, [textBoxQuery, k8sVersion])
 
     const renderDetails = () => {
         let rows = [];
@@ -230,6 +208,7 @@ function App() {
     const navigateToItem = (row) => {
         if (row?.links) {
             setQuery(`${query}.${row.title}`);
+            setTextBoxQuery(`${query}.${row.title}`);
             setDetails("");
         }
     };
@@ -340,7 +319,7 @@ function App() {
     }
 
     const renderDescription = () => {
-        if (details?.description) {
+        if (!loading && details?.description) {
             return details.description.split('\n').map((str, index) => {
                 const desc = str.split("More info: ")
 
@@ -386,42 +365,18 @@ function App() {
                                 return <MenuItem key={index} value={index}>{item}</MenuItem>
                             })}
                         </TextField>
-                        <Autocomplete
-                            // This autocomplete has an annoying bug where deleted text is searched if there is a match
-                            // https://github.com/mui-org/material-ui/issues/27137
-                            // Hopefully it is corrected soon and we can get that fix in here.
-                            id="search"
-                            value={query}
-                            onChange={(event, value) => {
-                                if(value !== null){
-                                    setQuery(value)
-                                }
-                            }}
-                            inputValue={textBoxQuery}
-                            onInputChange={(event, value) => {
-                                if(value !== null){
-                                    setTextBoxQuery(value)
-                                }
-                            }}
-                            sx={{width: '50ch'}}
-                            freeSolo
-                            options={autocomplete}
-                            renderInput={(params) => {
-                                return (<TextField {...params}
-                                                   variant="standard"
-                                                   label="search"
-                                                   placeholder="<resource>.<fieldPath>.[<fieldPath>]"
-                                                   InputProps={{
-                                                       ...params.InputProps,
-                                                       endAdornment: (
-                                                           <Fragment>
-                                                               {autocompleteLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                                               {params.InputProps.endAdornment}
-                                                           </Fragment>
-                                                       ),
-                                                   }}
-                                />);
-                            }}
+                        <TextField
+                           variant="standard"
+                           label="search"
+                           placeholder="<resource>.<fieldPath>.[<fieldPath>]"
+                           value={textBoxQuery}
+                           sx={{width: '50ch'}}
+                           onChange={(event) => setTextBoxQuery(event.target.value)}
+                           onKeyDown={(e) => {
+                               if(e.key === "Enter"){
+                                   setQuery(textBoxQuery)
+                               }
+                           }}
                         />
                     </FormControl>
                 </div>
