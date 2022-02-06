@@ -39,8 +39,8 @@ So for instance `./ETC/crds/certmanager-1.7/*.yaml` will generate a product name
 3. Add the version to the frontend application at `./app/src/k8s_details.js` (use the directory name)
 
 # Examples
-Examples are all maintained outside of this repo and pull down on the fly.
-A dictionary of examples is in lambda/examples.py
+Examples are all maintained outside of this repo and are pulled down on the fly.
+A dictionary of examples is in `lambda/examples.py`.
 
 ## Adding or modifying an example
 
@@ -63,7 +63,7 @@ This would directly reference an example.
 `text` is the text displayed in the frontend application as the source of the example  
 `source` is the url the text will link to  
 
-If the url needs to reference a specific branch, you can use `$BRANCH` within the `url` and `branch` within the dictionary to define what branch to use.  
+If the url needs to reference a specific branch, you can use `$BRANCH` within the `url`.  
 The `url` in the below example would resolve to `https://myamazingpod.com/my-awesome-branch/example.yaml`.  
 This is useful when using github raw content and the same path can support multiple different versions.
 ```python
