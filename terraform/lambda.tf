@@ -65,7 +65,10 @@ resource "aws_lambda_function" "api" {
   dynamic "vpc_config" {
     for_each = terraform.workspace == "production" ? [0] : []
     content {
-      subnet_ids         = module.subnets[vpc_config.value].private_subnet_ids
+
+      # put the function in the public subnets so I dont have to pay for a NAT gateway
+      # has routes to private subnet for redis
+      subnet_ids         = module.subnets[vpc_config.value].public_subnet_ids
       security_group_ids = [module.sg[vpc_config.value].id]
     }
   }
