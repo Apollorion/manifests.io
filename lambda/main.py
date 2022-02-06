@@ -10,6 +10,7 @@ from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 import sentry_sdk
 import random
+import examples
 
 app = FastAPI(title='Manifests.io API', description='Reads k8s manifests and returns helpful documents')
 app.add_middleware(
@@ -49,7 +50,7 @@ async def validation_exception_handler(request, e):
 
 
 @app.get("/{k8s_version}/{search}")
-def search(k8s_version, search):
+def search_req(k8s_version, search):
 
     if k8s_version not in supported_versions:
         raise HTTPException(status_code=404, detail="K8s version not found.")
@@ -76,7 +77,7 @@ def search(k8s_version, search):
     return result
 
 @app.get("/keys/{k8s_version}/{search}")
-def search(k8s_version, search):
+def keys_req(k8s_version, search):
     if search == "":
         return []
 
@@ -96,6 +97,18 @@ def search(k8s_version, search):
         return sorted(new_scan)
     else:
         return []
+
+@app.get("/examples/{k8s_version}/{search}")
+def examples_req(k8s_version, search):
+    if search == "":
+        raise HTTPException(status_code=404, detail=f"No example found.")
+
+    search = expand_search_string(search)
+    example = examples.get_example(k8s_version, search)
+    if example:
+        return example
+
+    raise HTTPException(status_code=404, detail=f"No example found.")
 
 
 def expand_search_string(search):
@@ -134,6 +147,7 @@ def expand_shortened_resource_name(resource):
         return shortened_map[resource]
     return resource
 
+
 def get_result_from_swagger(search, swagger):
 
     swagger = swagger["definitions"]
@@ -146,7 +160,7 @@ def get_result_from_swagger(search, swagger):
 
     # Return the resource if its all that was searched
     if len(search) == 1:
-        return replace_top_level_refs(resource, swagger)
+        return replace_top_level_refs(search, resource, swagger)
     else:
 
         # find item based off search term
@@ -163,10 +177,10 @@ def get_result_from_swagger(search, swagger):
                 else:
                     resource = {**get_next_resource(search, resource["$ref"], swagger), **hold}
 
-        return replace_top_level_refs(resource, swagger)
+        return replace_top_level_refs(search, resource, swagger)
 
 
-def replace_top_level_refs(resource, swagger):
+def replace_top_level_refs(search, resource, swagger):
     i = "properties"
     if "items" in resource:
         i = "items"
@@ -207,6 +221,7 @@ def get_hold_object(resource):
 
     return hold
 
+
 def get_next_resource(search, key, swagger):
     key = key.replace("#/definitions/", "")
     if key in swagger:
@@ -224,8 +239,6 @@ def get_resource(resource_search_term, swagger):
             return swagger[key]
 
     return None
-
-
 
 
 handler = Mangum(app=app)

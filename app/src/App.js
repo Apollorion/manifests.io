@@ -11,9 +11,9 @@ import Autocomplete from '@mui/material/Autocomplete';
 import CircularProgress from '@mui/material/CircularProgress'
 import Link from '@mui/material/Link';
 import InputIcon from '@mui/icons-material/Input';
+import Button from "@mui/material/Button";
 import {useState, useEffect, Fragment} from 'react';
 import axios from 'axios';
-import {CodeBlock, dracula} from "react-code-blocks";
 import {MeteorRainLoading} from 'react-loadingg';
 import ReactGA from 'react-ga';
 
@@ -36,6 +36,8 @@ function App() {
     const [textBoxQuery, setTextBoxQuery] = useState("");
     const [k8sVersion, setk8sVersion] = useState(0);
     const [details, setDetails] = useState("");
+    const [example, setExample] = useState("");
+    const [showExample, setShowExample] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [requiredList, setRequiredList] = useState([]);
@@ -79,8 +81,15 @@ function App() {
                 setLoading(true);
                 setError("");
                 setDetails("");
+                setExample("");
+                setShowExample(false);
+
+                const detailReq = axios.get(`${apiUrl}${k8s.choices[k8sVersion]}/${query}`);
+                const exampleReq = axios.get(`${apiUrl}examples/${k8s.choices[k8sVersion]}/${query}`);
+
+                // handle detail request
                 try {
-                    const response = await axios.get(`${apiUrl}${k8s.choices[k8sVersion]}/${query}`);
+                    const response = await detailReq;
                     setDetails(response.data);
                     if (response.data?.required) {
                         setRequiredList(response.data.required);
@@ -91,6 +100,17 @@ function App() {
                         setError(error.response.data.detail);
                     }
                 }
+
+                // handle examples request
+                try {
+                    const response = await exampleReq;
+                    if(response?.data?.result){
+                        setExample(response.data);
+                    }
+                } catch (error) {
+                    // Ignore any errors
+                }
+
                 window.history.pushState(null, null, `/${k8s.choices[k8sVersion]}/${query}`)
                 if (process.env?.REACT_APP_GA_ID) {
                     ReactGA.pageview(`/${k8s.choices[k8sVersion]}/${query}`);
@@ -266,21 +286,53 @@ function App() {
         if (details["x-kubernetes-group-version-kind"]) {
 
             let apiVersion = details["x-kubernetes-group-version-kind"][0].version;
-            if (details["x-kubernetes-group-version-kind"][0].group !== "core") {
+            if (details["x-kubernetes-group-version-kind"][0].group !== "") {
                 apiVersion = `${details["x-kubernetes-group-version-kind"][0].group}/${apiVersion}`
             }
+            apiVersion = apiVersion.trim();
 
-            const gvkYaml = `apiVersion: ${apiVersion}\nkind: ${details["x-kubernetes-group-version-kind"][0].kind}`.trim();
+            return (
+                <div style={{display: "flex", flexDirection: "row", margin: "auto", width: "fit-content"}}>
+                    <div style={{textAlign: "left", marginRight: "50px", whiteSpace: "nowrap"}}>
+                        <b>apiVersion:</b> {apiVersion}<br />
+                        <b>kind:</b> {details["x-kubernetes-group-version-kind"][0].kind}
+                    </div>
+                    {renderExampleButton()}
+                </div>
+            )
+        }
+        return renderExampleButton()
+    }
 
+    const renderExampleButton = () => {
+        if (example !== "") {
+            return (
+                <div>
+                    <Button
+                        variant="outlined"
+                        onClick={() => setShowExample(!showExample)}
+                        style={{whiteSpace: "nowrap"}}
+                    >
+                        {showExample ? "Hide" : "Show"} Example
+                    </Button>
+                </div>
+            )
+        }
+    };
+
+    const renderExample = () => {
+        if (showExample) {
             return (
                 <div>
                     <div style={{width: "fit-content", margin: "auto", textAlign: "left"}}>
-                        <CodeBlock
-                            language={"yaml"}
-                            text={gvkYaml}
-                            theme={dracula}
-                            wrapLines={true}
-                        />
+                        <div>
+                            <pre style={{display: "inline-block", border: "1px solid black", padding: "10px"}}>
+                                {example.result}
+                            </pre>
+                        </div>
+                        <div style={{textAlign: "center"}}>
+                            <span style={{fontSize: "xx-small"}}>Example via <a href={example.source}>{example.text}</a></span>
+                        </div>
                     </div>
                 </div>
             )
@@ -378,7 +430,8 @@ function App() {
                 <div style={{textAlign: "center"}}>
                     <h4>{renderTitle()}</h4>
                     {renderGVK()}<br/>
-                    {renderDescription()}
+                    {renderDescription()}<br />
+                    {renderExample()}
                 </div>
                 {renderBottom()}
             </div>
