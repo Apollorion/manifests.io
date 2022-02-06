@@ -37,3 +37,43 @@ So for instance `./ETC/crds/certmanager-1.7/*.yaml` will generate a product name
 1. Create a new directory under `./ETL/crds/` and name it appropriately.
 2. Copy all supported CRD YAML files under the new directory
 3. Add the version to the frontend application at `./app/src/k8s_details.js` (use the directory name)
+
+# Examples
+Examples are all maintained outside of this repo and pull down on the fly.
+A dictionary of examples is in lambda/examples.py
+
+## Adding or modifying an example
+
+Examples are found via the k8s/product version as a top key in the examples dictionary.  
+This example would support k8s 1.20 and certmanager-1.7
+```
+examples = {
+  "1.20"...
+  "certmanager-1.7"...
+}
+```
+
+Docs can be referenced via a ref that leads to a link (refs are only parsed 1 ref down, no recursion) or directly to a link.  
+This would reference the `common` product and would look for a key called `pod`.  
+`"pod": {"$ref": "common#pod"}`
+
+This would directly reference an example.  
+`pod: {"url": "https://myamazingpod.com/example.yaml", "text": "myamazingpod", "source": "https://myamazingpod.com"}`  
+`url` attribute is a url to the yaml that will be displayed to the user.  
+`text` is the text displayed in the frontend application as the source of the example  
+`source` is the url the text will link to  
+
+If the url needs to reference a specific branch, you can use `$BRANCH` within the `url` and `branch` within the dictionary to define what branch to use.  
+The `url` in the below example would resolve to `https://myamazingpod.com/my-awesome-branch/example.yaml`.  
+This is useful when using github raw content and the same path can support multiple different versions.
+```python
+example = {
+  "1.20": {
+    "branch": "my-awesome-branch",
+    "docs": {
+      "pod": {"url": "https://myamazingpod.com/$BRANCH/example.yaml", "text": "myamazingpod", "source": "https://myamazingpod.com"}
+    }
+  }
+}
+```
+

@@ -30,6 +30,9 @@ resource "aws_api_gateway_deployment" "main" {
     module.keys_k8sVersion_RMI,
     module.search_k8sVersion_RMI,
     module.search_fieldPath_RMI,
+    module.examples_examples_RMI,
+    module.examples_fieldPath_RMI,
+    module.examples_k8sVersion_RMI,
   ]
 }
 
@@ -99,6 +102,33 @@ module "keys_fieldPath_RMI" {
   http_methods      = ["GET"]
   lambda_invoke_arn = aws_lambda_function.api.invoke_arn
   parent_id         = module.keys_k8sVersion_RMI.resource_id
+  path_part         = "{fieldPath}"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
+}
+
+module "examples_examples_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = aws_api_gateway_rest_api.manifests_io.root_resource_id
+  path_part         = "examples"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
+}
+
+module "examples_k8sVersion_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = module.examples_examples_RMI.resource_id
+  path_part         = "{k8sVersion}"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
+}
+
+module "examples_fieldPath_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = module.examples_k8sVersion_RMI.resource_id
   path_part         = "{fieldPath}"
   rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
 }
