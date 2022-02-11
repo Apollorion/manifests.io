@@ -73,6 +73,41 @@ def examples_req(k8s_version, search):
     raise HTTPException(status_code=404, detail=f"No example found.")
 
 
+@app.get("/keys/{k8s_version}/{search}")
+def keys_req(k8s_version, search):
+    if search == "":
+        return []
+
+    search = expand_search_string(search)
+    f = open(f"./dist/{k8s_version}.json", "r")
+    swagger = json.loads(f.read())
+    f.close()
+
+    next = get_next_keys(search, swagger)
+    next.sort()
+
+    return next
+
+
+def get_next_keys(search, swagger, min_requested=10):
+    try:
+        result = get_result_from_swagger(search, swagger)
+    except HTTPException:
+        return []
+
+    keys = []
+    if "properties" in result:
+        for key in result["properties"].keys():
+            keys.append(f"{search}.{key}")
+
+    if len(keys) < min_requested and "properties" in result:
+        for key, value in result["properties"].items():
+            if "properties" in value:
+                keys = keys + get_next_keys(f"{search}.{key}", swagger, min_requested - len(keys))
+
+    return keys
+
+
 def expand_search_string(search):
     search = search.lower().split(".")
     search[0] = expand_shortened_resource_name(search[0])
