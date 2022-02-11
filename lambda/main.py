@@ -83,9 +83,11 @@ def keys_req(k8s_version, search):
     swagger = json.loads(f.read())
     f.close()
 
-    # Include original search in the result and sort alphabetically
-    result = get_next_keys(search, swagger) + [search]
-    result.sort()
+    # Include original search in the result (if the result is greater than 0) and sort alphabetically
+    result = get_next_keys(search, swagger)
+    if len(result) > 0:
+        result = [search] + result
+        result.sort()
 
     return result
 
