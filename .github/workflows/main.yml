@@ -23,9 +23,11 @@ jobs:
         name: Create GitHub deployment
         id: deployment
         with:
-          token: "${{ github.token }}"
-          target_url: https://staging.manifests.io
+          token: "${{ secrets.DEPLOY_TOKEN }}"
+          target_url: https://stage.manifests.io
           environment: Staging
+          ref: ${{ github.event.pull_request.head.ref }}
+          transient_environment: true
 
   create_production_deployment:
     name: "Create Production Deployment"
@@ -36,12 +38,12 @@ jobs:
         name: Create GitHub deployment
         id: deployment
         with:
-          token: "${{ github.token }}"
+          token: "${{ secrets.DEPLOY_TOKEN }}"
           target_url: https://manifests.io
           environment: Production
 
   stage:
-    name: 'Staging Deploymnet'
+    name: 'Staging Deployment'
     runs-on: ubuntu-latest
     if: ${{ github.event.deployment.environment == 'Staging' }}
 
@@ -51,6 +53,14 @@ jobs:
         shell: bash
 
     steps:
+
+      - name: Update deployment status (in progress)
+        uses: altinukshini/deployment-status@releases/v1
+        with:
+          token: "${{ github.token }}"
+          target_url: https://stage.manifests.io
+          state: "in_progress"
+          deployment_id: ${{ github.event.deployment.id }}
 
       # Checkout PR
       - name: Checkout
@@ -122,6 +132,24 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
 
+      - name: Update deployment status (success)
+        if: success()
+        uses: altinukshini/deployment-status@releases/v1
+        with:
+          token: "${{ github.token }}"
+          target_url: https://stage.manifests.io
+          state: "success"
+          deployment_id: ${{ github.event.deployment.id }}
+
+      - name: Update deployment status (failure)
+        if: failure()
+        uses: altinukshini/deployment-status@releases/v1
+        with:
+          token: "${{ github.token }}"
+          target_url: https://stage.manifests.io
+          state: "failure"
+          deployment_id: ${{ github.event.deployment.id }}
+
   push:
     name: 'Production Deployment'
     runs-on: ubuntu-latest
@@ -133,6 +161,14 @@ jobs:
         shell: bash
 
     steps:
+
+      - name: Update deployment status (in progress)
+        uses: altinukshini/deployment-status@releases/v1
+        with:
+          token: "${{ github.token }}"
+          target_url: https://manifests.io
+          state: "in_progress"
+          deployment_id: ${{ github.event.deployment.id }}
 
       # Checkout the repository to the GitHub Actions runner
       - name: Checkout
@@ -202,3 +238,21 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
+
+      - name: Update deployment status (success)
+        if: success()
+        uses: altinukshini/deployment-status@releases/v1
+        with:
+          token: "${{ github.token }}"
+          target_url: https://manifests.io
+          state: "success"
+          deployment_id: ${{ github.event.deployment.id }}
+
+      - name: Update deployment status (failure)
+        if: failure()
+        uses: altinukshini/deployment-status@releases/v1
+        with:
+          token: "${{ github.token }}"
+          target_url: https://manifests.io
+          state: "failure"
+          deployment_id: ${{ github.event.deployment.id }}
