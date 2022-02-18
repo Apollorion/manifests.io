@@ -6,13 +6,44 @@ on:
       - main
   pull_request:
     types: [ labeled ]
+  deployment:
+    environments:
+      - Production
+      - Staging
+
 
 jobs:
 
-  stage:
-    name: 'stage'
+  create_stage_deployment:
+    name: "Create Staging Deployment"
     runs-on: ubuntu-latest
     if: ${{ github.event.label.name == 'safe-to-stage' }}
+    steps:
+      - uses: altinukshini/deployment-action@releases/v1
+        name: Create GitHub deployment
+        id: deployment
+        with:
+          token: "${{ github.token }}"
+          target_url: https://staging.manifests.io
+          environment: Staging
+
+  create_production_deployment:
+    name: "Create Production Deployment"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: altinukshini/deployment-action@releases/v1
+        name: Create GitHub deployment
+        id: deployment
+        with:
+          token: "${{ github.token }}"
+          target_url: https://manifests.io
+          environment: Production
+
+  stage:
+    name: 'Staging Deploymnet'
+    runs-on: ubuntu-latest
+    if: ${{ github.event.deployment.environment == 'Staging' }}
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
@@ -92,9 +123,9 @@ jobs:
           AWS_DEFAULT_REGION: "us-east-1"
 
   push:
-    name: 'push'
+    name: 'Production Deployment'
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: ${{ github.event.deployment.environment == 'Production' }}
 
     # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
