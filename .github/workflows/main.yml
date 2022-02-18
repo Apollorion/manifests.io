@@ -27,7 +27,7 @@ jobs:
           target_url: https://stage.manifests.io
           environment: Staging
           ref: ${{ github.event.pull_request.head.ref }}
-          transient_environment: true
+
 
   create_production_deployment:
     name: "Create Production Deployment"
@@ -41,6 +41,7 @@ jobs:
           token: "${{ secrets.DEPLOY_TOKEN }}"
           target_url: https://manifests.io
           environment: Production
+          production_environment: true
 
   stage:
     name: 'Staging Deployment'
@@ -58,7 +59,7 @@ jobs:
         uses: altinukshini/deployment-status@releases/v1
         with:
           token: "${{ github.token }}"
-          target_url: https://stage.manifests.io
+          environment_url: https://stage.manifests.io
           state: "in_progress"
           deployment_id: ${{ github.event.deployment.id }}
 
@@ -137,7 +138,7 @@ jobs:
         uses: altinukshini/deployment-status@releases/v1
         with:
           token: "${{ github.token }}"
-          target_url: https://stage.manifests.io
+          environment_url: https://stage.manifests.io
           state: "success"
           deployment_id: ${{ github.event.deployment.id }}
 
@@ -146,7 +147,7 @@ jobs:
         uses: altinukshini/deployment-status@releases/v1
         with:
           token: "${{ github.token }}"
-          target_url: https://stage.manifests.io
+          environment_url: https://stage.manifests.io
           state: "failure"
           deployment_id: ${{ github.event.deployment.id }}
 
@@ -166,7 +167,7 @@ jobs:
         uses: altinukshini/deployment-status@releases/v1
         with:
           token: "${{ github.token }}"
-          target_url: https://manifests.io
+          environment_url: https://manifests.io
           state: "in_progress"
           deployment_id: ${{ github.event.deployment.id }}
 
@@ -244,7 +245,7 @@ jobs:
         uses: altinukshini/deployment-status@releases/v1
         with:
           token: "${{ github.token }}"
-          target_url: https://manifests.io
+          environment_url: https://manifests.io
           state: "success"
           deployment_id: ${{ github.event.deployment.id }}
 
@@ -253,6 +254,6 @@ jobs:
         uses: altinukshini/deployment-status@releases/v1
         with:
           token: "${{ github.token }}"
-          target_url: https://manifests.io
+          environment_url: https://manifests.io
           state: "failure"
           deployment_id: ${{ github.event.deployment.id }}
