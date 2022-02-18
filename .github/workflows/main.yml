@@ -28,7 +28,6 @@ jobs:
           environment: Staging
           ref: ${{ github.event.pull_request.head.ref }}
 
-
   create_production_deployment:
     name: "Create Production Deployment"
     runs-on: ubuntu-latest
