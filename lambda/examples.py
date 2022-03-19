@@ -24,7 +24,7 @@ EXAMPLES = {
             "service": {"url": "$URL/$BRANCH/content/en/examples/service/nginx-service.yaml", "text": "kubernetes/website", "source": "https://github.com/kubernetes/website"},
         }
     },
-    "1.23": {
+    "k8s-1.23": {
         "branch": "main",
         "docs": {
             "pod": {"$ref": "common#pod"},
@@ -47,7 +47,7 @@ EXAMPLES = {
             "service": {"$ref": "common#service"},
         }
     },
-    "1.22": {
+    "k8s-1.22": {
         "branch": "release-1.22",
         "docs": {
             "pod": {"$ref": "common#pod"},
@@ -70,7 +70,7 @@ EXAMPLES = {
             "service": {"$ref": "common#service"},
         }
     },
-    "1.21": {
+    "k8s-1.21": {
         "branch": "release-1.21",
         "docs": {
             "pod": {"$ref": "common#pod"},
@@ -93,7 +93,7 @@ EXAMPLES = {
             "service": {"$ref": "common#service"},
         }
     },
-    "1.20": {
+    "k8s-1.20": {
         "branch": "release-1.20",
         "docs": {
             "pod": {"$ref": "common#pod"},
@@ -120,6 +120,7 @@ EXAMPLES = {
 
 
 def get_example(product_version, field_ref):
+    field_ref = field_ref.lower()
     if product_version in EXAMPLES:
         if field_ref in EXAMPLES[product_version]["docs"]:
             doc = EXAMPLES[product_version]["docs"][field_ref]
