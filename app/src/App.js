@@ -34,12 +34,13 @@ function App() {
     // keep query inital state as empty string as to not hit the API with a dumb, unnessary request.
     const [query, setQuery] = useState("");
     const [textBoxQuery, setTextBoxQuery] = useState("");
-    const [k8sVersion, setk8sVersion] = useState(0);
+    const [k8sVersion, setk8sVersion] = useState(false);
     const [details, setDetails] = useState("");
     const [example, setExample] = useState("");
     const [showExample, setShowExample] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [resources, setResources] = useState([]);
     const [requiredList, setRequiredList] = useState([]);
     const [autocomplete, setAutocomplete] = useState([]);
     const [autocompleteLoading, setAutocompleteLoading] = useState(false);
@@ -48,15 +49,8 @@ function App() {
         function setPathStates() {
             if (window.location.pathname === "/") {
                 // Handle naked domais
-                setQuery('pod.spec')
-                setTextBoxQuery('pod.spec')
                 setk8sVersion(k8s.choices.indexOf(k8s.default))
-            } else if (window.location.pathname.split("/").length !== 3) {
-                // handle incorrect length (assume the k8s version wasnt in the URL)
-                const item = window.location.pathname.replace("/", "")
-                setQuery(item)
-                setTextBoxQuery(item)
-                setk8sVersion(k8s.choices.indexOf(k8s.default));
+                window.history.pushState(null, null, `/${k8s.default}/`)
             } else {
                 // handle correct URL's
                 const pathArr = window.location.pathname.split("/");
@@ -64,6 +58,10 @@ function App() {
                     setQuery(pathArr[2])
                     setTextBoxQuery(pathArr[2])
                     setk8sVersion(k8s.choices.indexOf(pathArr[1]));
+                    window.history.pushState(null, null, `/${pathArr[1]}/${pathArr[2]}`)
+                } else {
+                    setk8sVersion(k8s.choices.indexOf(pathArr[1]))
+                    window.history.pushState(null, null, `/${pathArr[1]}/`)
                 }
             }
         }
@@ -77,14 +75,15 @@ function App() {
 
     useEffect(() => {
         const search = async () => {
-            if (query !== "") {
-                setLoading(true);
-                setError("");
-                setDetails("");
-                setExample("");
-                setShowExample(false);
+            setLoading(true);
+            setError("");
+            setDetails("");
+            setExample("");
+            setShowExample(false);
+            setResources([]);
 
-                const detailReq = axios.get(`${apiUrl}${k8s.choices[k8sVersion]}/${query}`);
+            if (query !== "") {
+                const detailReq = axios.get(`${apiUrl}search/${k8s.choices[k8sVersion]}/${query}`);
                 const exampleReq = axios.get(`${apiUrl}examples/${k8s.choices[k8sVersion]}/${query}`);
 
                 // handle detail request
@@ -110,15 +109,31 @@ function App() {
                 } catch (error) {
                     // Ignore any errors
                 }
-
-                window.history.pushState(null, null, `/${k8s.choices[k8sVersion]}/${query}`)
-                if (process.env?.REACT_APP_GA_ID) {
-                    ReactGA.pageview(`/${k8s.choices[k8sVersion]}/${query}`);
+            } else {
+                try {
+                    const response = await axios.get(`${apiUrl}resources/${k8s.choices[k8sVersion]}`);
+                    setResources(response.data);
+                    const productVersion = k8s.choices[k8sVersion].split("-");
+                    setDetails({"description": `Available resources for ${productVersion[0]} version ${productVersion[1]}\n
+                    The searchbox above supports all resources in the ${productVersion[0]} openAPI spec, even if a resource is not listed here.`})
+                } catch (error) {
+                    if (error?.response?.data?.detail) {
+                        setDetails("")
+                        setError(error.response.data.detail);
+                    }
                 }
-                setLoading(false);
             }
+
+            window.history.pushState(null, null, `/${k8s.choices[k8sVersion]}/${query}`)
+            if (process.env?.REACT_APP_GA_ID) {
+                ReactGA.pageview(`/${k8s.choices[k8sVersion]}/${query}`);
+            }
+            setLoading(false);
         };
-        search()
+
+        if(k8sVersion !== false){
+            search();
+        }
     }, [query, k8sVersion]);
 
     useEffect(() => {
@@ -142,7 +157,7 @@ function App() {
 
     const renderDetails = () => {
         let rows = [];
-        if (details?.properties) {
+        if (query !== "" && details?.properties) {
             for (const [key, value] of Object.entries(details.properties)) {
                 let result = {"title": key, "links": value.hasOwnProperty("properties")};
 
@@ -180,6 +195,10 @@ function App() {
                 }
 
                 rows.push(result)
+            }
+        } else {
+            for(const resource of resources){
+                rows.push({"title": resource.resource, "links": true, "description": resource.description.split('\n')});
             }
         }
         return rows;
@@ -230,7 +249,11 @@ function App() {
 
     const navigateToItem = (row) => {
         if (row?.links) {
-            setQuery(`${query}.${row.title}`);
+            if(query === ""){
+                setQuery(`${row.title}`);
+            } else {
+                setQuery(`${query}.${row.title}`);
+            }
             setDetails("");
         }
     };
@@ -394,9 +417,7 @@ function App() {
                             id="search"
                             value={query}
                             onChange={(event, value) => {
-                                if(value !== null){
-                                    setQuery(value)
-                                }
+                                setQuery(value === null ? "" : value)
                             }}
                             inputValue={textBoxQuery}
                             onInputChange={(event, value) => {
