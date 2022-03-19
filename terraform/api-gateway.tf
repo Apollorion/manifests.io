@@ -28,8 +28,11 @@ resource "aws_api_gateway_deployment" "main" {
     module.keys_keys_RMI,
     module.keys_fieldPath_RMI,
     module.keys_k8sVersion_RMI,
+    module.search_search_RMI,
     module.search_k8sVersion_RMI,
     module.search_fieldPath_RMI,
+    module.resources_resources_RMI,
+    module.resources_k8sVersion_RMI,
     module.examples_examples_RMI,
     module.examples_fieldPath_RMI,
     module.examples_k8sVersion_RMI,
@@ -61,11 +64,20 @@ resource "aws_api_gateway_method" "latest" {
   authorization = "NONE"
 }
 
-module "search_k8sVersion_RMI" {
+module "search_search_RMI" {
   source            = "./modules/RMI"
   http_methods      = ["GET"]
   lambda_invoke_arn = aws_lambda_function.api.invoke_arn
   parent_id         = aws_api_gateway_rest_api.manifests_io.root_resource_id
+  path_part         = "search"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
+}
+
+module "search_k8sVersion_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = module.search_search_RMI.resource_id
   path_part         = "{k8sVersion}"
   rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
 }
@@ -76,6 +88,24 @@ module "search_fieldPath_RMI" {
   lambda_invoke_arn = aws_lambda_function.api.invoke_arn
   parent_id         = module.search_k8sVersion_RMI.resource_id
   path_part         = "{fieldPath}"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
+}
+
+module "resources_resources_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = aws_api_gateway_rest_api.manifests_io.root_resource_id
+  path_part         = "resources"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
+}
+
+module "resources_k8sVersion_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = module.resources_resources_RMI.resource_id
+  path_part         = "{k8sVersion}"
   rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
 }
 

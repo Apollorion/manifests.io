@@ -44,7 +44,7 @@ async def validation_exception_handler(request, e):
     return await request_validation_exception_handler(request, e)
 
 
-@app.get("/{k8s_version}/{search}")
+@app.get("/search/{k8s_version}/{search}")
 def search_req(k8s_version, search):
     if k8s_version not in supported_versions:
         raise HTTPException(status_code=404, detail="K8s version not found.")
@@ -92,6 +92,32 @@ def keys_req(k8s_version, search):
     return result
 
 
+@app.get("/resources/{k8s_version}")
+def resources_req(k8s_version):
+    if k8s_version not in supported_versions:
+        raise HTTPException(status_code=404, detail="K8s version not found.")
+
+    f = open(f"./dist/{k8s_version}.json", "r")
+    swagger = json.loads(f.read())
+    f.close()
+
+    items = []
+    keys = []
+    for key, value in swagger["definitions"].items():
+        key = key.split(".")[-1]
+        # The k8s openapi spec lists all resources (even sub resources) at the root level.
+        # This was the best way I could think to get only a list of resources people will actually
+        # care about. Im sure there might be a smarter way to do this, but this works for now.
+        if key not in keys and "properties" in value and "spec" in value["properties"]:
+            keys.append(key)
+            description = "" if "description" not in value else value["description"]
+            items.append({"resource": key, "description": description})
+
+    items = sorted(items, key=lambda x: x["resource"])
+
+    return items
+
+
 def get_next_keys(search, swagger, min_requested=10):
     try:
         result = get_result_from_swagger(search, swagger)
@@ -112,7 +138,7 @@ def get_next_keys(search, swagger, min_requested=10):
 
 
 def expand_search_string(search):
-    search = search.lower().split(".")
+    search = search.split(".")
     search[0] = expand_shortened_resource_name(search[0])
     return '.'.join(search)
 
@@ -152,7 +178,7 @@ def get_result_from_swagger(search, swagger):
 
     swagger = swagger["definitions"]
     search = search.split(".")
-    original_resource = search[0]
+    original_resource = search[0].lower()
 
     resource = get_resource(original_resource, swagger)
     if resource is None:

@@ -1,12 +1,12 @@
 const k8s = {
-    default: "1.23",
+    default: "k8s-1.23",
     choices: [
-        "1.20",
-        "1.21",
-        "1.22",
-        "1.23",
+        "k8s-1.20",
+        "k8s-1.21",
+        "k8s-1.22",
+        "k8s-1.23",
         "certmanager-1.7",
-	"flagger-1.19.0",
+        "flagger-1.19.0",
         "flux-0.27.3",
     ]
 }
