@@ -49,7 +49,6 @@ def search_req(k8s_version, search):
     if k8s_version not in supported_versions:
         raise HTTPException(status_code=404, detail="K8s version not found.")
 
-    # lowercase the entire search string
     search = expand_search_string(search)
 
     f = open(f"./dist/{k8s_version}.json", "r")
