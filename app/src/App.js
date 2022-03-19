@@ -382,7 +382,7 @@ function App() {
       if(!loading && error === ""){
           return (
               <div style={{textAlign: "center", marginTop: "50px", marginBottom: "50px"}}>
-                  <a href={`https://github.com/Apollorion/manifests.io/issues/new?title=Issue%20on%20page${encodeURIComponent(` ${k8s.choices[k8sVersion]}/${query}`)}&body=%23%23%20Description%20of%20issue%0A`}>See an issue here?</a>
+                  <a href={`https://github.com/Apollorion/manifests.io/issues/new?title=Issue%20on%20page${encodeURIComponent(` ${k8s.choices[k8sVersion]}/${query}`)}&body=%23%23%20Description%20of%20issue%0A`}>See an issue here?</a> | <a href="https://status.manifests.io/">Status</a>
               </div>
           )
       }
