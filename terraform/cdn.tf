@@ -22,6 +22,34 @@ module "cdn" {
   }]
 }
 
+module "status_cdn" {
+  count = terraform.workspace == "production" ? 1 : 0
+
+  source  = "cloudposse/cloudfront-s3-cdn/aws"
+  version = "0.40.0"
+
+  aliases             = ["status.${local.tld}"]
+  acm_certificate_arn = data.aws_acm_certificate.main.arn
+  allowed_methods     = ["HEAD", "GET"]
+  name                = "status.${local.tld}"
+  parent_zone_id      = data.aws_route53_zone.manifests_io.zone_id
+  dns_alias_enabled   = true
+  website_enabled     = true
+}
+
+resource "aws_s3_bucket_object" "status_redirect" {
+  count = terraform.workspace == "production" ? 1 : 0
+
+  bucket           = module.status_cdn[count.index].s3_bucket
+  key              = "index.html"
+  source           = ""
+  acl              = "public-read"
+  content_type     = "text/html"
+  etag             = md5("index.html")
+  website_redirect = local.statuspage_url
+  tags             = {}
+}
+
 resource "aws_s3_bucket_object" "websitefiles" {
   count        = length(local.website_files)
   bucket       = module.cdn.s3_bucket
