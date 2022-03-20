@@ -14,12 +14,19 @@ module "cdn" {
   dns_alias_enabled   = true
   website_enabled     = true
 
+  lambda_function_association = [{
+    event_type   = "origin-request"
+    include_body = false
+    lambda_arn   = "${aws_lambda_function.edge.arn}:${aws_lambda_function.edge.version}"
+  }]
+
   custom_error_response = [{
     error_code            = 404
     response_code         = 200
     response_page_path    = "/index.html"
     error_caching_min_ttl = 86400
   }]
+
 }
 
 module "status_cdn" {

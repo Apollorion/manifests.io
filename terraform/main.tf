@@ -2,6 +2,8 @@ provider "aws" {
   region = "us-east-1"
 }
 
+provider "archive" {}
+
 terraform {
   backend "s3" {
     bucket = "apollorion-us-east-1-tfstates"
