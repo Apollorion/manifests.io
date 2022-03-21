@@ -57,11 +57,21 @@ function App() {
                 if (pathArr.length === 3) {
                     setQuery(pathArr[2])
                     setTextBoxQuery(pathArr[2])
-                    setk8sVersion(k8s.choices.indexOf(pathArr[1]));
-                    window.history.pushState(null, null, `/${pathArr[1]}/${pathArr[2]}`)
+                    if (k8s.choices.includes(pathArr[1])) {
+                        setk8sVersion(k8s.choices.indexOf(pathArr[1]));
+                        window.history.pushState(null, null, `/${pathArr[1]}/${pathArr[2]}`)
+                    } else {
+                        setk8sVersion(k8s.choices.indexOf(k8s.default))
+                        window.history.pushState(null, null, `/${k8s.default}/${pathArr[2]}`)
+                    }
                 } else {
-                    setk8sVersion(k8s.choices.indexOf(pathArr[1]))
-                    window.history.pushState(null, null, `/${pathArr[1]}/`)
+                    if (k8s.choices.includes(pathArr[1])) {
+                        setk8sVersion(k8s.choices.indexOf(pathArr[1]));
+                        window.history.pushState(null, null, `/${pathArr[1]}/`)
+                    } else {
+                        setk8sVersion(k8s.choices.indexOf(k8s.default))
+                        window.history.pushState(null, null, `/${k8s.default}/`)
+                    }
                 }
             }
         }
