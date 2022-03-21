@@ -32,3 +32,4 @@ yarn-error.log*
 **/.env
 **/*.egg-info/*
 **/processable/*
+**/.built

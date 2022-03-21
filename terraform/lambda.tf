@@ -28,12 +28,18 @@ resource "aws_iam_role_policy_attachment" "api_vpc_access" {
   role       = aws_iam_role.api.name
 }
 
+data "archive_file" "api" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambda/"
+  output_path = "${path.module}/api_payload.zip"
+}
+
 resource "aws_lambda_function" "api" {
-  filename         = "../payload.zip"
+  filename         = data.archive_file.api.output_path
   function_name    = "manifests_io_api_${terraform.workspace}"
   role             = aws_iam_role.api.arn
   handler          = "main.handler"
-  source_code_hash = filebase64sha256("../payload.zip")
+  source_code_hash = data.archive_file.api.output_base64sha256
   timeout          = 10
   memory_size      = 512
 
@@ -44,5 +50,11 @@ resource "aws_lambda_function" "api" {
       SENTRY_INGEST      = local.secrets["SENTRY_INGEST"]
       SENTRY_ENVIRONMENT = terraform.workspace
     }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      last_modified
+    ]
   }
 }

@@ -101,7 +101,36 @@ jobs:
 
       # Build Lambda Function
       - name: Build Lambda Function
-        run: cd lambda && python3 -m pip install --target ./ -r requirements.txt && zip -r payload.zip ./ && mv payload.zip ../.
+        run: cd lambda && python3 -m pip install --target ./ -r requirements.txt
+
+      - name: Find and Replace URL stage
+        uses: jacobtomlinson/gha-find-replace@v2
+        with:
+          find: "{{ URL }}"
+          replace: 'https://stage.manifests.io/'
+          include: "lambda@edgefunction/main.py"
+
+      - name: Find and Replace API_URL stage
+        uses: jacobtomlinson/gha-find-replace@v2
+        with:
+          find: "{{ API_URL }}"
+          replace: 'https://api.stage.manifests.io/'
+          include: "lambda@edgefunction/main.py"
+
+      # Build Lambda@Edge Function
+      - name: Build Lambda@Edge Function
+        run: |
+          cp app/build/index.html lambda@edgefunction/
+          cd lambda@edgefunction
+          pip install --target ./ -r requirements.txt
+
+      - name: Find and Replace default open graph metadata stage
+        uses: jacobtomlinson/gha-find-replace@v2
+        with:
+          find: '<meta name="ogmetadata">'
+          replace: '<meta property="og:title" content="Easy to read docs for kubernetes, istio, flux and other k8s things!"><meta property="og:site_name" content="Manifests.io"><meta property="og:url" content="https://stage.manifests.io/"><meta property="og:description" content="Easy Kubernetes Documentation!"><meta property="og:image" content="https://stage.manifests.io/ogimage.png">'
+          include: "app/build/index.html"
+
 
       # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
       - name: Terraform Init
@@ -206,7 +235,36 @@ jobs:
 
       # Build Lambda Function
       - name: Build Lambda Function
-        run: cd lambda && python3 -m pip install --target ./ -r requirements.txt && zip -r payload.zip ./ && mv payload.zip ../.
+        run: cd lambda && python3 -m pip install --target ./ -r requirements.txt
+
+      - name: Find and Replace URL prod
+        uses: jacobtomlinson/gha-find-replace@v2
+        with:
+          find: "{{ URL }}"
+          replace: 'https://manifests.io/'
+          include: "lambda@edgefunction/main.py"
+
+      - name: Find and Replace API_URL prod
+        uses: jacobtomlinson/gha-find-replace@v2
+        with:
+          find: "{{ API_URL }}"
+          replace: 'https://api.manifests.io/'
+          include: "lambda@edgefunction/main.py"
+
+
+      # Build Lambda@Edge Function
+      - name: Build Lambda@Edge Function
+        run: |
+          cp app/build/index.html lambda@edgefunction/
+          cd lambda@edgefunction
+          pip install --target ./ -r requirements.txt
+
+      - name: Find and Replace default open graph metadata prod
+        uses: jacobtomlinson/gha-find-replace@v2
+        with:
+          find: '<meta name="ogmetadata">'
+          replace: '<meta property="og:title" content="Easy to read docs for kubernetes, istio, flux and other k8s things!"><meta property="og:site_name" content="Manifests.io"><meta property="og:url" content="https://manifests.io/"><meta property="og:description" content="Easy Kubernetes Documentation!"><meta property="og:image" content="https://manifests.io/ogimage.png">'
+          include: "app/build/index.html"
 
       # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
       - name: Terraform Init
