@@ -260,7 +260,7 @@ def get_resource(resource_search_term, swagger):
     # Find the resource
     for key, value in swagger.items():
         search_key = key.lower().split(".")[-1]
-        if search_key == resource_search_term:
+        if search_key == resource_search_term.lower():
             return swagger[key]
 
     return None
