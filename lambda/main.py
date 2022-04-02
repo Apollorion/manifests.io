@@ -46,6 +46,15 @@ async def validation_exception_handler(request, e):
 
 @app.get("/search/{k8s_version}/{search}")
 def search_req(k8s_version, search):
+    return get_search_result(k8s_version, search)
+
+
+@app.get("/search/{k8s_version}/{search}/{version}")
+def searchversion_req(k8s_version, search, version):
+    return get_search_result(k8s_version, search, version)
+
+
+def get_search_result(k8s_version, search, version=False):
     if k8s_version not in supported_versions:
         raise HTTPException(status_code=404, detail="K8s version not found.")
 
@@ -55,7 +64,7 @@ def search_req(k8s_version, search):
     swagger = json.loads(f.read())
     f.close()
 
-    result = get_result_from_swagger(search, swagger)
+    result = get_result_from_swagger(search, swagger, wanted_version=version)
     return result
 
 
@@ -89,6 +98,27 @@ def keys_req(k8s_version, search):
         result.sort()
 
     return result
+
+
+@app.get("/resourceversions/{k8s_version}/{search}")
+def resourceversions_req(k8s_version, search):
+    if search == "":
+        return []
+
+    search = expand_search_string(search)
+    f = open(f"./dist/{k8s_version}.json", "r")
+    swagger = json.loads(f.read())
+    f.close()
+
+    versions = []
+    wanted_kind = search.split(".")[-1]
+    for key, value in swagger["definitions"].items():
+        gvk = get_gvk_from_resource_key(key)
+        kind = gvk["kind"]
+        if kind.lower() == wanted_kind.lower():
+            if "version" in gvk:
+                versions.append(gvk["version"])
+    return versions
 
 
 @app.get("/resources/{k8s_version}")
@@ -173,36 +203,33 @@ def expand_shortened_resource_name(resource):
     return resource
 
 
-def get_result_from_swagger(search, swagger):
+def get_result_from_swagger(search, swagger, wanted_version=False):
 
     swagger = swagger["definitions"]
     search = search.split(".")
     original_resource = search[0].lower()
 
-    resource = get_resource(original_resource, swagger)
+    # We only set wanted version here, because the resource we get from here
+    # will have subresources versioned within its spec automatically.
+    resource = get_resource(original_resource, swagger, wanted_version)
     if resource is None:
         raise HTTPException(status_code=404, detail=f"Resource {original_resource} not found.")
 
-    # Return the resource if its all that was searched
-    if len(search) == 1:
-        return replace_top_level_refs(search, resource, swagger)
-    else:
+    # find item based off search term
+    del search[0]
+    for term in search:
+        resource = get_resource(term, resource["properties"])
+        if resource is None:
+            raise HTTPException(status_code=404, detail=f"FieldPath {'.'.join(search)} not found in {original_resource}.")
 
-        # find item based off search term
-        del search[0]
-        for term in search:
-            resource = get_resource(term, resource["properties"])
-            if resource is None:
-                raise HTTPException(status_code=404, detail=f"FieldPath {'.'.join(search)} not found in {original_resource}.")
+        hold = get_hold_object(resource)
+        if "$ref" in resource or ("items" in resource and "$ref" in resource["items"]):
+            if "items" in resource:
+                resource = {**get_next_resource(search, resource["items"]["$ref"], swagger), **hold}
+            else:
+                resource = {**get_next_resource(search, resource["$ref"], swagger), **hold}
 
-            hold = get_hold_object(resource)
-            if "$ref" in resource or ("items" in resource and "$ref" in resource["items"]):
-                if "items" in resource:
-                    resource = {**get_next_resource(search, resource["items"]["$ref"], swagger), **hold}
-                else:
-                    resource = {**get_next_resource(search, resource["$ref"], swagger), **hold}
-
-        return replace_top_level_refs(search, resource, swagger)
+    return replace_top_level_refs(search, resource, swagger)
 
 
 def replace_top_level_refs(search, resource, swagger):
@@ -256,14 +283,55 @@ def get_next_resource(search, key, swagger):
         raise HTTPException(status_code=404, detail=f"FieldPath {'.'.join(search)} not found.")
 
 
-def get_resource(resource_search_term, swagger):
+def get_resource(wanted_kind, swagger, wanted_version=False):
     # Find the resource
     for key, value in swagger.items():
-        search_key = key.lower().split(".")[-1]
-        if search_key == resource_search_term.lower():
-            return swagger[key]
+        gvk = get_gvk_from_resource_key(key)
+        kind = gvk["kind"]
+        if kind.lower() == wanted_kind.lower():
+            resource = {**swagger[key], **{"gvk": gvk}}
+            if wanted_version:
+                if "version" in gvk and gvk["version"] == wanted_version:
+                    return resource
+            else:
+                return resource
 
     return None
+
+
+def get_gvk_from_resource_key(key):
+    arr = key.split(".")
+    if len(arr) > 2:
+        kind = arr[-1]
+        del arr[-1]
+        version = arr[-1]
+        del arr[-1]
+        arr.reverse()
+        group = ".".join(arr)
+
+        if group == "core.api.k8s.io":
+            group = ""
+
+        return {
+            "group": group,
+            "version": version,
+            "kind": kind
+        }
+
+    elif len(arr) == 2:
+        kind = arr[-1]
+        del arr[-1]
+        version = arr[-1]
+
+        return {
+            "version": version,
+            "kind": kind
+        }
+
+    else:
+        return {
+            "kind": arr[0]
+        }
 
 
 handler = Mangum(app=app)

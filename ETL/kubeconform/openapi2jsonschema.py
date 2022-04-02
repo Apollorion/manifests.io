@@ -62,7 +62,11 @@ def process_files(files, destination):
                     for version in y["spec"]["versions"]:
                         if "schema" in version and "openAPIV3Schema" in version["schema"]:
                             gvk_kind = y["spec"]["names"]["kind"]
-                            gvk_group = y["spec"]["group"].split(".")[0]
+
+                            gvk_group = y["spec"]["group"].split(".")
+                            gvk_group.reverse()
+                            gvk_group = ".".join(gvk_group)
+
                             gvk_version = version["name"]
 
                             schema = version["schema"]["openAPIV3Schema"]
@@ -70,7 +74,11 @@ def process_files(files, destination):
                             new_crds[f"{gvk_group}.{gvk_version}.{gvk_kind}"] = schema
                         elif "validation" in y["spec"] and "openAPIV3Schema" in y["spec"]["validation"]:
                             gvk_kind = y["spec"]["names"]["kind"]
-                            gvk_group = y["spec"]["group"].split(".")[0]
+
+                            gvk_group = y["spec"]["group"].split(".")
+                            gvk_group.reverse()
+                            gvk_group = ".".join(gvk_group)
+
                             gvk_version = version["name"]
 
                             schema = y["spec"]["validation"]["openAPIV3Schema"]
@@ -78,7 +86,11 @@ def process_files(files, destination):
                             new_crds[f"{gvk_group}.{gvk_version}.{gvk_kind}"] = schema
                 elif "spec" in y and "validation" in y["spec"] and "openAPIV3Schema" in y["spec"]["validation"]:
                     gvk_kind = y["spec"]["names"]["kind"]
-                    gvk_group = y["spec"]["group"].split(".")[0]
+
+                    gvk_group = y["spec"]["group"].split(".")
+                    gvk_group.reverse()
+                    gvk_group = ".".join(gvk_group)
+
                     gvk_version = version["name"]
 
                     schema = y["spec"]["validation"]["openAPIV3Schema"]

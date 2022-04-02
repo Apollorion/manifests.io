@@ -44,6 +44,9 @@ function App() {
     const [requiredList, setRequiredList] = useState([]);
     const [autocomplete, setAutocomplete] = useState([]);
     const [autocompleteLoading, setAutocompleteLoading] = useState(false);
+    const [resourceVersion, setResourceVersion] = useState(false);
+    const [displayedResourceVersion, setDisplayedResourceVersion] = useState("");
+    const [availableVersions, setAvailableVersions] = useState([]);
 
     useEffect(() => {
         function setPathStates() {
@@ -63,6 +66,20 @@ function App() {
                     } else {
                         setk8sVersion(k8s.choices.indexOf(k8s.default))
                         window.history.pushState(null, null, `/${k8s.default}/${pathArr[2]}`)
+                    }
+                } else if (pathArr.length === 4) {
+                    setQuery(pathArr[2])
+                    setTextBoxQuery(pathArr[2])
+                    if (k8s.choices.includes(pathArr[1])) {
+                        setk8sVersion(k8s.choices.indexOf(pathArr[1]));
+                        setResourceVersion(pathArr[3])
+                        setDisplayedResourceVersion(pathArr[3]);
+                        window.history.pushState(null, null, `/${pathArr[1]}/${pathArr[2]}/${pathArr[3]}`)
+                    } else {
+                        setk8sVersion(k8s.choices.indexOf(k8s.default))
+                        setResourceVersion(pathArr[3])
+                        setDisplayedResourceVersion(pathArr[3]);
+                        window.history.pushState(null, null, `/${k8s.default}/${pathArr[2]}/${pathArr[3]}`)
                     }
                 } else {
                     if (k8s.choices.includes(pathArr[1])) {
@@ -91,9 +108,17 @@ function App() {
             setExample("");
             setShowExample(false);
             setResources([]);
+            setAvailableVersions([]);
 
             if (query !== "") {
-                const detailReq = axios.get(`${apiUrl}search/${k8s.choices[k8sVersion]}/${query}`);
+                let searchUrl = `${apiUrl}search/${k8s.choices[k8sVersion]}/${query}`;
+                const versionsReq = axios.get(searchUrl.replace("/search/", "/resourceversions/"));
+
+                if(resourceVersion){
+                    searchUrl = searchUrl + `/${resourceVersion}`;
+                }
+
+                const detailReq = axios.get(searchUrl);
                 const exampleReq = axios.get(`${apiUrl}examples/${k8s.choices[k8sVersion]}/${query}`);
 
                 // handle detail request
@@ -119,6 +144,17 @@ function App() {
                 } catch (error) {
                     // Ignore any errors
                 }
+
+                // handle versions request
+                try {
+                    const response = await versionsReq;
+                    if(response?.data && response?.data.length > 1){
+                        setAvailableVersions(response.data);
+                    }
+                } catch (error) {
+                    // Ignore any errors
+                }
+
             } else {
                 try {
                     const response = await axios.get(`${apiUrl}resources/${k8s.choices[k8sVersion]}`);
@@ -134,7 +170,11 @@ function App() {
                 }
             }
 
-            window.history.pushState(null, null, `/${k8s.choices[k8sVersion]}/${query}`)
+            let windowHistory = `/${k8s.choices[k8sVersion]}/${query}`;
+            if(resourceVersion) {
+                windowHistory = windowHistory + `/${resourceVersion}`;
+            }
+            window.history.pushState(null, null, windowHistory)
             if (process.env?.REACT_APP_GA_ID) {
                 ReactGA.pageview(`/${k8s.choices[k8sVersion]}/${query}`);
             }
@@ -144,7 +184,7 @@ function App() {
         if(k8sVersion !== false){
             search();
         }
-    }, [query, k8sVersion]);
+    }, [query, k8sVersion, resourceVersion]);
 
     useEffect(() => {
         const getAutoComplete = async () => {
@@ -215,14 +255,7 @@ function App() {
     };
 
     const renderBottom = () => {
-        if (loading) {
-            return (
-                <div style={{textAlign: "center"}}>
-                    Searching...<br/>
-                    <MeteorRainLoading/>
-                </div>
-            )
-        } else if (error !== "") {
+        if (error !== "") {
             return (
                 <div style={{textAlign: "center"}}>
                     <p>{error}</p>
@@ -317,11 +350,10 @@ function App() {
     };
 
     const renderGVK = () => {
-        if (details["x-kubernetes-group-version-kind"]) {
-
-            let apiVersion = details["x-kubernetes-group-version-kind"][0].version;
-            if (details["x-kubernetes-group-version-kind"][0].group !== "") {
-                apiVersion = `${details["x-kubernetes-group-version-kind"][0].group}/${apiVersion}`
+        if (details["gvk"] && details["gvk"].version) {
+            let apiVersion = details["gvk"].version;
+            if (details["gvk"].group !== undefined && details["gvk"].group !== "") {
+                apiVersion = `${details["gvk"].group}/${apiVersion}`
             }
             apiVersion = apiVersion.trim();
 
@@ -329,7 +361,7 @@ function App() {
                 <div style={{display: "flex", flexDirection: "row", margin: "auto", width: "fit-content"}}>
                     <div style={{textAlign: "left", marginRight: "50px", whiteSpace: "nowrap"}}>
                         <b>apiVersion:</b> {apiVersion}<br />
-                        <b>kind:</b> {details["x-kubernetes-group-version-kind"][0].kind}
+                        <b>kind:</b> {details["gvk"].kind}
                     </div>
                     {renderExampleButton()}
                 </div>
@@ -350,6 +382,33 @@ function App() {
                         {showExample ? "Hide" : "Show"} Example
                     </Button>
                 </div>
+            )
+        }
+    };
+
+    const renderVersionsList = () => {
+        if (availableVersions.length > 0) {
+            if(displayedResourceVersion === ""){
+                setDisplayedResourceVersion(availableVersions[0]);
+            }
+
+            return (
+                <TextField
+                    select
+                    sx={{width: '20ch'}}
+                    id="version-select"
+                    value={availableVersions[availableVersions.indexOf(displayedResourceVersion)]}
+                    variant="standard"
+                    label="resource version"
+                    onChange={(event) => {
+                        setResourceVersion(event.target.value);
+                        setDisplayedResourceVersion(event.target.value)
+                    }}
+                >
+                    {availableVersions.map((item, index) => {
+                        return <MenuItem key={index} value={item}>{item}</MenuItem>
+                    })}
+                </TextField>
             )
         }
     };
@@ -389,14 +448,22 @@ function App() {
     };
 
     const renderIssueLink = () => {
-      if(!loading && error === ""){
-          return (
-              <div style={{textAlign: "center", marginTop: "50px", marginBottom: "50px"}}>
-                  <a href={`https://github.com/Apollorion/manifests.io/issues/new?title=Issue%20on%20page${encodeURIComponent(` ${k8s.choices[k8sVersion]}/${query}`)}&body=%23%23%20Description%20of%20issue%0A`}>See an issue here?</a> | <a href="https://status.manifests.io/">Status</a>
-              </div>
-          )
-      }
+        return (
+            <div style={{textAlign: "center", marginTop: "50px", marginBottom: "50px"}}>
+                <a href={`https://github.com/Apollorion/manifests.io/issues/new?title=Issue%20on%20page${encodeURIComponent(` ${k8s.choices[k8sVersion]}/${query}`)}&body=%23%23%20Description%20of%20issue%0A`}>See an issue here?</a> | <a href="https://status.manifests.io/">Status</a>
+            </div>
+        )
     };
+
+    if (loading) {
+        return <div style={{display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", flexDirection: "column"}}>
+            <h1>Searching...</h1>
+            <br />
+            <MeteorRainLoading size="large" style={{display: "block"}}/>
+            <br />
+            {renderIssueLink()}
+        </div>
+    }
 
     return (
         <div className="App" style={{marginBottom: "50px"}}>
@@ -427,6 +494,7 @@ function App() {
                             id="search"
                             value={query}
                             onChange={(event, value) => {
+                                setResourceVersion(false);
                                 setQuery(value === null ? "" : value)
                             }}
                             inputValue={textBoxQuery}
@@ -455,14 +523,15 @@ function App() {
                                 />);
                             }}
                         />
+                        {renderVersionsList()}
                     </FormControl>
                 </div>
             </div>
             <div>
                 <div style={{textAlign: "center"}}>
                     <h4>{renderTitle()}</h4>
-                    {renderGVK()}<br/>
-                    {renderDescription()}<br />
+                    {renderGVK()}
+                    {renderDescription()}
                     {renderExample()}
                 </div>
                 {renderBottom()}

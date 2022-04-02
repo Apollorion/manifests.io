@@ -31,11 +31,15 @@ resource "aws_api_gateway_deployment" "main" {
     module.search_search_RMI,
     module.search_k8sVersion_RMI,
     module.search_fieldPath_RMI,
+    module.search_resourceVersion_RMI,
     module.resources_resources_RMI,
     module.resources_k8sVersion_RMI,
     module.examples_examples_RMI,
     module.examples_fieldPath_RMI,
     module.examples_k8sVersion_RMI,
+    module.resourceversions_resourceversions_RMI,
+    module.resourceversions_k8sVersion_RMI,
+    module.resourceversions_search_RMI,
   ]
 }
 
@@ -91,6 +95,15 @@ module "search_fieldPath_RMI" {
   rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
 }
 
+module "search_resourceVersion_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = module.search_fieldPath_RMI.resource_id
+  path_part         = "{resourceVersion}"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
+}
+
 module "resources_resources_RMI" {
   source            = "./modules/RMI"
   http_methods      = ["GET"]
@@ -106,6 +119,33 @@ module "resources_k8sVersion_RMI" {
   lambda_invoke_arn = aws_lambda_function.api.invoke_arn
   parent_id         = module.resources_resources_RMI.resource_id
   path_part         = "{k8sVersion}"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
+}
+
+module "resourceversions_resourceversions_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = aws_api_gateway_rest_api.manifests_io.root_resource_id
+  path_part         = "resourceversions"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
+}
+
+module "resourceversions_k8sVersion_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = module.resourceversions_resourceversions_RMI.resource_id
+  path_part         = "{k8s_version}"
+  rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
+}
+
+module "resourceversions_search_RMI" {
+  source            = "./modules/RMI"
+  http_methods      = ["GET"]
+  lambda_invoke_arn = aws_lambda_function.api.invoke_arn
+  parent_id         = module.resourceversions_k8sVersion_RMI.resource_id
+  path_part         = "{search}"
   rest_api_id       = aws_api_gateway_rest_api.manifests_io.id
 }
 
