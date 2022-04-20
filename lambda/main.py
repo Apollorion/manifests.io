@@ -218,6 +218,10 @@ def get_result_from_swagger(search, swagger, wanted_version=False):
     # find item based off search term
     del search[0]
     for term in search:
+        if "items" in resource:
+            resource["properties"] = resource["items"]["properties"]
+            del resource["items"]
+
         resource = get_resource(term, resource["properties"])
         if resource is None:
             raise HTTPException(status_code=404, detail=f"FieldPath {'.'.join(search)} not found in {original_resource}.")
@@ -253,7 +257,14 @@ def replace_top_level_refs(search, resource, swagger):
                 next_resource = {**get_next_resource(search, value["$ref"], swagger), **hold}
             new_resource[i][key] = next_resource
         else:
+            if "items" in value:
+                value = value["items"]
+                value["type"] = "array"
             new_resource[i][key] = value
+
+    if "items" in new_resource:
+        new_resource["properties"] = new_resource["items"]["properties"]
+        del new_resource["items"]
 
     return new_resource
 
