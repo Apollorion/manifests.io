@@ -8,6 +8,7 @@ const k8s = {
         "certmanager-1.7",
         "flagger-1.19.0",
         "flux-0.27.3",
+        "istio-1.13.3",
     ]
 }
 
