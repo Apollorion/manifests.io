@@ -31,7 +31,7 @@ jobs:
         with:
           aws-region: "us-east-1"
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          role-session-name: "GHA Manifests Staging"
+          role-session-name: "manifests-io-staging"
           role-duration-seconds: 900
 
       - uses: altinukshini/deployment-action@releases/v1
@@ -171,7 +171,7 @@ jobs:
         with:
           aws-region: "us-east-1"
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          role-session-name: "GHA Manifests Production"
+          role-session-name: "manifests-io-production"
           role-duration-seconds: 900
 
       - uses: altinukshini/deployment-action@releases/v1
