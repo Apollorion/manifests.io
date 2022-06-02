@@ -16,7 +16,6 @@ import Button from "@mui/material/Button";
 import {useState, useEffect, Fragment} from 'react';
 import axios from 'axios';
 import {MeteorRainLoading} from 'react-loadingg';
-import ReactGA from 'react-ga';
 
 import k8s from './k8s_details';
 
@@ -25,10 +24,6 @@ if (process.env?.REACT_APP_API_URL) {
     apiUrl = process.env.REACT_APP_API_URL;
 }
 console.log("Using API", apiUrl);
-
-if (process.env?.REACT_APP_GA_ID) {
-    ReactGA.initialize(process.env.REACT_APP_GA_ID);
-}
 
 function App() {
 
@@ -176,9 +171,6 @@ function App() {
                 windowHistory = windowHistory + `/${resourceVersion}`;
             }
             window.history.pushState(null, null, windowHistory)
-            if (process.env?.REACT_APP_GA_ID) {
-                ReactGA.pageview(`/${k8s.choices[k8sVersion]}/${query}`);
-            }
             setLoading(false);
         };
 
