@@ -5,6 +5,7 @@ const k8s = {
         "k8s-1.21",
         "k8s-1.22",
         "k8s-1.23",
+	"argo-3.3.8",
         "certmanager-1.7",
         "flagger-1.19.0",
         "flux-0.27.3",
