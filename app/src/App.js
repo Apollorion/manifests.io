@@ -157,7 +157,11 @@ function App() {
                     setResources(response.data);
                     const productVersion = k8s.choices[k8sVersion].split("-");
                     setDetails({"description": `Available resources for ${productVersion[0]} version ${productVersion[1]}\n
-                    The searchbox above supports all resources in the ${productVersion[0]} openAPI spec, even if a resource is not listed here.`})
+                    The searchbox above supports all resources in the ${productVersion[0]} openAPI spec, even if a resource is not listed here.\n\n
+                    ANNOUNCEMENT\n
+                    Im rewriting this site with NextJS, see a preview at https://next.manifests.io/\n
+                    Leave feedback on the next github repo https://github.com/Apollorion/manifests.io-next\n\n
+                    `})
                 } catch (error) {
                     if (error?.response?.data?.detail) {
                         setDetails("")
