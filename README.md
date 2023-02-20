@@ -8,7 +8,7 @@ Easy to use online kubernetes documentation.
 
 ## Devving this repo
 1. clone this repository
-2. `cd manifests.io-next`
+2. `cd manifests.io`
 3. `yarn install`
 4. `yarn dev`
 
