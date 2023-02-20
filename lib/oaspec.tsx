@@ -1,0 +1,99 @@
+import kubernetes124 from "../oaspec/kubernetes/1.24.json";
+import kubernetes123 from "../oaspec/kubernetes/1.23.json";
+import kubernetes122 from "../oaspec/kubernetes/1.22.json";
+import kubernetes121 from "../oaspec/kubernetes/1.21.json";
+import kubernetes120 from "../oaspec/kubernetes/1.20.json";
+
+import certmanager171 from "../oaspec/certmanager/1.7.json";
+
+import flagger1190 from "../oaspec/flagger/1.19.0.json";
+
+import flux0273 from "../oaspec/flux/0.27.3.json";
+
+import istio1133 from "../oaspec/istio/1.13.3.json";
+
+type KubernetesOpenApiSpec = {
+    definitions: {
+        [key: string]: {
+            description?: string;
+            properties?: {
+                [key: string]: {
+                    description?: string;
+                    items?: {
+                        type?: string;
+                        $ref?: string;
+                    }
+                    type?: string;
+                    $ref?: string;
+                }
+            }
+            required?: Array<string>;
+            type?: string;
+            "x-kubernetes-group-version-kind"?: Array<{
+                group: string;
+                kind: string;
+                version: string;
+            }>
+        }
+    }
+}
+
+export function oaspecFetch(item: string, version: string): KubernetesOpenApiSpec {
+    if (item === "kubernetes") {
+        switch(version) {
+            case "1.24":
+                return kubernetes124;
+            case "1.23":
+                return kubernetes123;
+            case "1.22":
+                return kubernetes122;
+            case "1.21":
+                return kubernetes121;
+            case "1.20":
+                return kubernetes120;
+        }
+    }
+
+    if (item === "certmanager") {
+        if (version === "1.7") {
+            return certmanager171;
+        }
+    }
+
+    if(item === "flagger"){
+        if(version === "1.19.0"){
+            return flagger1190;
+        }
+    }
+
+    if(item === "flux"){
+        if(version === "0.27.3"){
+            return flux0273;
+        }
+    }
+
+    if(item === "istio"){
+        if(version === "1.13.3"){
+            return istio1133;
+        }
+    }
+
+    throw new Error("Open Api Spec Not Found");
+}
+
+export function availableItemVersions(): {[key: string]: Array<string>} {
+    return {
+        "certmanager": ["1.7"],
+        "flagger": ["1.19.0"],
+        "flux": ["0.27.3"],
+        "istio": ["1.13.3"],
+        "kubernetes": ["1.20", "1.21", "1.22", "1.23", "1.24"]
+    }
+}
+
+export function defaultItemVersion(): {item: string, version: string} {
+    return {
+        item: "kubernetes",
+        version: "1.24"
+    }
+}
