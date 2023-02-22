@@ -12,9 +12,10 @@ type Props = {
     version: string;
     linkedResource?: string;
     required?: Array<string>;
+    leftHeading: string;
 };
 
-export default function ResourceTable({resources, item, version, linkedResource, required}: Props) {
+export default function ResourceTable({leftHeading, resources, item, version, linkedResource, required}: Props) {
 
     function generateLink(resource: Resource){
         if(linkedResource){
@@ -34,7 +35,7 @@ export default function ResourceTable({resources, item, version, linkedResource,
         <table style={{width: "100%", borderCollapse: "collapse", marginTop: "1rem"}}>
             <thead>
             <tr style={{padding: "10px", borderBottom: "1pt solid var(--table-border)", backgroundColor: "var(--table-heading-bg)"}}>
-                <td style={{padding: "10px"}}><b>Item</b></td>
+                <td style={{padding: "10px"}}><b>{leftHeading}</b></td>
                 <td style={{padding: "10px"}}><b>Description</b></td>
             </tr>
             </thead>
