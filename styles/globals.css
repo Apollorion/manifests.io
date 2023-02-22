@@ -13,6 +13,7 @@
   --card-rgb: 180, 185, 188;
   --card-border-rgb: 131, 134, 135;
 
+  --header-bg: rgba(255,255,255,.75);
   --table-border: #666;
   --table-heading-bg: #f0f0f0;
 }
@@ -28,6 +29,7 @@
     --card-rgb: 100, 100, 100;
     --card-border-rgb: 200, 200, 200;
 
+    --header-bg: rgba(0,0,0,.75);
     --table-border: #444;
     --table-heading-bg: #222;
   }

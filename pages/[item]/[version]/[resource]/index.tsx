@@ -1,7 +1,7 @@
-import Head from 'next/head'
 import styles from '@/styles/Home.module.css'
 import {GetServerSideProps} from "next";
 import { oaspecFetch } from "@/lib/oaspec";
+import Layout from '@/components/Layout';
 import SearchBar from "@/components/SearchBar";
 import ResourceTable from "@/components/ResourceTable";
 import ReportIssue from "@/components/ReportIssue";
@@ -41,7 +41,7 @@ function Gvk({gvk}: {gvk: Array<{group: string, kind: string, version: string}>}
 
 export default function Home({resources, item, version, linkedResource, description, resource, gvk, required}: Props) {
     return (
-        <>
+        <Layout item={item} version={version}>
             <ManifestsHeading
                 item={item}
                 version={version}
@@ -49,8 +49,6 @@ export default function Home({resources, item, version, linkedResource, descript
                 resource={resource}
             />
             <main className={styles.main}>
-                <HeartApollorion />
-                <SearchBar pageItem={item} pageVersion={version} />
                 <h1 style={{marginTop: "20px", marginBottom: "50px"}}>{linkedResource}</h1>
                 {gvk && (
                     <div style={{marginTop: "-30px", marginBottom: "30px", textAlign: "center"}}>
@@ -62,7 +60,7 @@ export default function Home({resources, item, version, linkedResource, descript
                 <ResourceTable leftHeading="Key" required={required} resources={resources} item={item} version={version} linkedResource={linkedResource} />
                 <ReportIssue resource={resource} item={item} />
             </main>
-        </>
+        </Layout>
     )
 }
 
