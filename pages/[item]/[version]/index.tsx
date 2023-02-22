@@ -37,7 +37,7 @@ export default function Home({resources, item, version}: Props) {
                     Available resources for {item} version {version}.<br/>
                     Your browsers url supports all resources in the {item} openAPI spec, even if a resource is not listed here.
                 </p>
-                <ResourceTable resources={resources} item={item} version={version} />
+                <ResourceTable leftHeading="Object" resources={resources} item={item} version={version} />
                 <ReportIssue item={item} />
             </main>
         </>

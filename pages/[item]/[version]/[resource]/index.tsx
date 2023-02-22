@@ -59,7 +59,7 @@ export default function Home({resources, item, version, linkedResource, descript
                     </div>
                 )}
                 <p>{description}</p>
-                <ResourceTable required={required} resources={resources} item={item} version={version} linkedResource={linkedResource} />
+                <ResourceTable leftHeading="Key" required={required} resources={resources} item={item} version={version} linkedResource={linkedResource} />
                 <ReportIssue resource={resource} item={item} />
             </main>
         </>
