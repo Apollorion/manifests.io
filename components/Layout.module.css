@@ -1,0 +1,32 @@
+.header {
+  padding: 15px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9;
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--table-border);
+}
+.wrapper {
+  max-width: var(--max-width);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 auto;
+}
+.header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.header span {
+  font-size: small;
+}
+
+@media screen and (max-width: 768px) {
+  .header span {
+    display: none;
+  }
+  
+}
