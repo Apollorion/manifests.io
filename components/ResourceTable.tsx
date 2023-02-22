@@ -31,16 +31,16 @@ export default function ResourceTable({resources, item, version, linkedResource,
     }
 
     return (
-        <table style={{width: "100%", borderCollapse: "collapse"}}>
+        <table style={{width: "100%", borderCollapse: "collapse", marginTop: "1rem"}}>
             <thead>
-            <tr style={{padding: "10px", borderBottom: "1pt solid white"}}>
+            <tr style={{padding: "10px", borderBottom: "1pt solid var(--table-border)", backgroundColor: "var(--table-heading-bg)"}}>
                 <td style={{padding: "10px"}}><b>Item</b></td>
                 <td style={{padding: "10px"}}><b>Description</b></td>
             </tr>
             </thead>
             <tbody>
             {resources.map((resource) => (
-                <tr key={resource.resource} style={{padding: "10px", borderBottom: "1pt solid white"}}>
+                <tr key={resource.resource} style={{padding: "10px", borderBottom: "1pt solid var(--table-border)"}}>
                     <td style={{padding: "10px", whiteSpace: "nowrap"}}>
                         <b>{resource.links ? <a href={generateLink(resource)}><span className="link">{resource.resource}</span> 🔗</a> : resource.resource}</b><br/>
                         <small>{resource.type} {generateRequiredStar(resource.resource)}</small>

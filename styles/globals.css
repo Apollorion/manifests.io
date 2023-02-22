@@ -38,6 +38,9 @@
   --callout-border-rgb: 172, 175, 176;
   --card-rgb: 180, 185, 188;
   --card-border-rgb: 131, 134, 135;
+
+  --table-border: #666;
+  --table-heading-bg: #f0f0f0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -70,6 +73,9 @@
     --callout-border-rgb: 108, 108, 108;
     --card-rgb: 100, 100, 100;
     --card-border-rgb: 200, 200, 200;
+
+    --table-border: #444;
+    --table-heading-bg: #222;
   }
 }
 
@@ -117,6 +123,8 @@ body {
   sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  padding: 0 1rem;
+  line-height: 1.4;
 }
 
 code {
