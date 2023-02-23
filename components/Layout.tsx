@@ -15,7 +15,9 @@ export default function Layout({children, item, version, resource, linked}: Prop
             <header className={styles.header}>
                 <div className={styles.wrapper}>
                     <div>
-                        <h1><a href={`/${item}/${version}`}>Manifests.io</a></h1>
+                        <h1><a href={`/${item}/${version}`}>Manifests.io</a>
+                            <button onClick={() => scroll({top: document.body.scrollHeight, behavior: "smooth"})}>?</button>
+                        </h1>
                         <span>Easy to use kubernetes documentation</span>
                     </div>
                     <SearchBar pageItem={item} pageVersion={version} resource={resource} linked={linked}/>

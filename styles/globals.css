@@ -16,6 +16,9 @@
   --header-bg: rgba(255,255,255,.75);
   --table-border: #666;
   --table-heading-bg: #f0f0f0;
+  --info-bg: #555;
+  --info-text: #fff;
+  --info-focus: blue;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,6 +35,9 @@
     --header-bg: rgba(0,0,0,.75);
     --table-border: #444;
     --table-heading-bg: #222;
+    --info-bg: #aaa;
+    --info-text: #222;
+    --info-focus: lightblue;
   }
 }
 
@@ -81,6 +87,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   padding: 0 1rem;
   line-height: 1.4;
+  scroll-behavior: smooth;
 }
 
 code {
