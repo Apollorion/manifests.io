@@ -19,6 +19,8 @@
   --info-bg: #555;
   --info-text: #fff;
   --info-focus: blue;
+  --footer-bg: #eee;
+  --footer-text: #333;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,7 +40,9 @@
     --info-bg: #aaa;
     --info-text: #222;
     --info-focus: lightblue;
-  }
+    --footer-bg: #333;
+    --footer-text: #fff;
+    }
 }
 
 * {
