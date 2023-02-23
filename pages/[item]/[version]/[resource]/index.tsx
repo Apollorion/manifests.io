@@ -2,10 +2,8 @@ import styles from '@/styles/Home.module.css'
 import {GetServerSideProps} from "next";
 import { oaspecFetch } from "@/lib/oaspec";
 import Layout from '@/components/Layout';
-import SearchBar from "@/components/SearchBar";
 import ResourceTable from "@/components/ResourceTable";
 import ReportIssue from "@/components/ReportIssue";
-import HeartApollorion from "@/components/HeartApollorion";
 import ManifestsHeading from "@/components/ManifestsHeading";
 
 type Resource = {
@@ -41,7 +39,7 @@ function Gvk({gvk}: {gvk: Array<{group: string, kind: string, version: string}>}
 
 export default function Home({resources, item, version, linkedResource, description, resource, gvk, required}: Props) {
     return (
-        <Layout item={item} version={version}>
+        <Layout item={item} version={version} resource={resource} linked={linkedResource}>
             <ManifestsHeading
                 item={item}
                 version={version}
@@ -56,7 +54,7 @@ export default function Home({resources, item, version, linkedResource, descript
                         <Gvk gvk={gvk} />
                     </div>
                 )}
-                <p>{description}</p>
+                <p style={{whiteSpace: "pre-wrap"}}>{description}</p>
                 <ResourceTable leftHeading="Key" required={required} resources={resources} item={item} version={version} linkedResource={linkedResource} />
                 <ReportIssue resource={resource} item={item} />
             </main>
@@ -92,6 +90,9 @@ export const getServerSideProps: GetServerSideProps = async ({query}) => {
         for (const [key, value] of Object.entries(resourceSpec.properties)) {
             const resource = key.split(".").pop();
             if (resource && !resource.endsWith("List") && !(resourceNames.includes(resource))) {
+                if(!value.description){
+                    value.description = "";
+                }
                 // @ts-ignore
                 let resourceObj: Resource = {resource, description: value.description, key};
                 // @ts-ignore
