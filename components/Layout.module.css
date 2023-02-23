@@ -25,7 +25,7 @@
   position: absolute;
   border: none;
   outline: none;
-  top: 10px;
+  top: .7em;
   right: -20px;
   width: 15px;
   height: 15px;
@@ -54,5 +54,7 @@
   .header span {
     display: none;
   }
-  
+  .header h1 {
+    font-size: 1.3rem;
+  }
 }
