@@ -25,7 +25,7 @@ export default function Layout({children, item, version, resource, linked}: Prop
                 </div>
             </header>
                 {children}
-            <footer style={{ display: 'flex', justifyContent: 'center', height: "50px"}}>
+            <footer style={{ display: 'flex', justifyContent: 'center'}}>
                 <HeartApollorion />
             </footer>
         </>
