@@ -1,4 +1,5 @@
 import {availableItemVersions} from "@/lib/oaspec";
+import styles from "./SearchBar.module.css";
 
 function SearchBar({pageItem, pageVersion}: {pageItem: string, pageVersion: string}){
     const itemVersions = availableItemVersions();
@@ -8,9 +9,9 @@ function SearchBar({pageItem, pageVersion}: {pageItem: string, pageVersion: stri
     }
 
     return (
-        <div>
+        <div className={styles.selector}>
+            <label htmlFor="product">Choose a spec:</label>
             <select
-                style={{width: "50ch", textAlignLast: "center"}}
                 name="product"
                 id="product"
                 defaultValue={`/${pageItem}/${pageVersion}`}

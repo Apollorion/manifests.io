@@ -5,4 +5,21 @@
   min-height: 100vh;
   max-width: var(--max-width);
   margin: 0 auto;
+  padding-top: 80px;
+}
+
+.intro {
+  margin-top: 40px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.intro h3 {
+  font-weight: normal;
+  font-size: 1.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.intro code {
+  font-weight: bold;
 }

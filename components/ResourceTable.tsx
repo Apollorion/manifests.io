@@ -1,3 +1,5 @@
+import styles from "./ResourceTable.module.css";
+
 type Resource = {
     resource: string;
     description: string;
@@ -32,21 +34,21 @@ export default function ResourceTable({leftHeading, resources, item, version, li
     }
 
     return (
-        <table style={{width: "100%", borderCollapse: "collapse", marginTop: "1rem"}}>
+        <table className={styles.table}>
             <thead>
-            <tr style={{padding: "10px", borderBottom: "1pt solid var(--table-border)", backgroundColor: "var(--table-heading-bg)"}}>
-                <td style={{padding: "10px"}}><b>{leftHeading}</b></td>
-                <td style={{padding: "10px"}}><b>Description</b></td>
+            <tr style={{backgroundColor: "var(--table-heading-bg)"}}>
+                <th>{leftHeading}</th>
+                <th>Description</th>
             </tr>
             </thead>
             <tbody>
             {resources.map((resource) => (
-                <tr key={resource.resource} style={{padding: "10px", borderBottom: "1pt solid var(--table-border)"}}>
-                    <td style={{padding: "10px", whiteSpace: "nowrap"}}>
+                <tr key={resource.resource}>
+                    <td>
                         <b>{resource.links ? <a href={generateLink(resource)}><span className="link">{resource.resource}</span> 🔗</a> : resource.resource}</b><br/>
                         <small>{resource.type} {generateRequiredStar(resource.resource)}</small>
                     </td>
-                    <td style={{padding: "10px"}}><p style={{whiteSpace: "pre-line"}}>{resource.description}</p></td>
+                    <td><p>{resource.description}</p></td>
                 </tr>
             ))}
             </tbody>

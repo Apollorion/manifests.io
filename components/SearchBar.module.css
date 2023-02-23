@@ -1,0 +1,25 @@
+.selector {
+  display: flex;
+  align-items: center;
+}
+.selector label {
+  font-size: .9rem;
+  margin-right: .5rem;
+}
+.selector select {
+  padding: .4rem;
+  font-size: 1.1rem;
+}
+
+@media screen and (max-width: 768px) {
+  .selector select {
+    padding: .25rem;
+    font-size: 1rem;
+  } 
+}
+
+@media screen and (max-width: 500px) {
+  .selector label {
+    display: none;
+  }
+}

@@ -2,6 +2,7 @@ import Head from 'next/head'
 import styles from '@/styles/Home.module.css'
 import {GetServerSideProps} from "next";
 import { oaspecFetch } from "@/lib/oaspec";
+import Layout from '@/components/Layout';
 import HeartApollorion from "@/components/HeartApollorion";
 import SearchBar from "@/components/SearchBar";
 import ResourceTable from "@/components/ResourceTable";
@@ -24,23 +25,25 @@ type Props = {
 
 export default function Home({resources, item, version}: Props) {
     return (
-        <>
+        <Layout item={item} version={version}>
             <ManifestsHeading
                 item={item}
                 version={version}
                 description={""}
             />
             <main className={styles.main}>
-                <HeartApollorion />
-                <SearchBar pageItem={item} pageVersion={version} />
-                <p style={{marginTop: "50px", marginBottom: "20px", textAlign: "center"}}>
-                    Available resources for {item} version {version}.<br/>
-                    Your browsers url supports all resources in the {item} openAPI spec, even if a resource is not listed here.
-                </p>
+                <div className={styles.intro}>
+                    <h3>
+                        Available resources for <code>{item}</code> version <code>{version}</code>
+                    </h3>
+                    <p>
+                        Your browsers url supports all resources in the {item} openAPI spec, even if a resource is not listed here.
+                    </p>
+                </div>
                 <ResourceTable leftHeading="Object" resources={resources} item={item} version={version} />
                 <ReportIssue item={item} />
             </main>
-        </>
+        </Layout>
     )
 }
 
