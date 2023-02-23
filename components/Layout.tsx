@@ -1,5 +1,6 @@
 import SearchBar from "./SearchBar";
 import styles from "./Layout.module.css";
+import HeartApollorion from "@/components/HeartApollorion";
 
 type Props = {
     children: React.ReactNode;
@@ -25,7 +26,7 @@ export default function Layout({children, item, version, resource, linked}: Prop
             </header>
                 {children}
             <footer style={{ display: 'flex', justifyContent: 'center', height: "50px"}}>
-                <p>K8s Is Awesome. Made with ❤, <a href="https://github.com/apollorion/manifests.io">apollorion</a>.</p>
+                <HeartApollorion />
             </footer>
         </>
     )
