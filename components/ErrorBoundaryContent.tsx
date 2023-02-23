@@ -4,14 +4,17 @@ import Layout from "@/components/Layout";
 import React from "react";
 import {defaultItemVersion} from "@/lib/oaspec";
 
-export default function ErrorBoundaryContent(){
+type Props = {
+    errorType: string;
+}
+export default function ErrorBoundaryContent({errorType}: Props){
     const defaults = defaultItemVersion();
     return (
         <Layout item={defaults.item} version={defaults.version}>
             <main className={styles.main}>
                 <div className={styles.intro} style={{textAlign: "center"}}>
                     <h1>
-                        Whoops.
+                        Whoops. {errorType} Error.
                     </h1>
                     <p>
                         One of three things just happened.

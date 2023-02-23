@@ -25,7 +25,7 @@ class ErrorBoundary extends Component<Props, State> {
 
     public render() {
         if (this.state.hasError) {
-            return <ErrorBoundaryContent />;
+            return <ErrorBoundaryContent errorType="500" />;
         }
 
         return this.props.children;
