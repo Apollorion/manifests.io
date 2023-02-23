@@ -18,10 +18,36 @@
 .header h1 {
   margin: 0;
   font-size: 1.5rem;
+  display: inline-block;
+  position: relative;
 }
-
+.header h1 button {
+  position: absolute;
+  border: none;
+  outline: none;
+  top: 10px;
+  right: -20px;
+  width: 15px;
+  height: 15px;
+  background-color: var(--info-bg);
+  color: var(--info-text);
+  border-radius: 20px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color .2s;
+  cursor: pointer;
+}
+.header h1 button:focus {
+  outline: 2px solid var(--info-focus);
+  outline-offset: 1px;
+}
+.header h1 button:hover {
+  background-color: var(--info-focus);
+}
 .header span {
   font-size: small;
+  display: block;
 }
 
 @media screen and (max-width: 768px) {

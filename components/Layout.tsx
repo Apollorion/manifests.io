@@ -15,7 +15,9 @@ export default function Layout({children, item, version}: Props) {
             <header className={styles.header}>
                 <div className={styles.wrapper}>
                     <div>
-                        <h1>Manifests.io</h1>
+                        <h1>Manifests.io
+                            <button onClick={() => scroll({top: document.body.scrollHeight, behavior: "smooth"})}>?</button>
+                        </h1>
                         <span>Easy to use online kubernetes documentation</span>
                     </div>
                     <SearchBar pageItem={item} pageVersion={version} />
