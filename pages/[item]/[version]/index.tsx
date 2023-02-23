@@ -1,10 +1,7 @@
-import Head from 'next/head'
 import styles from '@/styles/Home.module.css'
 import {GetServerSideProps} from "next";
 import { oaspecFetch } from "@/lib/oaspec";
 import Layout from '@/components/Layout';
-import HeartApollorion from "@/components/HeartApollorion";
-import SearchBar from "@/components/SearchBar";
 import ResourceTable from "@/components/ResourceTable";
 import ReportIssue from "@/components/ReportIssue";
 import ManifestsHeading from "@/components/ManifestsHeading";
