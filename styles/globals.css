@@ -13,9 +13,14 @@
   --card-rgb: 180, 185, 188;
   --card-border-rgb: 131, 134, 135;
 
-  --header-bg: rgba(255,255,255,.75);
+  --header-bg: rgba(255,255,255,.85);
   --table-border: #666;
   --table-heading-bg: #f0f0f0;
+  --info-bg: #555;
+  --info-text: #fff;
+  --info-focus: blue;
+  --footer-bg: #eee;
+  --footer-text: #333;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,10 +34,15 @@
     --card-rgb: 100, 100, 100;
     --card-border-rgb: 200, 200, 200;
 
-    --header-bg: rgba(0,0,0,.75);
+    --header-bg: rgba(0,0,0,.85);
     --table-border: #444;
     --table-heading-bg: #222;
-  }
+    --info-bg: #aaa;
+    --info-text: #222;
+    --info-focus: lightblue;
+    --footer-bg: #333;
+    --footer-text: #fff;
+    }
 }
 
 * {
@@ -81,6 +91,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   padding: 0 1rem;
   line-height: 1.4;
+  scroll-behavior: smooth;
 }
 
 code {
