@@ -33,6 +33,15 @@ function Gvk({gvk}: {gvk: Array<{group: string, kind: string, version: string}>}
 }
 
 export default function Home({resources, item, version, linkedResource, description, resource, gvk, required}: Props) {
+    function replaceWithWbr(str: string){
+        const splitStr = str.split(".");
+        return splitStr.map((str, i) => {
+            if(i === splitStr.length - 1){
+                return <span key={str}>{str}</span>
+            }
+            return <span key={str}>{str}<wbr/>.</span>
+        });
+    }
     return (
         <Layout item={item} version={version} resource={resource} linked={linkedResource}>
             <ManifestsHeading
@@ -42,7 +51,7 @@ export default function Home({resources, item, version, linkedResource, descript
                 resource={resource}
             />
             <main className={styles.main}>
-                <h1 style={{marginTop: "20px", marginBottom: "50px"}}>{linkedResource}</h1>
+                <h1 style={{marginTop: "20px", marginBottom: "50px", overflowWrap: "break-word"}}>{replaceWithWbr(linkedResource)}</h1>
                 {gvk && (
                     <div style={{marginTop: "-30px", marginBottom: "30px", textAlign: "center"}}>
                         <h3>Group/Version/Kind</h3>
