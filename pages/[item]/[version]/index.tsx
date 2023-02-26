@@ -5,17 +5,10 @@ import Layout from '@/components/Layout';
 import ResourceTable from "@/components/ResourceTable";
 import ReportIssue from "@/components/ReportIssue";
 import ManifestsHeading from "@/components/ManifestsHeading";
-
-type ResourcesArr = Array<{
-    resource: string;
-    description: string;
-    key: string;
-    links: boolean;
-    type: string;
-}>;
+import {Resource} from "@/typings/Resource";
 
 type Props = {
-    resources: ResourcesArr;
+    resources: Array<Resource>;
     item: string;
     version: string;
 };
@@ -49,7 +42,7 @@ export const getServerSideProps: GetServerSideProps = async ({query}) => {
 
     const spec = oaspecFetch(item as string, version as string);
 
-    let resources: ResourcesArr = [];
+    let resources: Array<Resource> = [];
     let resourceNames: Array<string> = [];
     for (const [key, value] of Object.entries(spec.definitions)) {
         if("x-kubernetes-group-version-kind" in value

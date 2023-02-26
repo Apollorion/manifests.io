@@ -1,3 +1,5 @@
+import {KubernetesOpenApiSpec} from "@/typings/KubernetesSpec";
+
 import kubernetes126 from "../oaspec/kubernetes/1.26.json";
 import kubernetes125 from "../oaspec/kubernetes/1.25.json";
 import kubernetes124 from "../oaspec/kubernetes/1.24.json";
@@ -12,32 +14,6 @@ import flagger1190 from "../oaspec/flagger/1.19.0.json";
 import flux0273 from "../oaspec/flux/0.27.3.json";
 
 import istio1133 from "../oaspec/istio/1.13.3.json";
-
-type KubernetesOpenApiSpec = {
-    definitions: {
-        [key: string]: {
-            description?: string;
-            properties?: {
-                [key: string]: {
-                    description?: string;
-                    items?: {
-                        type?: string;
-                        $ref?: string;
-                    }
-                    type?: string;
-                    $ref?: string;
-                }
-            }
-            required?: Array<string>;
-            type?: string;
-            "x-kubernetes-group-version-kind"?: Array<{
-                group: string;
-                kind: string;
-                version: string;
-            }>
-        }
-    }
-}
 
 export function oaspecFetch(item: string, version: string): KubernetesOpenApiSpec {
     if (item === "kubernetes") {

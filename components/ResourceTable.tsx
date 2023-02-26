@@ -1,12 +1,5 @@
 import styles from "./ResourceTable.module.css";
-
-type Resource = {
-    resource: string;
-    description: string;
-    links?: boolean;
-    key?: string;
-    type: string;
-};
+import {Resource} from "@/typings/Resource";
 
 type Props = {
     resources: Array<Resource>;
