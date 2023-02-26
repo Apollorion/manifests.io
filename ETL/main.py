@@ -129,16 +129,27 @@ def remove_props(crds):
         if "properties" in crd or "items" in crd:
             crdThing = "properties" if "properties" in crd else "items"
             for prop in crd[crdThing]:
-                if key == "io.fluxcd.toolkit.kustomize.v1beta1.KustomizationSpecPatchesstrategicmerge":
-                    print("working", crd[crdThing][prop])
-                if isinstance(crd[crdThing][prop], bool):
+                if isinstance(crd[crdThing][prop], (int, float)):
+                    continue
+                if "manifests_processed" in crd[crdThing][prop]:
                     continue
                 if "properties" in crd[crdThing][prop] or "items" in crd[crdThing][prop]:
                     new_crds[key + prop.capitalize()] = crds[key][crdThing][prop]
-                    crds[key][crdThing][prop] = {
-                        "$ref": "#/definitions/" + key + prop.capitalize(),
-                        "description": "" if "description" not in crds[key][crdThing][prop] else crds[key][crdThing][prop]["description"]
-                    }
+                    thisThing = "properties" if "properties" in crds[key][crdThing][prop] else "items"
+                    if thisThing == "items":
+                        crds[key][crdThing][prop] = {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/" + key + prop.capitalize(),
+                            },
+                            "description": "" if "description" not in crds[key][crdThing][prop] else crds[key][crdThing][prop]["description"],
+                            "manifests_processed": True
+                        }
+                    else:
+                        crds[key][crdThing][prop] = {
+                            "$ref": "#/definitions/" + key + prop.capitalize(),
+                            "description": "" if "description" not in crds[key][crdThing][prop] else crds[key][crdThing][prop]["description"]
+                        }
                     found_update = True
                     print(key + prop.capitalize() + " added")
 
