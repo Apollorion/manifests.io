@@ -5,14 +5,9 @@ import Layout from '@/components/Layout';
 import ResourceTable from "@/components/ResourceTable";
 import ReportIssue from "@/components/ReportIssue";
 import ManifestsHeading from "@/components/ManifestsHeading";
-
-type Resource = {
-    resource: string;
-    description: string;
-    links?: boolean;
-    key: string;
-    type: string;
-};
+import {NextParsedUrlQuery} from "next/dist/server/request-meta";
+import {KubernetesOpenApiSpec} from "@/typings/KubernetesSpec";
+import {Resource} from "@/typings/Resource";
 
 type Props = {
     resources: Array<Resource>;
@@ -63,70 +58,95 @@ export default function Home({resources, item, version, linkedResource, descript
 }
 
 export const getServerSideProps: GetServerSideProps = async ({query}) => {
-    const { item, version, resource, linked } = query;
-
-    if (typeof resource !== "string") {
-        return {
-            redirect: {
-                destination: `/${item}/${version}`,
-                permanent: false,
-            },
+    function parseQuery(query: NextParsedUrlQuery){
+        const { item, version, resource, linked } = query;
+        if(Array.isArray(item) || !item){
+            throw new Error("Item is not a string");
         }
+        if(Array.isArray(version) || !version){
+            throw new Error("Version is not a string");
+        }
+        if(Array.isArray(resource) || !resource){
+            throw new Error("Resource is not a string");
+        }
+        if(Array.isArray(linked)){
+            throw new Error("Linked is not a string");
+        }
+        return { item, version, resource, linked };
     }
 
-    let linkedResource = linked;
-    if(linked === undefined && resource) {
-        linkedResource = resource.split(".").pop();
+    function defaultString(value: string | undefined, defaultValue?: string): string {
+        if(value === undefined) {
+            return defaultValue ? defaultValue : "";
+        }
+        return value;
     }
 
-    const spec = oaspecFetch(item as string, version as string);
+    function popString(value: string): string {
+        let returnValue = value.split(".").pop();
+        if(returnValue === undefined){
+            return value;
+        }
+        return returnValue;
+    }
 
-    let resources: Array<Resource> = [];
-    let resourceNames: Array<string> = [];
-    const resourceSpec = spec.definitions[resource];
-
-    if("properties" in resourceSpec){
-        // @ts-ignore
-        for (const [key, value] of Object.entries(resourceSpec.properties)) {
-            const resource = key.split(".").pop();
-            if (resource && !resource.endsWith("List") && !(resourceNames.includes(resource))) {
-                if(!value.description){
-                    value.description = "";
-                }
-                // @ts-ignore
-                let resourceObj: Resource = {resource, description: value.description, key};
-                // @ts-ignore
-                if ("$ref" in value) {
-                    resourceObj.links = true;
-                    // @ts-ignore
-                    resourceObj.key = value.$ref.replace("#/definitions/", "")
-                    // @ts-ignore
-                    resourceObj.type = value.type ? value.type : value.$ref.split(".").pop();
-                } else { // @ts-ignore
-                    if ("items" in value && "$ref" in value.items) {
-                        resourceObj.links = true;
-                        // @ts-ignore
-                        resourceObj.key = value.items.$ref.replace("#/definitions/", "");
-                        // @ts-ignore
-                        resourceObj.type = `${value.items.$ref.split(".").pop()}[]`;
-                    } else {
-                        resourceObj.type = value.type ? value.type : resource;
-                    }
-                }
-                // @ts-ignore
-                resources.push(resourceObj);
-                resourceNames.push(resource);
+    function buildResource(resource: string, key: string, value:any): Resource {
+        let resourceObj: Resource = {resource, description: value.description, key, type: "Unknown"};
+        if (value.$ref) {
+            resourceObj.links = true;
+            resourceObj.key = value.$ref.replace("#/definitions/", "");
+            resourceObj.type = value.type ? value.type : popString(value.$ref);
+        } else {
+            if (value.items && value.items.$ref) {
+                resourceObj.links = true;
+                resourceObj.key = value.items.$ref.replace("#/definitions/", "");
+                resourceObj.type = `${popString(value.items.$ref)}[]`;
+            } else {
+                resourceObj.type = value.type ? value.type : resource;
             }
         }
-    } else {
-        // @ts-ignore
-        resources.push({resource: resource.split(".").pop(), description: resourceSpec.description});
+        return resourceObj;
     }
 
-    resources.sort((a, b) => (a.resource > b.resource) ? 1 : -1);
+    function getResourceArrayFromSpec(item: string, version: string, spec: KubernetesOpenApiSpec): Array<Resource> {
+        let resources: Array<Resource> = [];
+        let resourceNames: Array<string> = [];
+        const resourceSpec = spec.definitions[resource];
+        if(resourceSpec.properties){
+            for (const [key, value] of Object.entries(resourceSpec.properties)) {
+                const resource = popString(key);
+                if (resource && !resource.endsWith("List") && !(resourceNames.includes(resource))) {
+                    resources.push(buildResource(resource, key, value));
+                    resourceNames.push(resource);
+                }
+            }
+        } else {
+            resources.push({
+                resource: popString(resource),
+                description: defaultString(resourceSpec.description),
+                type: "Unknown",
+                key: resource
+            });
+        }
+        resources.sort((a, b) => (a.resource > b.resource) ? 1 : -1);
+        return resources
+    }
 
-    // @ts-ignore
-    let props: Props = {resources, item, version, linkedResource, description: resourceSpec.description, resource}
+    const { item, version, resource, linked } = parseQuery(query);
+
+    const spec = oaspecFetch(item, version);
+    const resourceSpec = spec.definitions[resource];
+    const linkedResource = defaultString(linked, popString(resource));
+    const resources = getResourceArrayFromSpec(item, version, spec);
+
+    let props: Props = {
+        resources,
+        item,
+        version,
+        linkedResource,
+        description: defaultString(resourceSpec.description),
+        resource
+    };
 
     if(resourceSpec["x-kubernetes-group-version-kind"]) {
         props["gvk"] = resourceSpec["x-kubernetes-group-version-kind"];
