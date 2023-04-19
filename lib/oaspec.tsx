@@ -15,6 +15,8 @@ import flux0273 from "../oaspec/flux/0.27.3.json";
 
 import istio1133 from "../oaspec/istio/1.13.3.json";
 
+import cosignpolicycontroller057 from "../oaspec/cosignpolicycontroller/0.5.7.json";
+
 export function oaspecFetch(item: string, version: string): KubernetesOpenApiSpec {
     if (item === "kubernetes") {
         switch(version) {
@@ -57,12 +59,19 @@ export function oaspecFetch(item: string, version: string): KubernetesOpenApiSpe
         }
     }
 
+    if(item === "cosign policy-controller"){
+        if(version === "0.5.7"){
+            return cosignpolicycontroller057;
+        }
+    }
+
     throw new Error("Open Api Spec Not Found");
 }
 
 export function availableItemVersions(): {[key: string]: Array<string>} {
     return {
         "certmanager": ["1.7"],
+        "cosign policy-controller": ["0.5.7"],
         "flagger": ["1.19.0"],
         "flux": ["0.27.3"],
         "istio": ["1.13.3"],
