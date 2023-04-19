@@ -12,7 +12,8 @@ export type KubernetesOpenApiSpec = {
                     type?: string;
                     $ref?: string;
                 }
-            }
+            };
+            items?: any; // TODO: fix this
             required?: Array<string>;
             type?: string;
             "x-kubernetes-group-version-kind"?: Array<{

@@ -117,15 +117,40 @@ export const getServerSideProps: GetServerSideProps = async ({query}) => {
         return resourceObj;
     }
 
-    function getResourceArrayFromSpec(item: string, version: string, spec: KubernetesOpenApiSpec): Array<Resource> {
+    function getResourceArrayFromSpec(item: string, version: string, spec: KubernetesOpenApiSpec, linked?: string): Array<Resource> {
+        function isValidResource(resource: string | undefined, resourceNames: string[]): boolean {
+            return (resource && !resource.endsWith("List") && !(resourceNames.includes(resource))) as boolean;
+        }
+
         let resources: Array<Resource> = [];
         let resourceNames: Array<string> = [];
         const resourceSpec = spec.definitions[resource];
-        if(resourceSpec.properties){
+        if(resourceSpec.properties) {
             for (const [key, value] of Object.entries(resourceSpec.properties)) {
                 const resource = popString(key);
-                if (resource && !resource.endsWith("List") && !(resourceNames.includes(resource))) {
+                if (isValidResource(resource, resourceNames)) {
                     resources.push(buildResource(resource, key, value));
+                    resourceNames.push(resource);
+                }
+            }
+        } else if(resourceSpec.items && resourceSpec.items.properties) {
+            for (const [key, value] of Object.entries(resourceSpec.items.properties)) {
+                const resource = popString(key);
+                if (isValidResource(resource, resourceNames)) {
+                    resources.push(buildResource(resource, key, value));
+                    resourceNames.push(resource);
+                }
+            }
+        } else if(resourceSpec.items) {
+            for (const [key, value] of Object.entries(resourceSpec.items)) {
+                const resource = linked ? popString(linked) : popString(key) ;
+                if (isValidResource(resource, resourceNames)) {
+                    resources.push({
+                        resource: "",
+                        description: defaultString(resourceSpec.description),
+                        type: `${value}[]`,
+                        key: resource
+                    });
                     resourceNames.push(resource);
                 }
             }
@@ -146,7 +171,7 @@ export const getServerSideProps: GetServerSideProps = async ({query}) => {
     const spec = oaspecFetch(item, version);
     const resourceSpec = spec.definitions[resource];
     const linkedResource = defaultString(linked, popString(resource));
-    const resources = getResourceArrayFromSpec(item, version, spec);
+    const resources = getResourceArrayFromSpec(item, version, spec, linked);
 
     let props: Props = {
         resources,
