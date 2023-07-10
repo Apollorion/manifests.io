@@ -1,5 +1,6 @@
 import {KubernetesOpenApiSpec} from "@/typings/KubernetesSpec";
 
+import kubernetes127 from "../oaspec/kubernetes/1.27.json";
 import kubernetes126 from "../oaspec/kubernetes/1.26.json";
 import kubernetes125 from "../oaspec/kubernetes/1.25.json";
 import kubernetes124 from "../oaspec/kubernetes/1.24.json";
@@ -32,6 +33,8 @@ export function oaspecFetch(item: string, version: string): KubernetesOpenApiSpe
                 return kubernetes122;
             case "1.21":
                 return kubernetes121;
+            case "1.27":
+                return kubernetes127;
         }
     }
 
@@ -75,13 +78,13 @@ export function availableItemVersions(): {[key: string]: Array<string>} {
         "flagger": ["1.19.0"],
         "flux": ["0.27.3"],
         "istio": ["1.13.3"],
-        "kubernetes": ["1.21", "1.22", "1.23", "1.24", "1.25", "1.26"]
+        "kubernetes": ["1.21", "1.22", "1.23", "1.24", "1.25", "1.26", "1.27"]
     }
 }
 
 export function defaultItemVersion(): {item: string, version: string} {
     return {
         item: "kubernetes",
-        version: "1.26"
+        version: "1.27"
     }
 }
