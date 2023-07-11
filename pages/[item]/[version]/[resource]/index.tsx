@@ -9,6 +9,17 @@ import {NextParsedUrlQuery} from "next/dist/server/request-meta";
 import {KubernetesOpenApiSpec} from "@/typings/KubernetesSpec";
 import {Resource} from "@/typings/Resource";
 
+type OtherVersions = {
+    keys: Array<string>;
+    gvk: {
+        [key: string]: {
+            group: string;
+            kind: string;
+            version: string;
+        };
+    }
+}
+
 type Props = {
     resources: Array<Resource>;
     item: string;
@@ -16,23 +27,23 @@ type Props = {
     linkedResource: string;
     description: string;
     resource: string;
+    otherVersions: OtherVersions;
     required?: Array<string>;
-    gvk?: Array<{
-        group: string;
-        kind: string;
-        version: string;
-    }>
 };
 
-function Gvk({gvk}: {gvk: Array<{group: string, kind: string, version: string}>}){
+function Gvk({otherVersions, resource}: {otherVersions: OtherVersions, resource: string}){
     return (<div>
-        {gvk.map((gvk) => (
-            <p key={`${gvk.group}/${gvk.version}/${gvk.kind}`}>{gvk.group}/{gvk.version}/{gvk.kind}</p>
-        ))}
+        {otherVersions.keys.map((gvk) => {
+            const thisGVK = otherVersions.gvk[gvk];
+            if(gvk == resource){
+                return (<p key={gvk}><a href={gvk}><b><span className="link">{thisGVK.group}/{thisGVK.version}/{thisGVK.kind}</span></b></a></p>)
+            }
+            return (<p key={gvk}><a href={gvk}><span className="link">{thisGVK.group}/{thisGVK.version}/{thisGVK.kind}</span></a></p>)
+        })}
     </div>)
 }
 
-export default function Home({resources, item, version, linkedResource, description, resource, gvk, required}: Props) {
+export default function Home({resources, item, version, linkedResource, description, resource, otherVersions, required}: Props) {
     function replaceWithWbr(str: string){
         const splitStr = str.split(".");
         return splitStr.map((str, i) => {
@@ -52,10 +63,10 @@ export default function Home({resources, item, version, linkedResource, descript
             />
             <main className={styles.main}>
                 <h1 style={{marginTop: "20px", marginBottom: "50px", overflowWrap: "break-word"}}>{replaceWithWbr(linkedResource)}</h1>
-                {gvk && (
+                {otherVersions.keys.length > 0 && (
                     <div style={{marginTop: "-30px", marginBottom: "30px", textAlign: "center"}}>
-                        <h3>Group/Version/Kind</h3>
-                        <Gvk gvk={gvk} />
+                        <h2>Group/Version/Kind</h2>
+                        <Gvk otherVersions={otherVersions} resource={resource} />
                     </div>
                 )}
                 <p style={{whiteSpace: "pre-wrap"}}>{description}</p>
@@ -166,12 +177,31 @@ export const getServerSideProps: GetServerSideProps = async ({query}) => {
         return resources
     }
 
+    function findOtherResourceVersions(resourceSearch: string, spec: KubernetesOpenApiSpec): OtherVersions {
+        const searchableResource = popString(resourceSearch);
+        let keys: Array<string> = [];
+        let gvk: { [key: string]: { group: string; kind: string; version: string; }; } = {};
+        for (const [key, value] of Object.entries(spec.definitions)) {
+            if("x-kubernetes-group-version-kind" in value && value["x-kubernetes-group-version-kind"] !== undefined
+                && "description" in value && value.description !== undefined
+            ){
+                const resource = popString(key);
+                if(resource && searchableResource == resource && !resource.endsWith("List") && !(keys.includes(resource))){
+                    keys.push(key);
+                    gvk[key] = value["x-kubernetes-group-version-kind"][0];
+                }
+            }
+        }
+        return { keys, gvk};
+    }
+
     const { item, version, resource, linked } = parseQuery(query);
 
     const spec = oaspecFetch(item, version);
     const resourceSpec = spec.definitions[resource];
     const linkedResource = defaultString(linked, popString(resource));
     const resources = getResourceArrayFromSpec(item, version, spec, linked);
+    const otherVersions = findOtherResourceVersions(resource, spec);
 
     let props: Props = {
         resources,
@@ -179,12 +209,9 @@ export const getServerSideProps: GetServerSideProps = async ({query}) => {
         version,
         linkedResource,
         description: defaultString(resourceSpec.description),
-        resource
+        resource,
+        otherVersions
     };
-
-    if(resourceSpec["x-kubernetes-group-version-kind"]) {
-        props["gvk"] = resourceSpec["x-kubernetes-group-version-kind"];
-    }
 
     if(resourceSpec.required) {
         props["required"] = resourceSpec.required;
