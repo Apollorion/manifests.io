@@ -41,3 +41,15 @@
     padding-bottom: 0;
   }
 }
+
+.search {
+  border: none;
+  display: inline;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  padding: none;
+  width: auto;
+  background-color: inherit;
+  color: inherit;
+}
