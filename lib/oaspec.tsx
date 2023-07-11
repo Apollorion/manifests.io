@@ -21,6 +21,8 @@ import cosignpolicycontroller057 from "../oaspec/cosignpolicycontroller/0.5.7.js
 export function oaspecFetch(item: string, version: string): KubernetesOpenApiSpec {
     if (item === "kubernetes") {
         switch(version) {
+            case "1.27":
+                return kubernetes127;
             case "1.26":
                 return kubernetes126;
             case "1.25":
@@ -29,12 +31,6 @@ export function oaspecFetch(item: string, version: string): KubernetesOpenApiSpe
                 return kubernetes124;
             case "1.23":
                 return kubernetes123;
-            case "1.22":
-                return kubernetes122;
-            case "1.21":
-                return kubernetes121;
-            case "1.27":
-                return kubernetes127;
         }
     }
 
@@ -78,7 +74,7 @@ export function availableItemVersions(): {[key: string]: Array<string>} {
         "flagger": ["1.19.0"],
         "flux": ["0.27.3"],
         "istio": ["1.13.3"],
-        "kubernetes": ["1.21", "1.22", "1.23", "1.24", "1.25", "1.26", "1.27"]
+        "kubernetes": ["1.23", "1.24", "1.25", "1.26", "1.27"]
     }
 }
 
