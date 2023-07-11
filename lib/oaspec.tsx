@@ -5,8 +5,6 @@ import kubernetes126 from "../oaspec/kubernetes/1.26.json";
 import kubernetes125 from "../oaspec/kubernetes/1.25.json";
 import kubernetes124 from "../oaspec/kubernetes/1.24.json";
 import kubernetes123 from "../oaspec/kubernetes/1.23.json";
-import kubernetes122 from "../oaspec/kubernetes/1.22.json";
-import kubernetes121 from "../oaspec/kubernetes/1.21.json";
 
 import certmanager171 from "../oaspec/certmanager/1.7.json";
 
