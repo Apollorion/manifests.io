@@ -47,7 +47,7 @@ export default function ResourceTable({leftHeading, resources, item, version, li
         <table className={styles.table}>
             <thead>
             <tr style={{backgroundColor: "var(--table-heading-bg)"}}>
-                <th><input type="search" className={styles.search} onKeyUp={(e) => {filterResources(e.target.value)}} placeholder={`🔍 ${leftHeading}`} /></th>
+                <th><input type="search" className={styles.search} onKeyUp={(e) => {filterResources((e.target as HTMLInputElement).value)}} placeholder={`🔍 ${leftHeading}`} /></th>
                 <th>Description</th>
             </tr>
             </thead>
