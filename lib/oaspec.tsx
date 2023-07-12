@@ -10,6 +10,8 @@ import certmanager171 from "../oaspec/certmanager/1.7.json";
 
 import flagger1190 from "../oaspec/flagger/1.19.0.json";
 
+import flux201 from "../oaspec/flux/2.0.1.json";
+import flux0312 from "../oaspec/flux/0.31.2.json";
 import flux0273 from "../oaspec/flux/0.27.3.json";
 
 import istio1133 from "../oaspec/istio/1.13.3.json";
@@ -45,8 +47,13 @@ export function oaspecFetch(item: string, version: string): KubernetesOpenApiSpe
     }
 
     if(item === "flux"){
-        if(version === "0.27.3"){
-            return flux0273;
+        switch(version) {
+            case "2.0.1":
+                return flux201;
+            case "0.31.2":
+                return flux0312;
+            case "0.27.3":
+                return flux0273;
         }
     }
 
@@ -70,7 +77,7 @@ export function availableItemVersions(): {[key: string]: Array<string>} {
         "certmanager": ["1.7"],
         "cosign policy-controller": ["0.5.7"],
         "flagger": ["1.19.0"],
-        "flux": ["0.27.3"],
+        "flux": ["0.27.3", "0.31.2", "2.0.1"],
         "istio": ["1.13.3"],
         "kubernetes": ["1.23", "1.24", "1.25", "1.26", "1.27"]
     }
