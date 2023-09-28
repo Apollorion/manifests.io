@@ -1,10 +1,10 @@
 import {KubernetesOpenApiSpec} from "@/typings/KubernetesSpec";
 
+import kubernetes128 from "../oaspec/kubernetes/1.28.json";
 import kubernetes127 from "../oaspec/kubernetes/1.27.json";
 import kubernetes126 from "../oaspec/kubernetes/1.26.json";
 import kubernetes125 from "../oaspec/kubernetes/1.25.json";
 import kubernetes124 from "../oaspec/kubernetes/1.24.json";
-import kubernetes123 from "../oaspec/kubernetes/1.23.json";
 
 import certmanager171 from "../oaspec/certmanager/1.7.json";
 
@@ -21,6 +21,8 @@ import cosignpolicycontroller057 from "../oaspec/cosignpolicycontroller/0.5.7.js
 export function oaspecFetch(item: string, version: string): KubernetesOpenApiSpec {
     if (item === "kubernetes") {
         switch(version) {
+            case "1.28":
+                return kubernetes128;
             case "1.27":
                 return kubernetes127;
             case "1.26":
@@ -29,8 +31,6 @@ export function oaspecFetch(item: string, version: string): KubernetesOpenApiSpe
                 return kubernetes125;
             case "1.24":
                 return kubernetes124;
-            case "1.23":
-                return kubernetes123;
         }
     }
 
@@ -79,13 +79,13 @@ export function availableItemVersions(): {[key: string]: Array<string>} {
         "flagger": ["1.19.0"],
         "flux": ["0.27.3", "0.31.2", "2.0.1"],
         "istio": ["1.13.3"],
-        "kubernetes": ["1.23", "1.24", "1.25", "1.26", "1.27"]
+        "kubernetes": ["1.24", "1.25", "1.26", "1.27", "1.28"]
     }
 }
 
 export function defaultItemVersion(): {item: string, version: string} {
     return {
         item: "kubernetes",
-        version: "1.27"
+        version: "1.28"
     }
 }
