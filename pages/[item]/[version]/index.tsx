@@ -1,6 +1,6 @@
 import styles from '@/styles/Home.module.css'
 import {GetServerSideProps} from "next";
-import { oaspecFetch } from "@/lib/oaspec";
+import {oaspecFetch, showAllResultsInHome} from "@/lib/oaspec";
 import Layout from '@/components/Layout';
 import ResourceTable from "@/components/ResourceTable";
 import ReportIssue from "@/components/ReportIssue";
@@ -27,30 +27,48 @@ export default function Home({resources, item, version}: Props) {
                         Available resources for <code>{item}</code> version <code>{version}</code>
                     </h3>
                     <p>
-                        Your browsers url supports all resources in the {item} openAPI spec, even if a resource is not listed here.
+                        Your browsers url supports all resources in the {item} openAPI spec, even if a resource is not
+                        listed here.
                     </p>
                 </div>
-                <ResourceTable leftHeading="Object" resources={resources} item={item} version={version} />
-                <ReportIssue item={item} />
+                <ResourceTable leftHeading="Object" resources={resources} item={item} version={version}/>
+                <ReportIssue item={item}/>
             </main>
         </Layout>
     )
 }
 
 export const getServerSideProps: GetServerSideProps = async ({query}) => {
-    const { item, version } = query;
+    const {item, version} = query;
 
     const spec = oaspecFetch(item as string, version as string);
+    const showAllResults = showAllResultsInHome(item as string);
 
     let resources: Array<Resource> = [];
     let resourceNames: Array<string> = [];
-    for (const [key, value] of Object.entries(spec.definitions)) {
-        if("x-kubernetes-group-version-kind" in value
-            && "description" in value && value.description !== undefined
-        ){
+    for (const [key, value] of Object.entries(spec)) {
+        if (showAllResults) {
             const resource = key.split(".").pop();
-            if(resource && !resource.endsWith("List") && !(resourceNames.includes(resource))){
-                resources.push({resource, description: value.description, key, links: true, type: resource});
+            if (resource && !resource.endsWith("List") && !(resourceNames.includes(resource))) {
+                resources.push({
+                    resource,
+                    description: value.description ? value.description : "",
+                    key,
+                    links: true,
+                    type: resource
+                });
+                resourceNames.push(resource);
+            }
+        } else if ("x-kubernetes-group-version-kind" in value) {
+            const resource = key.split(".").pop();
+            if (resource && !resource.endsWith("List") && !(resourceNames.includes(resource))) {
+                resources.push({
+                    resource,
+                    description: value.description ? value.description : "",
+                    key,
+                    links: true,
+                    type: resource
+                });
                 resourceNames.push(resource);
             }
         }
