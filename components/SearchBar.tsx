@@ -1,16 +1,16 @@
 import {availableItemVersions} from "@/lib/oaspec";
 import styles from "./SearchBar.module.css";
 
-function SearchBar({pageItem, pageVersion, resource, linked}: {pageItem: string, pageVersion: string, resource?: string, linked?: string}) {
+function SearchBar({pageItem, pageVersion, resource, linked}: { pageItem: string, pageVersion: string, resource?: string, linked?: string }) {
     const itemVersions = availableItemVersions();
 
     const handleChanges = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        window.location.href=event.target.value
+        window.location.href = event.target.value
     }
 
     const generateDefault = () => {
-        if(resource){
-            if(linked){
+        if (resource) {
+            if (linked) {
                 return `/${pageItem}/${pageVersion}/${resource}?linked=${linked}`
             }
             return `/${pageItem}/${pageVersion}/${resource}`
@@ -20,8 +20,8 @@ function SearchBar({pageItem, pageVersion, resource, linked}: {pageItem: string,
     }
 
     const generateValue = (item: string, version: string) => {
-        if(resource && item === pageItem){
-            if(linked){
+        if (resource && item === pageItem) {
+            if (linked) {
                 return `/${item}/${version}/${resource}?linked=${linked}`
             }
             return `/${item}/${version}/${resource}`

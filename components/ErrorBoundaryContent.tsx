@@ -7,7 +7,7 @@ import {defaultItemVersion} from "@/lib/oaspec";
 type Props = {
     errorType: string;
 }
-export default function ErrorBoundaryContent({errorType}: Props){
+export default function ErrorBoundaryContent({errorType}: Props) {
     const defaults = defaultItemVersion();
     return (
         <Layout item={defaults.item} version={defaults.version}>
@@ -20,7 +20,8 @@ export default function ErrorBoundaryContent({errorType}: Props){
                         One of three things just happened.
                     </p>
                     <div style={{textAlign: "center"}}>
-                        <ol type="A" style={{display: "inline-block", listStylePosition: "inside", marginTop: "10px", marginBottom: "10px", textAlign: "left"}}>
+                        <ol type="A"
+                            style={{display: "inline-block", listStylePosition: "inside", marginTop: "10px", marginBottom: "10px", textAlign: "left"}}>
                             <li>The version of the spec you are looking for does not exist.</li>
                             <li>The resource you are looking for does not exist in this version of the spec.</li>
                             <li>You found a legitimate bug in the code, please use the below button to report it.</li>
@@ -30,7 +31,7 @@ export default function ErrorBoundaryContent({errorType}: Props){
                         Try going back, or change to a different spec above.
                     </p>
                 </div>
-                <ReportIssue item="ErrorBoundary" />
+                <ReportIssue item="ErrorBoundary"/>
             </main>
         </Layout>
     )

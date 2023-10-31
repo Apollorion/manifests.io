@@ -1,4 +1,4 @@
-import { NextSeo } from 'next-seo';
+import {NextSeo} from 'next-seo';
 
 const url = "https://www.manifests.io";
 
