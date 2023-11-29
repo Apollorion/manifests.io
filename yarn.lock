@@ -303,10 +303,10 @@
   dependencies:
     glob "7.1.7"
 
-"@next/font@13.5.4":
-  version "13.5.4"
-  resolved "https://registry.yarnpkg.com/@next/font/-/font-13.5.4.tgz#5b5d204d8c6de035688b5728131cc0d7edaf2da3"
-  integrity sha512-rOMki1/9BP9N93RZABiiF0EidMGgyCvNVSKvLLAnMkVh/IYk4Z827+NRuxCyRQCeT3vv/AeCiP5SFPAP10SPrQ==
+"@next/font@13.5.6":
+  version "13.5.6"
+  resolved "https://registry.yarnpkg.com/@next/font/-/font-13.5.6.tgz#2659cfbd9298e21c4ff734bb863d139ef6971cb8"
+  integrity sha512-urmUq05uCVJsBqAAJEV+xK5OTTodrSxdiG+351SOSjlWctywdBM6qX+K9pIe3K48RxjfnxlBbXjGyOJAji+pfw==
 
 "@next/swc-darwin-arm64@13.4.19":
   version "13.4.19"
