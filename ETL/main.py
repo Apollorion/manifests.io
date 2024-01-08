@@ -123,10 +123,14 @@ def process_crd(crdFile):
 
 def remove_props(crds):
     new_crds = {}
+    deletes = []
     found_update = False
     for key in crds:
         crd = crds[key]
         if "properties" in crd or "items" in crd:
+            if type(crd) is str:
+                deletes.append(key)
+                continue
             crdThing = "properties" if "properties" in crd else "items"
             for prop in crd[crdThing]:
                 if isinstance(crd[crdThing][prop], (int, float)):
@@ -154,6 +158,8 @@ def remove_props(crds):
                     print(key + prop.capitalize() + " added")
 
     crds.update(new_crds)
+    for d in deletes:
+        del crds[d]
     if found_update:
         print("going again")
         crds = remove_props(crds)
