@@ -18,8 +18,6 @@ import istio1133 from "../oaspec/istio/1.13.3.json";
 
 import cosignpolicycontroller057 from "../oaspec/cosignpolicycontroller/0.5.7.json";
 
-import rafayv3 from "../oaspec/rafay/v3.json";
-
 export function oaspecFetch(item: string, version: string): K8sDefinitions {
     if (item === "kubernetes") {
         switch (version) {
@@ -71,12 +69,6 @@ export function oaspecFetch(item: string, version: string): K8sDefinitions {
         }
     }
 
-    if (item === "rafay") {
-        if (version === "v3") {
-            return rafayv3.components.schemas;
-        }
-    }
-
     throw new Error("Open Api Spec Not Found");
 }
 
@@ -93,7 +85,6 @@ export function availableItemVersions(): { [key: string]: Array<string> } {
         "flux": ["0.27.3", "0.31.2", "2.0.1"],
         "istio": ["1.13.3"],
         "kubernetes": ["1.24", "1.25", "1.26", "1.27", "1.28"],
-        "rafay": ["v3"]
     }
 }
 
