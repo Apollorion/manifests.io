@@ -18,6 +18,8 @@ import istio1133 from "../oaspec/istio/1.13.3.json";
 
 import cosignpolicycontroller057 from "../oaspec/cosignpolicycontroller/0.5.7.json";
 
+import opagatekeeper3140 from "../oaspec/opagatekeeper/3.14.0.json"
+
 export function oaspecFetch(item: string, version: string): K8sDefinitions {
     if (item === "kubernetes") {
         switch (version) {
@@ -69,12 +71,13 @@ export function oaspecFetch(item: string, version: string): K8sDefinitions {
         }
     }
 
-    throw new Error("Open Api Spec Not Found");
-}
+    if (item === "opa gatekeeper") {
+        if (version === "3.14.0") {
+            return opagatekeeper3140.definitions;
+        }
+    }
 
-export function showAllResultsInHome(item: string): boolean {
-    const specsWithoutDescriptions = ["rafay"];
-    return specsWithoutDescriptions.includes(item);
+    throw new Error("Open Api Spec Not Found");
 }
 
 export function availableItemVersions(): { [key: string]: Array<string> } {
@@ -85,6 +88,7 @@ export function availableItemVersions(): { [key: string]: Array<string> } {
         "flux": ["0.27.3", "0.31.2", "2.0.1"],
         "istio": ["1.13.3"],
         "kubernetes": ["1.24", "1.25", "1.26", "1.27", "1.28"],
+        "opa gatekeeper": ["3.14.0"]
     }
 }
 
