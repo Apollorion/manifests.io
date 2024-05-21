@@ -23,6 +23,8 @@ import opagatekeeper3140 from "../oaspec/opagatekeeper/3.14.0.json"
 
 import prometheusoperator0712 from "../oaspec/prometheusoperator/0.71.2.json";
 
+import rancher28 from "../oaspec/rancher/2.8.json";
+
 export function oaspecFetch(item: string, version: string): K8sDefinitions {
     if (item === "kubernetes") {
         switch (version) {
@@ -89,6 +91,12 @@ export function oaspecFetch(item: string, version: string): K8sDefinitions {
         }
     }
 
+    if (item === "rancher") {
+        if (version === "2.8") {
+            return rancher28.definitions;
+        }
+    }
+
     throw new Error("Open Api Spec Not Found");
 }
 
@@ -101,7 +109,8 @@ export function availableItemVersions(): { [key: string]: Array<string> } {
         "istio": ["1.13.3"],
         "kubernetes": ["1.24", "1.25", "1.26", "1.27", "1.28"],
         "opa gatekeeper": ["3.14.0"],
-        "prometheus operator": ["0.71.2"]
+        "prometheus operator": ["0.71.2"],
+        "rancher": ["2.8"]
     }
 }
 
