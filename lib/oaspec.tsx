@@ -1,10 +1,10 @@
 import {K8sDefinitions} from "@/typings/KubernetesSpec";
 
+import kubernetes130 from "../oaspec/kubernetes/1.30.json";
+import kubernetes129 from "../oaspec/kubernetes/1.29.json";
 import kubernetes128 from "../oaspec/kubernetes/1.28.json";
 import kubernetes127 from "../oaspec/kubernetes/1.27.json";
 import kubernetes126 from "../oaspec/kubernetes/1.26.json";
-import kubernetes125 from "../oaspec/kubernetes/1.25.json";
-import kubernetes124 from "../oaspec/kubernetes/1.24.json";
 
 import certmanager171 from "../oaspec/certmanager/1.7.json";
 import certmanager1144 from "../oaspec/certmanager/1.14.json";
@@ -28,16 +28,16 @@ import rancher28 from "../oaspec/rancher/2.8.json";
 export function oaspecFetch(item: string, version: string): K8sDefinitions {
     if (item === "kubernetes") {
         switch (version) {
+            case "1.30":
+                return kubernetes130.definitions;
+            case "1.29":
+                return kubernetes129.definitions;
             case "1.28":
                 return kubernetes128.definitions;
             case "1.27":
                 return kubernetes127.definitions;
             case "1.26":
                 return kubernetes126.definitions;
-            case "1.25":
-                return kubernetes125.definitions;
-            case "1.24":
-                return kubernetes124.definitions;
         }
     }
 
@@ -107,7 +107,7 @@ export function availableItemVersions(): { [key: string]: Array<string> } {
         "flagger": ["1.19.0"],
         "flux": ["0.27.3", "0.31.2", "2.0.1"],
         "istio": ["1.13.3"],
-        "kubernetes": ["1.24", "1.25", "1.26", "1.27", "1.28"],
+        "kubernetes": ["1.26", "1.27", "1.28", "1.29", "1.30"],
         "opa gatekeeper": ["3.14.0"],
         "prometheus operator": ["0.71.2"],
         "rancher": ["2.8"]
@@ -117,6 +117,6 @@ export function availableItemVersions(): { [key: string]: Array<string> } {
 export function defaultItemVersion(): { item: string, version: string } {
     return {
         item: "kubernetes",
-        version: "1.28"
+        version: "1.30"
     }
 }
