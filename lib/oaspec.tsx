@@ -19,7 +19,8 @@ import istio1133 from "../oaspec/istio/1.13.3.json";
 
 import cosignpolicycontroller057 from "../oaspec/cosignpolicycontroller/0.5.7.json";
 
-import gatewayapi110 from "../oaspec/gatewayapi/1.1.0.json";
+import gatewayapi110standard from "../oaspec/gatewayapi/1.1.0.json";
+import gatewayapi110experimental from "../oaspec/gatewayapi/1.1.0experimental.json";
 
 import opagatekeeper3140 from "../oaspec/opagatekeeper/3.14.0.json"
 
@@ -100,8 +101,11 @@ export function oaspecFetch(item: string, version: string): K8sDefinitions {
     }
 
     if (item === "gateway api") {
-        if (version === "1.1.0") {
-            return gatewayapi110.definitions;
+        if (version === "1.1.0 standard") {
+            return gatewayapi110standard.definitions;
+        }
+        if (version === "1.1.0 experimental") {
+            return gatewayapi110experimental.definitions;
         }
     }
 
@@ -114,7 +118,7 @@ export function availableItemVersions(): { [key: string]: Array<string> } {
         "cosign policy-controller": ["0.5.7"],
         "flagger": ["1.19.0"],
         "flux": ["0.27.3", "0.31.2", "2.0.1"],
-        "gateway api": ["1.1.0"],
+        "gateway api": ["1.1.0 standard", "1.1.0 experimental"],
         "istio": ["1.13.3"],
         "kubernetes": ["1.26", "1.27", "1.28", "1.29", "1.30"],
         "opa gatekeeper": ["3.14.0"],
