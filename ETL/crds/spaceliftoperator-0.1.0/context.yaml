@@ -1,0 +1,210 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.13.0
+  name: contexts.app.spacelift.io
+spec:
+  group: app.spacelift.io
+  names:
+    kind: Context
+    listKind: ContextList
+    plural: contexts
+    singular: context
+  scope: Namespaced
+  versions:
+    - name: v1beta1
+      schema:
+        openAPIV3Schema:
+          description: Context is the Schema for the contexts API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ContextSpec defines the desired state of Context
+              properties:
+                attachments:
+                  items:
+                    properties:
+                      moduleId:
+                        minLength: 1
+                        type: string
+                      priority:
+                        type: integer
+                      stackId:
+                        minLength: 1
+                        type: string
+                      stackName:
+                        minLength: 1
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                      - message: only one of stackName or stackId or moduleId should be
+                          set
+                        rule: has(self.stackName) != has(self.stackId) != has(self.moduleId)
+                  type: array
+                description:
+                  type: string
+                environment:
+                  items:
+                    properties:
+                      description:
+                        type: string
+                      id:
+                        minLength: 1
+                        pattern: ^[a-zA-Z_]+[a-zA-Z0-9_]*$
+                        type: string
+                      secret:
+                        type: boolean
+                      value:
+                        type: string
+                      valueFromSecret:
+                        description: SecretKeySelector selects a key of a Secret.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                          - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    required:
+                      - id
+                    type: object
+                    x-kubernetes-validations:
+                      - message: only one of value or valueFromSecret should be set
+                        rule: has(self.valueFromSecret) != has(self.value)
+                  type: array
+                hooks:
+                  properties:
+                    afterApply:
+                      items:
+                        type: string
+                      type: array
+                    afterDestroy:
+                      items:
+                        type: string
+                      type: array
+                    afterInit:
+                      items:
+                        type: string
+                      type: array
+                    afterPerform:
+                      items:
+                        type: string
+                      type: array
+                    afterPlan:
+                      items:
+                        type: string
+                      type: array
+                    afterRun:
+                      items:
+                        type: string
+                      type: array
+                    beforeApply:
+                      items:
+                        type: string
+                      type: array
+                    beforeDestroy:
+                      items:
+                        type: string
+                      type: array
+                    beforeInit:
+                      items:
+                        type: string
+                      type: array
+                    beforePerform:
+                      items:
+                        type: string
+                      type: array
+                    beforePlan:
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                labels:
+                  items:
+                    type: string
+                  type: array
+                mountedFiles:
+                  items:
+                    properties:
+                      description:
+                        type: string
+                      id:
+                        minLength: 1
+                        type: string
+                      secret:
+                        type: boolean
+                      value:
+                        type: string
+                      valueFromSecret:
+                        description: SecretKeySelector selects a key of a Secret.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                          - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    required:
+                      - id
+                    type: object
+                    x-kubernetes-validations:
+                      - message: only one of value or valueFromSecret should be set
+                        rule: has(self.valueFromSecret) != has(self.value)
+                  type: array
+                name:
+                  type: string
+                spaceId:
+                  minLength: 1
+                  type: string
+                spaceName:
+                  minLength: 1
+                  type: string
+              type: object
+              x-kubernetes-validations:
+                - message: only one of spaceName or spaceId should be set
+                  rule: has(self.spaceId) != has(self.spaceName)
+            status:
+              description: ContextStatus defines the observed state of Context
+              properties:
+                id:
+                  type: string
+              required:
+                - id
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

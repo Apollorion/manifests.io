@@ -1,0 +1,237 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.13.0
+  name: stacks.app.spacelift.io
+spec:
+  group: app.spacelift.io
+  names:
+    kind: Stack
+    listKind: StackList
+    plural: stacks
+    singular: stack
+  scope: Namespaced
+  versions:
+    - name: v1beta1
+      schema:
+        openAPIV3Schema:
+          description: Stack is the Schema for the stacks API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: StackSpec defines the desired state of Stack
+              properties:
+                additionalProjectGlobs:
+                  items:
+                    type: string
+                  type: array
+                administrative:
+                  type: boolean
+                afterApply:
+                  items:
+                    type: string
+                  type: array
+                afterDestroy:
+                  items:
+                    type: string
+                  type: array
+                afterInit:
+                  items:
+                    type: string
+                  type: array
+                afterPerform:
+                  items:
+                    type: string
+                  type: array
+                afterPlan:
+                  items:
+                    type: string
+                  type: array
+                afterRun:
+                  items:
+                    type: string
+                  type: array
+                autodeploy:
+                  type: boolean
+                autoretry:
+                  type: boolean
+                awsIntegration:
+                  properties:
+                    id:
+                      type: string
+                    read:
+                      type: boolean
+                    write:
+                      type: boolean
+                  required:
+                    - id
+                    - read
+                    - write
+                  type: object
+                beforeApply:
+                  items:
+                    type: string
+                  type: array
+                beforeDestroy:
+                  items:
+                    type: string
+                  type: array
+                beforeInit:
+                  items:
+                    type: string
+                  type: array
+                beforePerform:
+                  items:
+                    type: string
+                  type: array
+                beforePlan:
+                  items:
+                    type: string
+                  type: array
+                branch:
+                  type: string
+                commitSHA:
+                  minLength: 1
+                  type: string
+                description:
+                  type: string
+                githubActionDeploy:
+                  type: boolean
+                isDisabled:
+                  type: boolean
+                labels:
+                  items:
+                    type: string
+                  type: array
+                localPreviewEnabled:
+                  type: boolean
+                managesStateFile:
+                  description: In our API managesStateFile is not part of StackInput
+                  type: boolean
+                name:
+                  type: string
+                projectRoot:
+                  type: string
+                protectFromDeletion:
+                  type: boolean
+                provider:
+                  type: string
+                repository:
+                  type: string
+                repositoryURL:
+                  type: string
+                runnerImage:
+                  type: string
+                spaceId:
+                  type: string
+                spaceName:
+                  type: string
+                terraformVersion:
+                  type: string
+                vcsIntegrationId:
+                  type: string
+                vendorConfig:
+                  properties:
+                    ansible:
+                      properties:
+                        playbook:
+                          type: string
+                      required:
+                        - playbook
+                      type: object
+                    cloudFormation:
+                      properties:
+                        entryTemplateFile:
+                          type: string
+                        region:
+                          type: string
+                        stackName:
+                          type: string
+                        templateBucket:
+                          type: string
+                      required:
+                        - entryTemplateFile
+                        - region
+                        - stackName
+                        - templateBucket
+                      type: object
+                    kubernetes:
+                      properties:
+                        kubectlVersion:
+                          type: string
+                        namespace:
+                          type: string
+                      required:
+                        - namespace
+                      type: object
+                    pulumi:
+                      properties:
+                        loginURL:
+                          type: string
+                        stackName:
+                          type: string
+                      required:
+                        - loginURL
+                        - stackName
+                      type: object
+                    terraform:
+                      properties:
+                        externalStateAccessEnabled:
+                          type: boolean
+                        useSmartSanitization:
+                          type: boolean
+                        version:
+                          type: string
+                        workflowTool:
+                          type: string
+                        workspace:
+                          type: string
+                      type: object
+                    terragrunt:
+                      properties:
+                        terraformVersion:
+                          type: string
+                        terragruntVersion:
+                          type: string
+                        useRunAll:
+                          type: boolean
+                        useSmartSanitization:
+                          type: boolean
+                      required:
+                        - terraformVersion
+                        - terragruntVersion
+                        - useRunAll
+                        - useSmartSanitization
+                      type: object
+                  type: object
+                workerPool:
+                  type: string
+              required:
+                - repository
+              type: object
+              x-kubernetes-validations:
+                - message: only one of spaceName or spaceId can be set
+                  rule: has(self.spaceName) != has(self.spaceId)
+            status:
+              description: StackStatus defines the observed state of Stack
+              properties:
+                id:
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
