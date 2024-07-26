@@ -28,6 +28,8 @@ import prometheusoperator0712 from "../oaspec/prometheusoperator/0.71.2.json";
 
 import rancher28 from "../oaspec/rancher/2.8.json";
 
+import spaceliftworkerpoolcontroller0012 from "../oaspec/spaceliftworkerpoolcontroller/0.0.12.json"
+
 export function oaspecFetch(item: string, version: string): K8sDefinitions {
     if (item === "kubernetes") {
         switch (version) {
@@ -109,6 +111,12 @@ export function oaspecFetch(item: string, version: string): K8sDefinitions {
         }
     }
 
+    if (item === "spacelift workerpool controller") {
+        if (version === "0.0.12") {
+            return spaceliftworkerpoolcontroller0012.definitions;
+        }
+    }
+
     throw new Error("Open Api Spec Not Found");
 }
 
@@ -123,7 +131,8 @@ export function availableItemVersions(): { [key: string]: Array<string> } {
         "kubernetes": ["1.26", "1.27", "1.28", "1.29", "1.30"],
         "opa gatekeeper": ["3.14.0"],
         "prometheus operator": ["0.71.2"],
-        "rancher": ["2.8"]
+        "rancher": ["2.8"],
+        "spacelift worker pool controller": ["0.0.12"]
     }
 }
 

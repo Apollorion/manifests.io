@@ -1,0 +1,54 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.13.0
+  name: workers.workers.spacelift.io
+spec:
+  group: workers.spacelift.io
+  names:
+    kind: Worker
+    listKind: WorkerList
+    plural: workers
+    singular: worker
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .metadata.annotations.workers\.spacelift\.io/workerpool-name
+          name: Pool
+          type: string
+        - jsonPath: .status.registered
+          name: Registered
+          type: boolean
+        - jsonPath: .status.state
+          name: Status
+          type: string
+        - jsonPath: .status.currentRunID
+          name: Run ID
+          type: string
+      name: v1beta1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+            status:
+              properties:
+                currentRunID:
+                  type: string
+                registered:
+                  type: boolean
+                state:
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
