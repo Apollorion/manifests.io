@@ -19,8 +19,14 @@ import istio1133 from "../oaspec/istio/1.13.3.json";
 
 import cosignpolicycontroller057 from "../oaspec/cosignpolicycontroller/0.5.7.json";
 
+import gatewayapi100standard from "../oaspec/gatewayapi/1.0.0.json";
+import gatewayapi100experimental from "../oaspec/gatewayapi/1.0.0experimental.json";
 import gatewayapi110standard from "../oaspec/gatewayapi/1.1.0.json";
 import gatewayapi110experimental from "../oaspec/gatewayapi/1.1.0experimental.json";
+import gatewayapi111standard from "../oaspec/gatewayapi/1.1.1.json";
+import gatewayapi111experimental from "../oaspec/gatewayapi/1.1.1experimental.json";
+import gatewayapi120standard from "../oaspec/gatewayapi/1.2.0.json";
+import gatewayapi120experimental from "../oaspec/gatewayapi/1.2.0experimental.json";
 
 import opagatekeeper3140 from "../oaspec/opagatekeeper/3.14.0.json"
 
@@ -103,11 +109,29 @@ export function oaspecFetch(item: string, version: string): K8sDefinitions {
     }
 
     if (item === "gateway api") {
+        if (version === "1.0.0 standard") {
+            return gatewayapi100standard.definitions;
+        }
+        if (version === "1.0.0 experimental") {
+            return gatewayapi100experimental.definitions;
+        }
         if (version === "1.1.0 standard") {
             return gatewayapi110standard.definitions;
         }
         if (version === "1.1.0 experimental") {
             return gatewayapi110experimental.definitions;
+        }
+        if (version === "1.1.1 standard") {
+            return gatewayapi111standard.definitions;
+        }
+        if (version === "1.1.1 experimental") {
+            return gatewayapi111experimental.definitions;
+        }
+        if (version === "1.2.0 standard") {
+            return gatewayapi120standard.definitions;
+        }
+        if (version === "1.2.0 experimental") {
+            return gatewayapi120experimental.definitions;
         }
     }
 
@@ -126,7 +150,7 @@ export function availableItemVersions(): { [key: string]: Array<string> } {
         "cosign policy-controller": ["0.5.7"],
         "flagger": ["1.19.0"],
         "flux": ["0.27.3", "0.31.2", "2.0.1"],
-        "gateway api": ["1.1.0 standard", "1.1.0 experimental"],
+        "gateway api": ["1.0.0 standard", "1.0.0 experimental", "1.1.0 standard", "1.1.0 experimental", "1.1.1 standard", "1.1.1 experimental", "1.2.0 standard", "1.2.0 experimental"],
         "istio": ["1.13.3"],
         "kubernetes": ["1.27", "1.28", "1.29", "1.30", "1.31"],
         "opa gatekeeper": ["3.14.0"],
