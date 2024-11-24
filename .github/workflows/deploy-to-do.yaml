@@ -1,0 +1,44 @@
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v3
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: https://ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ghcr.io/apollorion/manifestsio:$(echo $GITHUB_SHA | head -c7)
+
+      - name: Update deployment file
+        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|ghcr.io/apollorion/manifestsio:'${TAG}'|' deployment.yaml
+
+      - name: Log in to DigitalOcean
+        run: doctl kubernetes cluster kubeconfig save --expiry-seconds 1200 ${{ secrets.DIGITALOCEAN_CLUSTER_ID }}
+
+      - name: Deploy to DigitalOcean Kubernetes
+        run: kubectl apply -f deployment.yaml
+
+      - name: Verify deployment
+        run: kubectl -n manifestsio rollout status deployment/manifestsio
