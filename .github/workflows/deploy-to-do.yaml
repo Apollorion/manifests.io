@@ -29,7 +29,13 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ghcr.io/apollorion/manifestsio:$(echo $GITHUB_SHA | head -c7)
+          tags: ghcr.io/apollorion/manifestsio:latest
+
+      - name: Tag with SHA and push that too
+        run: |
+            TAG=$(echo $GITHUB_SHA | head -c7)
+            docker tag ghcr.io/apollorion/manifestsio:latest ghcr.io/apollorion/manifestsio:${TAG}
+            docker push ghcr.io/apollorion/manifestsio:${TAG}
 
       - name: Update deployment file
         run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|ghcr.io/apollorion/manifestsio:'${TAG}'|' deployment.yaml
