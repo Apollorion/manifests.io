@@ -1,12 +1,9 @@
 # Manifests.io
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/99772608-03b1-45d2-a943-8ee47bb82a8c/deploy-status)](https://app.netlify.com/sites/manifestsio/deploys)
-
 Easy to use online kubernetes documentation.
 
 ## Important URLS
 - Production: www.manifests.io
-
 
 ## Devving this repo
 1. clone this repository
