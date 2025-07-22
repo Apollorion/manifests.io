@@ -1,10 +1,10 @@
 import {K8sDefinitions} from "@/typings/KubernetesSpec";
 
+import kubernetes133 from "../oaspec/kubernetes/1.33.json";
+import kubernetes132 from "../oaspec/kubernetes/1.32.json";
 import kubernetes131 from "../oaspec/kubernetes/1.31.json";
 import kubernetes130 from "../oaspec/kubernetes/1.30.json";
 import kubernetes129 from "../oaspec/kubernetes/1.29.json";
-import kubernetes128 from "../oaspec/kubernetes/1.28.json";
-import kubernetes127 from "../oaspec/kubernetes/1.27.json";
 
 import certmanager171 from "../oaspec/certmanager/1.7.json";
 import certmanager1144 from "../oaspec/certmanager/1.14.json";
@@ -41,16 +41,16 @@ import spaceliftworkerpool0021 from "../oaspec/spaceliftworkerpool/0.0.21.json";
 export function oaspecFetch(item: string, version: string): K8sDefinitions {
     if (item === "kubernetes") {
         switch (version) {
+            case "1.33":
+                return kubernetes133.definitions;
+            case "1.32":
+                return kubernetes132.definitions;
             case "1.31":
                 return kubernetes131.definitions;
             case "1.30":
                 return kubernetes130.definitions;
             case "1.29":
                 return kubernetes129.definitions;
-            case "1.28":
-                return kubernetes128.definitions;
-            case "1.27":
-                return kubernetes127.definitions;
         }
     }
 
@@ -160,7 +160,7 @@ export function availableItemVersions(): { [key: string]: Array<string> } {
         "flux": ["0.27.3", "0.31.2", "2.0.1"],
         "gateway api": ["1.0.0 standard", "1.0.0 experimental", "1.1.0 standard", "1.1.0 experimental", "1.1.1 standard", "1.1.1 experimental", "1.2.0 standard", "1.2.0 experimental"],
         "istio": ["1.13.3"],
-        "kubernetes": ["1.27", "1.28", "1.29", "1.30", "1.31"],
+        "kubernetes": ["1.29", "1.30", "1.31", "1.32", "1.33"],
         "opa gatekeeper": ["3.14.0"],
         "prometheus operator": ["0.71.2"],
         "rancher": ["2.8"],
@@ -172,6 +172,6 @@ export function availableItemVersions(): { [key: string]: Array<string> } {
 export function defaultItemVersion(): { item: string, version: string } {
     return {
         item: "kubernetes",
-        version: "1.31"
+        version: "1.33"
     }
 }
