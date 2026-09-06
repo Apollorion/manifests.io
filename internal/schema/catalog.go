@@ -31,7 +31,7 @@ type Query struct {
 	Version  string `json:"version"`
 	Resource string `json:"resource,omitempty"`
 	Path     string `json:"path,omitempty"`
-	Linked   string `json:"linked,omitempty"`
+	Pointer  string `json:"pointer,omitempty"`
 	OneOf    string `json:"oneOf,omitempty"`
 	Key      string `json:"key,omitempty"`
 }
@@ -59,7 +59,7 @@ type Page struct {
 	Title         string    `json:"title"`
 	Description   string    `json:"description"`
 	Path          string    `json:"path,omitempty"`
-	Linked        string    `json:"linked,omitempty"`
+	Pointer       string    `json:"pointer,omitempty"`
 	Resources     []Row     `json:"resources"`
 	OtherVersions []Link    `json:"otherVersions"`
 	Breadcrumbs   []Link    `json:"breadcrumbs"`
@@ -207,7 +207,7 @@ func (c *Catalog) Routes() []Query {
 			q := Query{Item: p.Name, Version: version}
 			result = append(result, q)
 			for _, loc := range c.documents[p.Name+"/"+version].routes {
-				q.Resource, q.Path = loc.resource, loc.path
+				q.Resource, q.Pointer = loc.resource, loc.path
 				result = append(result, q)
 			}
 		}

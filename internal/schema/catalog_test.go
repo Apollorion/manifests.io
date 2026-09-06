@@ -112,7 +112,7 @@ func TestFiniteCanonicalRoutes(t *testing.T) {
 		}
 		seen[p.Canonical] = q.String()
 	}
-	q := Query{Item: "kubernetes", Version: "1.34", Resource: "io.k8s.api.core.v1.Pod", Path: "/properties/spec/properties/containers/items"}
+	q := Query{Item: "kubernetes", Version: "1.34", Resource: "io.k8s.api.core.v1.Pod", Pointer: "/properties/spec/properties/containers/items"}
 	p, err := c.Page(q)
 	if err != nil {
 		t.Fatal(err)
@@ -153,10 +153,10 @@ func TestNavigation(t *testing.T) {
 			spec = row
 		}
 	}
-	if spec.Href != "/kubernetes/1.34/io.k8s.api.core.v1.PodSpec" || spec.Type != "PodSpec" {
+	if spec.Href != "/kubernetes/1.34/io.k8s.api.core.v1.PodSpec?path=Pod.spec" || spec.Type != "PodSpec" {
 		t.Fatalf("spec row: %+v", spec)
 	}
-	q.Path = "/properties/spec/properties/containers/items"
+	q.Pointer = "/properties/spec/properties/containers/items"
 	p, err = c.Page(q)
 	if err != nil {
 		t.Fatal(err)
@@ -171,16 +171,16 @@ func TestNavigation(t *testing.T) {
 		t.Fatal("container name must be required")
 	}
 	for _, path := range []string{"oops", "/properties", "/properties/~2", "/oneOf/-1"} {
-		q.Path = path
+		q.Pointer = path
 		if _, err := c.Page(q); !errors.Is(err, ErrBadQuery) {
 			t.Errorf("path %q: %v", path, err)
 		}
 	}
-	q.Path = "/properties/nonexistent"
+	q.Pointer = "/properties/nonexistent"
 	if _, err := c.Page(q); !errors.Is(err, ErrNotFound) {
 		t.Fatal(err)
 	}
-	q = Query{Item: "gateway api", Version: "1.2.0 standard", Resource: "io.k8s.networking.gateway.v1.Gateway", Path: "/properties/spec/properties/addresses"}
+	q = Query{Item: "gateway api", Version: "1.2.0 standard", Resource: "io.k8s.networking.gateway.v1.Gateway", Pointer: "/properties/spec/properties/addresses"}
 	p, err = c.Page(q)
 	if err != nil {
 		t.Fatal(err)
@@ -196,6 +196,7 @@ func TestReferenceNavigationUsesTargetURLs(t *testing.T) {
 		t.Fatal(err)
 	}
 	q := Query{Item: "kubernetes", Version: "1.34", Resource: "io.k8s.api.apps.v1.Deployment"}
+	context := "Deployment"
 	for _, step := range []struct{ field, target string }{
 		{"spec", "io.k8s.api.apps.v1.DeploymentSpec"},
 		{"template", "io.k8s.api.core.v1.PodTemplateSpec"},
@@ -212,16 +213,21 @@ func TestReferenceNavigationUsesTargetURLs(t *testing.T) {
 				href = row.Href
 			}
 		}
-		if want := "/kubernetes/1.34/" + step.target; href != want {
+		context += "." + step.field
+		if want := "/kubernetes/1.34/" + step.target + "?path=" + context; href != want {
 			t.Fatalf("%s.%s links to %q, want %q", q.Resource, step.field, href, want)
 		}
 		q = queryFromHref(t, href)
+		target, err := c.Page(q)
+		if err != nil || target.Title != context || target.Path != context || target.Pointer != "" {
+			t.Fatalf("target lost traversal context: page=%+v error=%v", target, err)
+		}
 	}
-	page, err := c.Page(Query{Item: "kubernetes", Version: "1.34", Resource: "io.k8s.api.apps.v1.Deployment", Path: "/properties/spec/properties/template/properties/spec"})
+	page, err := c.Page(Query{Item: "kubernetes", Version: "1.34", Resource: "io.k8s.api.core.v1.PodSpec", Path: "Deployment.spec.template.spec"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if page.Resource != "io.k8s.api.core.v1.PodSpec" || page.Path != "" || page.Title != "PodSpec" {
+	if page.Resource != "io.k8s.api.core.v1.PodSpec" || page.Pointer != "" || page.Title != "Deployment.spec.template.spec" {
 		t.Fatalf("contextual URL did not resolve to PodSpec: resource=%s path=%s title=%s", page.Resource, page.Path, page.Title)
 	}
 }

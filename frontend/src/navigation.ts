@@ -5,7 +5,7 @@ export function specURL(page: Page, item: string, version: string): string {
   if (item !== page.item || !page.resource) return base;
   const query = new URLSearchParams();
   if (page.path) query.set('path', page.path);
-  if (page.linked) query.set('linked', page.linked);
+  if (page.pointer) query.set('pointer', page.pointer);
   const suffix = query.size ? `?${query}` : '';
   return `${base}/${encodeURIComponent(page.resource)}${suffix}`;
 }

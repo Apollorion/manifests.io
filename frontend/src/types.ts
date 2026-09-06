@@ -25,7 +25,7 @@ export interface Page {
   title: string;
   description: string;
   path?: string;
-  linked?: string;
+  pointer?: string;
   resources: Row[];
   otherVersions: Link[];
   breadcrumbs: Link[];

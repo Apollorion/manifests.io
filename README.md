@@ -4,6 +4,8 @@ Browse Kubernetes and custom resource schemas with a Go backend and one React re
 
 Choose a product and version, filter resources, then follow fields into their types. Descriptions, required fields, arrays, maps, unions, validation constraints, and alternate API versions come from the original schemas. Existing resource URLs and the legacy `linked`, `oneOf`, and `key` parameters remain supported.
 
+The resource in the URL selects the schema, while `path` records the field traversal shown in the heading. For example, `/kubernetes/1.34/io.k8s.api.core.v1.PodSpec?path=Deployment.spec.template.spec` displays PodSpec in its Deployment context. Each field click extends that path while linking directly to its target schema. Unnamed inline schemas use a separate JSON Pointer in `pointer`; version switching preserves both values. Schema navigation does not redirect to canonical URLs.
+
 ## Run locally
 
 Requirements: Go 1.27+, Node.js 24.15+, and npm.

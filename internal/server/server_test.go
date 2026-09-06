@@ -111,7 +111,7 @@ func TestPrerenderCachingAndDynamicQueries(t *testing.T) {
 		t.Fatal("conditional request did not return 304")
 	}
 	dynamic := httptest.NewRecorder()
-	s.ServeHTTP(dynamic, httptest.NewRequest("GET", "/kubernetes/1.34?path=/properties/spec", nil))
+	s.ServeHTTP(dynamic, httptest.NewRequest("GET", "/kubernetes/1.34?path=Deployment.spec.template.spec", nil))
 	if !strings.Contains(dynamic.Body.String(), "Server rendered fields") || !strings.Contains(dynamic.Body.String(), "data-dynamic") {
 		t.Fatal("contextual query lost its selected schema HTML or fresh page data")
 	}
@@ -135,49 +135,71 @@ func (c canonicalCatalog) Page(schema.Query) (schema.Page, error) {
 	return c.page, nil
 }
 
-func TestNamedReferencesRedirectToTheirCanonicalResource(t *testing.T) {
+func TestDocumentationKeepsNavigationContextWithoutRedirecting(t *testing.T) {
 	const deployment = "/kubernetes/1.34/io.k8s.api.apps.v1.Deployment"
 	const podSpec = "/kubernetes/1.34/io.k8s.api.core.v1.PodSpec"
-	const context = "?path=/properties/spec/properties/template/properties/spec"
+	const context = "?path=Deployment.spec.template.spec"
 	for _, tc := range []struct {
 		name      string
 		method    string
 		url       string
 		canonical string
-		status    int
 	}{
-		{"nested reference", "GET", deployment + context, podSpec, http.StatusPermanentRedirect},
-		{"nested reference head", "HEAD", deployment + context, podSpec, http.StatusPermanentRedirect},
-		{"legacy linked reference", "GET", deployment + context + "&linked=Workload", podSpec, http.StatusPermanentRedirect},
-		{"canonical resource", "GET", podSpec, podSpec, http.StatusOK},
-		{"canonical linked resource", "GET", podSpec + "?linked=Workload", podSpec, http.StatusOK},
-		{"inline schema", "GET", deployment + "?path=/properties/status", deployment + "?path=%2Fproperties%2Fstatus", http.StatusOK},
-		{"resource listing", "GET", "/kubernetes/1.34", podSpec, http.StatusOK},
-		{"API reference", "GET", "/api/page?item=kubernetes&version=1.34&resource=io.k8s.api.apps.v1.Deployment&path=/properties/spec/properties/template/properties/spec", podSpec, http.StatusOK},
+		{"reference context", "GET", podSpec + context, podSpec},
+		{"reference context head", "HEAD", podSpec + context, podSpec},
+		{"different canonical resource", "GET", deployment + "?pointer=/properties/spec/properties/template/properties/spec", podSpec},
+		{"different canonical resource head", "HEAD", deployment + "?pointer=/properties/spec/properties/template/properties/spec", podSpec},
+		{"legacy linked reference", "GET", podSpec + "?linked=Deployment.spec.template.spec", podSpec},
+		{"canonical resource", "GET", podSpec, podSpec},
+		{"inline schema", "GET", deployment + "?pointer=/properties/status&path=Deployment.status", deployment + "?pointer=%2Fproperties%2Fstatus"},
+		{"resource listing", "GET", "/kubernetes/1.34", "/kubernetes/1.34"},
+		{"API reference", "GET", "/api/page?item=kubernetes&version=1.34&resource=io.k8s.api.core.v1.PodSpec&path=Deployment.spec.template.spec", podSpec},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			s := testServer(t)
-			s.catalog = canonicalCatalog{page: schema.Page{Canonical: tc.canonical, Title: "PodSpec"}}
+			s.catalog = canonicalCatalog{page: schema.Page{Canonical: tc.canonical, Title: "PodSpec", Path: "Deployment.spec.template.spec"}}
 			w := httptest.NewRecorder()
 			s.ServeHTTP(w, httptest.NewRequest(tc.method, tc.url, nil))
-			if w.Code != tc.status {
-				t.Fatalf("status=%d want=%d body=%s", w.Code, tc.status, w.Body)
+			if w.Code != http.StatusOK {
+				t.Fatalf("status=%d want=200 body=%s", w.Code, w.Body)
 			}
-			if tc.status == http.StatusPermanentRedirect {
-				if location := w.Header().Get("Location"); location != tc.canonical {
-					t.Fatalf("location=%q want=%q", location, tc.canonical)
-				}
-			} else if w.Header().Get("Location") != "" {
-				t.Fatal("non-redirect response includes Location")
+			if w.Header().Get("Location") != "" {
+				t.Fatal("documentation response includes a redirect Location")
 			}
 			if tc.method == "HEAD" && w.Body.Len() != 0 {
-				t.Fatal("HEAD redirect returned a body")
+				t.Fatal("HEAD response returned a body")
 			}
 			if strings.HasPrefix(tc.url, "/api/") {
 				var page schema.Page
-				if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil || page.Canonical != podSpec {
-					t.Fatalf("API did not return canonical page JSON: %s", w.Body)
+				if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil || page.Canonical != podSpec || page.Path != "Deployment.spec.template.spec" {
+					t.Fatalf("API did not return page JSON with navigation context: %s", w.Body)
 				}
+			}
+		})
+	}
+}
+
+func TestParseNavigationPathAndPointer(t *testing.T) {
+	const resource = "io.k8s.api.core.v1.PodSpec"
+	const route = "/kubernetes/1.34/" + resource
+	for _, tc := range []struct {
+		url     string
+		path    string
+		pointer string
+	}{
+		{route + "?path=Deployment.spec.template.spec", "Deployment.spec.template.spec", ""},
+		{route + "?path=Deployment.spec.template.spec.containers&pointer=%2Fproperties%2Fcontainers", "Deployment.spec.template.spec.containers", "/properties/containers"},
+		{route + "?linked=Deployment.spec.template.spec", "Deployment.spec.template.spec", ""},
+		{route + "?path=Pod.spec&linked=Deployment.spec.template.spec", "Pod.spec", ""},
+		{"/api/page?item=kubernetes&version=1.34&resource=" + resource + "&path=Pod.spec&pointer=%2Fproperties%2Fcontainers", "Pod.spec", "/properties/containers"},
+	} {
+		t.Run(tc.url, func(t *testing.T) {
+			query, err := parseQuery(httptest.NewRequest("GET", tc.url, nil))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if query.Item != "kubernetes" || query.Version != "1.34" || query.Resource != resource || query.Path != tc.path || query.Pointer != tc.pointer {
+				t.Fatalf("unexpected navigation query: %+v", query)
 			}
 		})
 	}

@@ -111,7 +111,7 @@ func TestReferenceDescriptionsAreEdgeSpecific(t *testing.T) {
 					t.Errorf("%s description: %q", row.Name, row.Description)
 				}
 			}
-			p, err = c.Page(Query{Item: "example", Version: "1", Resource: "Root", Path: "/properties/nested"})
+			p, err = c.Page(Query{Item: "example", Version: "1", Resource: "Root", Pointer: "/properties/nested"})
 			if err != nil {
 				t.Fatal(err)
 			}

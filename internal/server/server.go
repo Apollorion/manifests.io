@@ -134,16 +134,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, r, http.StatusOK, page)
 		return
 	}
-	if query.Resource != "" {
-		canonical, err := url.Parse(page.Canonical)
-		if err == nil && canonical.Scheme == "" && canonical.Host == "" && canonical.Path != r.URL.Path {
-			target, err := parseQuery(&http.Request{URL: canonical})
-			if err == nil && target.Resource != "" {
-				http.Redirect(w, r, page.Canonical, http.StatusPermanentRedirect)
-				return
-			}
-		}
-	}
 	s.servePage(w, r, http.StatusOK, page)
 }
 
@@ -157,7 +147,10 @@ func parseQuery(r *http.Request) (schema.Query, error) {
 			return schema.Query{}, fmt.Errorf("duplicate parameter %s", key)
 		}
 	}
-	q := schema.Query{Path: values.Get("path"), Linked: values.Get("linked"), OneOf: values.Get("oneOf"), Key: values.Get("key")}
+	q := schema.Query{Path: values.Get("path"), Pointer: values.Get("pointer"), OneOf: values.Get("oneOf"), Key: values.Get("key")}
+	if q.Path == "" {
+		q.Path = values.Get("linked")
+	}
 	if r.URL.Path == "/api/page" {
 		q.Item, q.Version, q.Resource = values.Get("item"), values.Get("version"), values.Get("resource")
 	} else {
@@ -216,7 +209,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, p
 	if status == http.StatusOK {
 		if rendered, err := readRendered(filepath.Join(s.config.RenderDir, RenderFilename(page.Canonical))); err == nil {
 			body = rendered
-			dynamic = r.URL.RequestURI() != page.Canonical || page.Linked != ""
+			dynamic = r.URL.RequestURI() != page.Canonical || page.Path != ""
 		}
 	}
 	data, err := json.Marshal(page)

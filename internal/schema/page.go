@@ -16,7 +16,7 @@ func (c *Catalog) Page(q Query) (Page, error) {
 		q.Item, q.Version = "kubernetes", "1.34"
 	}
 	p := Page{Item: q.Item, Version: q.Version, Resource: q.Resource, Catalog: c.Products(), Resources: []Row{}, OtherVersions: []Link{}, Breadcrumbs: []Link{}, Variants: []Link{}}
-	if len(q.Path) > 8192 || len(q.Linked) > 8192 || len(q.Resource) > 2048 {
+	if len(q.Pointer) > 8192 || len(q.Path) > 8192 || len(q.Resource) > 2048 {
 		return p, ErrBadQuery
 	}
 	d := c.documents[q.Item+"/"+q.Version]
@@ -26,7 +26,7 @@ func (c *Catalog) Page(q Query) (Page, error) {
 	base := Query{Item: q.Item, Version: q.Version}
 	p.Breadcrumbs = append(p.Breadcrumbs, Link{q.Item + " " + q.Version, Href(base)})
 	if q.Resource == "" {
-		if q.Path != "" || q.OneOf != "" || q.Key != "" {
+		if q.Pointer != "" || q.Path != "" || q.OneOf != "" || q.Key != "" {
 			return p, ErrBadQuery
 		}
 		p.Title = q.Item + " " + q.Version
@@ -48,13 +48,13 @@ func (c *Catalog) Page(q Query) (Page, error) {
 	}
 	if alias, ok := d.aliases[q.Resource]; ok && d.schemas[q.Resource] == nil {
 		q.Resource = alias.resource
-		q.Path = alias.path + q.Path
+		q.Pointer = alias.path + q.Pointer
 	}
 	ref := d.schemas[q.Resource]
 	if ref == nil || ref.Value == nil {
 		return p, ErrNotFound
 	}
-	selected, err := navigate(ref.Value, q.Path)
+	selected, err := navigate(ref.Value, q.Pointer)
 	if err != nil {
 		return p, err
 	}
@@ -76,28 +76,29 @@ func (c *Catalog) Page(q Query) (Page, error) {
 		if found < 0 {
 			return p, ErrNotFound
 		}
-		q.Path += "/properties/" + escapePointer(q.Key) + "/oneOf/" + strconv.Itoa(found)
-		if q.Linked != "" {
-			q.Linked += "." + q.Key
+		q.Pointer += "/properties/" + escapePointer(q.Key) + "/oneOf/" + strconv.Itoa(found)
+		if q.Path != "" {
+			q.Path += "." + q.Key
 		}
 		selected = property.Value.OneOf[found].Value
 		q.OneOf, q.Key = "", ""
 	}
 	q = d.canonicalQuery(selected, q)
-	p.Resource, p.Path, p.Linked = q.Resource, q.Path, q.Linked
-	p.Title = shortName(q.Resource) + displayPath(q.Path)
-	if q.Linked != "" {
-		p.Title = q.Linked
+	p.Resource, p.Pointer, p.Path = q.Resource, q.Pointer, q.Path
+	p.Title = shortName(q.Resource) + displayPath(q.Pointer)
+	if q.Path != "" {
+		p.Title = q.Path
 	}
 	p.Description = selected.Description
 	canonical := q
-	canonical.Linked = ""
+	canonical.Path = ""
 	p.Canonical = Href(canonical)
+	q.Path = p.Title
 	root := base
 	root.Resource = q.Resource
 	p.Breadcrumbs = append(p.Breadcrumbs, Link{shortName(q.Resource), Href(root)})
-	if q.Path != "" {
-		p.Breadcrumbs = append(p.Breadcrumbs, Link{displayPath(q.Path), p.Canonical})
+	if p.Title != shortName(q.Resource) {
+		p.Breadcrumbs = append(p.Breadcrumbs, Link{p.Title, Href(q)})
 	}
 	for _, current := range d.gvks[q.Resource] {
 		for _, name := range sortedKeys(d.gvks) {
@@ -115,29 +116,28 @@ func (c *Catalog) Page(q Query) (Page, error) {
 	rowSchema, rowQuery := selected, q
 	if selected.Items != nil && selected.Items.Value != nil {
 		rowSchema = selected.Items.Value
-		rowQuery.Path += "/items"
+		rowQuery.Pointer += "/items"
 		p.Variants = append(p.Variants, d.variants(rowSchema, rowQuery)...)
 	}
 	for _, name := range sortedKeys(rowSchema.Properties) {
 		child := rowSchema.Properties[name]
 		childQ := rowQuery
-		childQ.Path += "/properties/" + escapePointer(name)
-		if childQ.Linked != "" {
-			childQ.Linked += "." + name
-		}
+		childQ.Pointer += "/properties/" + escapePointer(name)
+		childQ.Path += "." + name
 		row := d.buildRow(name, child, childQ)
 		row.Required = slices.Contains(rowSchema.Required, name)
 		p.Resources = append(p.Resources, row)
 	}
 	if additional := rowSchema.AdditionalProperties.Schema; additional != nil {
 		childQ := rowQuery
-		childQ.Path += "/additionalProperties"
+		childQ.Pointer += "/additionalProperties"
+		childQ.Path += ".[key]"
 		p.Resources = append(p.Resources, d.buildRow("[key]", additional, childQ))
 	} else if rowSchema.AdditionalProperties.Has != nil && *rowSchema.AdditionalProperties.Has {
 		p.Resources = append(p.Resources, Row{Name: "[key]", Type: "any"})
 	}
 	if len(p.Resources) == 0 {
-		row := d.buildRow(shortName(q.Resource)+displayPath(q.Path), &openapi3.SchemaRef{Value: rowSchema}, rowQuery)
+		row := d.buildRow(p.Title, &openapi3.SchemaRef{Value: rowSchema}, rowQuery)
 		row.Href = ""
 		p.Resources = append(p.Resources, row)
 	}
@@ -153,8 +153,8 @@ func Href(q Query) string {
 	if q.Path != "" {
 		values.Set("path", q.Path)
 	}
-	if q.Linked != "" {
-		values.Set("linked", q.Linked)
+	if q.Pointer != "" {
+		values.Set("pointer", q.Pointer)
 	}
 	if q.OneOf != "" {
 		values.Set("oneOf", q.OneOf)
@@ -315,11 +315,10 @@ func (d *document) buildRow(name string, ref *openapi3.SchemaRef, q Query) Row {
 	}
 	row.Constraints = constraints(s)
 	q = d.canonicalQuery(s, q)
-	q.Linked = ""
 	row.Variants = d.variants(s, q)
 	if s.Items != nil && s.Items.Value != nil {
 		itemsQuery := q
-		itemsQuery.Path += "/items"
+		itemsQuery.Pointer += "/items"
 		row.Variants = append(row.Variants, d.variants(s.Items.Value, itemsQuery)...)
 		if s.Items.Ref != "" {
 			q = d.canonicalQuery(s.Items.Value, itemsQuery)
@@ -383,7 +382,7 @@ func schemaType(ref *openapi3.SchemaRef, seen map[*openapi3.Schema]bool, depth i
 
 func (d *document) canonicalQuery(s *openapi3.Schema, q Query) Query {
 	if loc, ok := d.nodes[s]; ok {
-		q.Resource, q.Path = loc.resource, loc.path
+		q.Resource, q.Pointer = loc.resource, loc.path
 	}
 	return q
 }
@@ -400,9 +399,8 @@ func (d *document) variants(s *openapi3.Schema, q Query) []Link {
 				label = ref.Value.Title
 			}
 			child := q
-			child.Path += "/" + set.name + "/" + strconv.Itoa(i)
+			child.Pointer += "/" + set.name + "/" + strconv.Itoa(i)
 			child = d.canonicalQuery(ref.Value, child)
-			child.Linked = ""
 			links = append(links, Link{label, Href(child)})
 		}
 	}
@@ -484,5 +482,5 @@ func constraints(s *openapi3.Schema) []string {
 }
 
 func (q Query) String() string {
-	return fmt.Sprintf("%s %s %s%s", q.Item, q.Version, q.Resource, q.Path)
+	return fmt.Sprintf("%s %s %s%s (%s)", q.Item, q.Version, q.Resource, q.Pointer, q.Path)
 }

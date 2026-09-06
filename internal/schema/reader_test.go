@@ -75,7 +75,7 @@ func TestCRDWrappersAndSchemaFeatures(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := &Catalog{products: []Product{{"example", []string{"1"}}}, documents: map[string]*document{"example/1": d}}
-	q := Query{Item: "example", Version: "1", Resource: "io.example.v1.Example", Path: "/properties/spec"}
+	q := Query{Item: "example", Version: "1", Resource: "io.example.v1.Example", Pointer: "/properties/spec"}
 	p, err := c.Page(q)
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +105,7 @@ func TestCRDWrappersAndSchemaFeatures(t *testing.T) {
 			}
 		}
 	}
-	q.OneOf, q.Key, q.Linked = "Hosted", "config", "Example.spec"
+	q.OneOf, q.Key, q.Path = "Hosted", "config", "Example.spec"
 	p, err = c.Page(q)
 	if err != nil {
 		t.Fatal(err)
@@ -116,8 +116,8 @@ func TestCRDWrappersAndSchemaFeatures(t *testing.T) {
 	if !slices.Contains(p.Resources[0].Constraints, `enum: ["us","eu"]`) || !slices.Contains(p.Resources[0].Constraints, `default: "us"`) {
 		t.Fatal("enum/default lost")
 	}
-	q.OneOf, q.Key, q.Linked = "", "", ""
-	q.Path = "/properties/spec/properties/a~1b~0c"
+	q.OneOf, q.Key, q.Path = "", "", ""
+	q.Pointer = "/properties/spec/properties/a~1b~0c"
 	p, err = c.Page(q)
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +125,7 @@ func TestCRDWrappersAndSchemaFeatures(t *testing.T) {
 	if !slices.Contains(p.Resources[0].Constraints, "exclusiveMinimum: true") {
 		t.Fatal("exclusive bound lost")
 	}
-	q.Path = "/properties/spec/properties/mapping"
+	q.Pointer = "/properties/spec/properties/mapping"
 	p, err = c.Page(q)
 	if err != nil {
 		t.Fatal(err)
@@ -134,12 +134,12 @@ func TestCRDWrappersAndSchemaFeatures(t *testing.T) {
 		t.Fatalf("map page: %+v", p)
 	}
 	q.Resource = "io.example.v1.ExampleSpec"
-	q.Path = ""
+	q.Pointer = ""
 	p, err = c.Page(q)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.Path != "/properties/spec" || p.Resource != "io.example.v1.Example" {
+	if p.Pointer != "/properties/spec" || p.Resource != "io.example.v1.Example" {
 		t.Fatal("legacy alias not canonicalized")
 	}
 }
@@ -182,7 +182,7 @@ func TestBoundedCyclicNavigation(t *testing.T) {
 		}
 		q = queryFromHref(t, p.Resources[0].Href)
 	}
-	q.Path = strings.Repeat("/properties/self", 65)
+	q.Pointer = strings.Repeat("/properties/self", 65)
 	if _, err := c.Page(q); !errors.Is(err, ErrBadQuery) {
 		t.Fatalf("depth limit: %v", err)
 	}
@@ -200,6 +200,6 @@ func queryFromHref(t *testing.T, href string) Query {
 		q.Resource = parts[2]
 	}
 	values := u.Query()
-	q.Path, q.Linked, q.OneOf, q.Key = values.Get("path"), values.Get("linked"), values.Get("oneOf"), values.Get("key")
+	q.Pointer, q.Path, q.OneOf, q.Key = values.Get("pointer"), values.Get("path"), values.Get("oneOf"), values.Get("key")
 	return q
 }
