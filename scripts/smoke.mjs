@@ -50,6 +50,7 @@ for (const path of [pod, `${podSpec}?path=Deployment.spec.template.spec`, `${pod
   assert(body.includes('<tbody>'), `No rendered fields at ${path}`);
   assert(body.includes('id="__PAGE_DATA__"'), `No browser data at ${path}`);
   assert(!body.includes('<!--page-'), `Incomplete template at ${path}`);
+  assert(!body.includes('baadaa'), 'Old design credit is still rendered');
   if (path === pod) assert(body.includes(`href="${podSpec}?path=Pod.spec"`), 'Rendered spec link lost target or traversal');
   if (path.includes('path=Deployment.spec.template.spec')) assert(body.includes('<title>Deployment.spec.template.spec | Manifests.io</title>'));
   assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
@@ -84,4 +85,31 @@ assert.equal((await fetch(`${base}/kubernetes/1.34/missing`)).status, 404);
 assert.equal((await fetch(`${base}/api/page?item=kubernetes&item=flux&version=1.34`)).status, 400);
 assert.equal((await fetch(`${base}/api/catalog`, { method: 'POST' })).status, 405);
 assert.equal(await (await fetch(`${base}${pod}`, { method: 'HEAD' })).text(), '');
-console.log('Container smoke checks passed: API, descriptions, target URLs with traversal context, no resource redirects, nested SSR, required fields, errors, and headers.');
+
+let cyclicURL = new URL('/kubernetes/1.34/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps', base);
+for (let visit = 1; visit <= 3; visit++) {
+  const [, item, version, resource] = cyclicURL.pathname.split('/');
+  const query = new URLSearchParams(cyclicURL.search);
+  query.set('item', item);
+  query.set('version', version);
+  query.set('resource', resource);
+  const response = await fetch(`${base}/api/page?${query}`);
+  assert.equal(response.status, 200);
+  const current = await response.json();
+  const recursive = current.resources.find(row => row.name === 'allOf');
+  assert.equal(!!recursive.circular, visit === 3);
+  assert(!current.canonical.includes('trail='));
+  if (visit < 3) {
+    assert(recursive.href);
+    cyclicURL = new URL(recursive.href, base);
+  } else {
+    assert(!recursive.href);
+    assert(current.resources.find(row => row.name === 'externalDocs').href, 'Unrelated field was blocked');
+    const reloaded = await (await fetch(`${base}/api/page?${query}`)).json();
+    assert.deepEqual(reloaded, current, 'Refresh changed the recursion limit');
+    const html = await (await fetch(cyclicURL)).text();
+    const embedded = JSON.parse(html.match(/<script id="__PAGE_DATA__" type="application\/json">(.*?)<\/script>/s)[1]);
+    assert(embedded.resources.find(row => row.name === 'allOf').circular, 'HTML page data lost circular state');
+  }
+}
+console.log('Container smoke checks passed: API, descriptions, traversal URLs, circular limits, no resource redirects, nested SSR, required fields, errors, and headers.');

@@ -170,9 +170,12 @@ func TestBoundedCyclicNavigation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := d.indexNodes(); err != nil {
+		t.Fatal(err)
+	}
 	c := &Catalog{documents: map[string]*document{"example/1": d}}
 	q := Query{Item: "example", Version: "1", Resource: "Thing"}
-	for i := 0; i < 64; i++ {
+	for i := 0; i < 3; i++ {
 		p, err := c.Page(q)
 		if err != nil {
 			t.Fatalf("depth %d: %v", i, err)
@@ -180,7 +183,13 @@ func TestBoundedCyclicNavigation(t *testing.T) {
 		if len(p.Resources) != 1 {
 			t.Fatal("cyclic schema expanded recursively")
 		}
-		q = queryFromHref(t, p.Resources[0].Href)
+		if i == 2 {
+			if !p.Resources[0].Circular || p.Resources[0].Href != "" {
+				t.Fatal("fourth schema visit was not blocked")
+			}
+		} else {
+			q = queryFromHref(t, p.Resources[0].Href)
+		}
 	}
 	q.Pointer = strings.Repeat("/properties/self", 65)
 	if _, err := c.Page(q); !errors.Is(err, ErrBadQuery) {
@@ -201,5 +210,6 @@ func queryFromHref(t *testing.T, href string) Query {
 	}
 	values := u.Query()
 	q.Pointer, q.Path, q.OneOf, q.Key = values.Get("pointer"), values.Get("path"), values.Get("oneOf"), values.Get("key")
+	q.Trail = values.Get("trail")
 	return q
 }

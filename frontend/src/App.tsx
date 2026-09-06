@@ -26,18 +26,27 @@ function ThemeButton() {
   </button>;
 }
 
+function SchemaLink({ label, href, circular }: { label: string; href?: string; circular?: boolean }) {
+  if (circular) return <span className="schema-circular">
+    <span>{label}</span>
+    <span className="circular-label"><span aria-hidden="true">× </span>Circular reference</span>
+    <span className="circular-explanation">This schema has already been visited 3 times in this path.</span>
+  </span>;
+  return href ? <a href={href}>{label}<span className="field-arrow" aria-hidden="true"> ↗</span></a> : <>{label}</>;
+}
+
 function LinkList({ links, label }: { links: Link[]; label: string }) {
   if (!links?.length) return null;
   return <nav className="related-links" aria-label={label}>
     <span className="eyebrow">{label}</span>
-    <ul>{links.map(link => <li key={link.href}><a href={link.href}>{link.label}<span aria-hidden="true"> ↗</span></a></li>)}</ul>
+    <ul>{links.map((link, index) => <li key={`${link.href}-${link.label}-${index}`}><SchemaLink {...link}/></li>)}</ul>
   </nav>;
 }
 
 function FieldRow({ row }: { row: Row }) {
   return <tr>
     <th scope="row">
-      <div className="field-name">{row.href ? <a href={row.href}>{row.name}<span className="field-arrow" aria-hidden="true"> ↗</span></a> : row.name}</div>
+      <div className="field-name"><SchemaLink label={row.name} href={row.href} circular={row.circular}/></div>
       <div className="field-meta"><code>{row.type || 'schema'}</code>{row.required && <span className="required"><span aria-hidden="true">*</span> required</span>}</div>
     </th>
     <td>
@@ -128,7 +137,7 @@ export function App({ initialPage: page }: { initialPage: Page }) {
         <div className="page-footer"><span>{page.resource ? <><span className="required">*</span> marks a required field</> : 'Select a resource to explore its schema.'}</span><a href={issueURL}>See an issue here? <span aria-hidden="true">↗</span></a></div>
       </main>
     </div>
-    <footer id="about" className="site-footer"><div><a className="footer-brand" href="/">manifests.io</a><p>Easy to use Kubernetes documentation.</p></div><div className="credits"><p><a href={repository}>View in GitHub</a><span aria-hidden="true"> · </span>K8s Is Awesome<span aria-hidden="true"> · </span>Made with <span className="heart" role="img" aria-label="love">♥</span></p><p>Authored by <a href="https://github.com/TheOutdoorProgrammer/">TheOutdoorProgrammer</a><span aria-hidden="true"> · </span>Design support by <a href="https://github.com/baadaa/">baadaa</a></p></div></footer>
+    <footer id="about" className="site-footer"><div><a className="footer-brand" href="/">manifests.io</a><p>Easy to use Kubernetes documentation.</p></div><div className="credits"><p><a href={repository}>View in GitHub</a><span aria-hidden="true"> · </span>K8s Is Awesome<span aria-hidden="true"> · </span>Made with <span className="heart" role="img" aria-label="love">♥</span></p><p>Authored by <a href="https://github.com/TheOutdoorProgrammer/">TheOutdoorProgrammer</a></p></div></footer>
   </>;
 }
 

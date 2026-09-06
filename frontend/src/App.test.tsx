@@ -45,8 +45,8 @@ describe('schema browser', () => {
   });
 
   it('preserves the current resource and navigation query only within the same product', () => {
-    const nested = { ...page, resource: 'io.k8s.api.core.v1.PodSpec', path: 'Deployment.spec.template.spec', canonical: '/kubernetes/1.34/io.k8s.api.core.v1.PodSpec' };
-    expect(specURL(nested, 'kubernetes', '1.33')).toBe('/kubernetes/1.33/io.k8s.api.core.v1.PodSpec?path=Deployment.spec.template.spec');
+    const nested = { ...page, resource: 'io.k8s.api.core.v1.PodSpec', path: 'Deployment.spec.template.spec', trail: 'encoded-history', canonical: '/kubernetes/1.34/io.k8s.api.core.v1.PodSpec' };
+    expect(specURL(nested, 'kubernetes', '1.33')).toBe('/kubernetes/1.33/io.k8s.api.core.v1.PodSpec?path=Deployment.spec.template.spec&trail=encoded-history');
     expect(specURL(nested, 'flux', '2.0.1')).toBe('/flux/2.0.1');
     render(<App initialPage={nested}/>);
     expect(screen.getByRole('option', { name: 'kubernetes / 1.33' })).toHaveValue(specURL(nested, 'kubernetes', '1.33'));
@@ -56,6 +56,32 @@ describe('schema browser', () => {
     const inline = { ...page, pointer: '/properties/spec', path: 'Workload.spec' };
     expect(specURL(inline, 'kubernetes', '1.33')).toBe('/kubernetes/1.33/io.k8s.api.core.v1.Pod?path=Workload.spec&pointer=%2Fproperties%2Fspec');
     expect(specURL(inline, 'flux', '2.0.1')).toBe('/flux/2.0.1');
+  });
+
+  it('stops circular fields and variants with visible explanations while other fields stay navigable', () => {
+    const circular = {
+      ...page,
+      variants: [{ label: 'Recursive schema', href: '', circular: true }],
+      resources: [...page.resources, {
+        name: 'children', type: 'array', description: 'Nested children.', href: '', circular: true,
+        variants: [{ label: 'Recursive child', href: '', circular: true }],
+      }],
+    };
+    const { container } = render(<App initialPage={circular}/>);
+    const blocked = container.querySelectorAll('.schema-circular');
+    expect(blocked).toHaveLength(3);
+    for (const element of blocked) {
+      expect(element.querySelector('a, button, [tabindex]')).toBeNull();
+      expect(within(element as HTMLElement).getByText('Circular reference')).toBeVisible();
+      expect(within(element as HTMLElement).getByText('This schema has already been visited 3 times in this path.')).toBeVisible();
+    }
+    expect(screen.getByText('children')).toBeVisible();
+    expect(screen.getByText('Nested children.')).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'children' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Recursive schema' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Recursive child' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'spec' })).toHaveAttribute('href', page.resources[1].href);
+    expect(renderPage(circular)).not.toContain('href=""');
   });
 
   it('renders untrusted descriptions as text in browser and server output', () => {
@@ -89,11 +115,12 @@ describe('schema browser', () => {
   });
 
   it('builds API requests from the route and retains schema navigation parameters', () => {
-    const query = new URLSearchParams(pageQuery({ pathname: '/gatewayapi/1.2.0/Foo%2FBar', search: '?path=Foo.spec&pointer=%2Fproperties%2Fspec&oneOf=0&item=ignored' }));
+    const query = new URLSearchParams(pageQuery({ pathname: '/gatewayapi/1.2.0/Foo%2FBar', search: '?path=Foo.spec&pointer=%2Fproperties%2Fspec&trail=encoded-history&oneOf=0&item=ignored' }));
     expect(query.get('item')).toBe('gatewayapi');
     expect(query.get('resource')).toBe('Foo/Bar');
     expect(query.get('path')).toBe('Foo.spec');
     expect(query.get('pointer')).toBe('/properties/spec');
+    expect(query.get('trail')).toBe('encoded-history');
     expect(query.get('oneOf')).toBe('0');
   });
 });

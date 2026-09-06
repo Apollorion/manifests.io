@@ -24,9 +24,9 @@ func (c *Catalog) Page(q Query) (Page, error) {
 		return p, ErrNotFound
 	}
 	base := Query{Item: q.Item, Version: q.Version}
-	p.Breadcrumbs = append(p.Breadcrumbs, Link{q.Item + " " + q.Version, Href(base)})
+	p.Breadcrumbs = append(p.Breadcrumbs, Link{Label: q.Item + " " + q.Version, Href: Href(base)})
 	if q.Resource == "" {
-		if q.Pointer != "" || q.Path != "" || q.OneOf != "" || q.Key != "" {
+		if q.Pointer != "" || q.Path != "" || q.Trail != "" || q.OneOf != "" || q.Key != "" {
 			return p, ErrBadQuery
 		}
 		p.Title = q.Item + " " + q.Version
@@ -85,6 +85,10 @@ func (c *Catalog) Page(q Query) (Page, error) {
 	}
 	q = d.canonicalQuery(selected, q)
 	p.Resource, p.Pointer, p.Path = q.Resource, q.Pointer, q.Path
+	p.Trail = q.Trail
+	if err := d.trackVisits(&q, selected); err != nil {
+		return p, err
+	}
 	p.Title = shortName(q.Resource) + displayPath(q.Pointer)
 	if q.Path != "" {
 		p.Title = q.Path
@@ -92,13 +96,16 @@ func (c *Catalog) Page(q Query) (Page, error) {
 	p.Description = selected.Description
 	canonical := q
 	canonical.Path = ""
+	canonical.Trail = ""
 	p.Canonical = Href(canonical)
 	q.Path = p.Title
 	root := base
 	root.Resource = q.Resource
-	p.Breadcrumbs = append(p.Breadcrumbs, Link{shortName(q.Resource), Href(root)})
+	p.Breadcrumbs = append(p.Breadcrumbs, Link{Label: shortName(q.Resource), Href: Href(root)})
 	if p.Title != shortName(q.Resource) {
-		p.Breadcrumbs = append(p.Breadcrumbs, Link{p.Title, Href(q)})
+		current := q
+		current.Trail = p.Trail
+		p.Breadcrumbs = append(p.Breadcrumbs, Link{Label: p.Title, Href: Href(current)})
 	}
 	for _, current := range d.gvks[q.Resource] {
 		for _, name := range sortedKeys(d.gvks) {
@@ -108,7 +115,7 @@ func (c *Catalog) Page(q Query) (Page, error) {
 				}
 				link := base
 				link.Resource = name
-				p.OtherVersions = append(p.OtherVersions, Link{strings.TrimPrefix(g.Group+"/"+g.Version+"/"+g.Kind, "/"), Href(link)})
+				p.OtherVersions = append(p.OtherVersions, Link{Label: strings.TrimPrefix(g.Group+"/"+g.Version+"/"+g.Kind, "/"), Href: Href(link)})
 			}
 		}
 	}
@@ -139,6 +146,7 @@ func (c *Catalog) Page(q Query) (Page, error) {
 	if len(p.Resources) == 0 {
 		row := d.buildRow(p.Title, &openapi3.SchemaRef{Value: rowSchema}, rowQuery)
 		row.Href = ""
+		row.Circular = false
 		p.Resources = append(p.Resources, row)
 	}
 	return p, nil
@@ -155,6 +163,9 @@ func Href(q Query) string {
 	}
 	if q.Pointer != "" {
 		values.Set("pointer", q.Pointer)
+	}
+	if q.Trail != "" {
+		values.Set("trail", q.Trail)
 	}
 	if q.OneOf != "" {
 		values.Set("oneOf", q.OneOf)
@@ -314,6 +325,7 @@ func (d *document) buildRow(name string, ref *openapi3.SchemaRef, q Query) Row {
 		row.Description = description
 	}
 	row.Constraints = constraints(s)
+	target := s
 	q = d.canonicalQuery(s, q)
 	row.Variants = d.variants(s, q)
 	if s.Items != nil && s.Items.Value != nil {
@@ -322,10 +334,12 @@ func (d *document) buildRow(name string, ref *openapi3.SchemaRef, q Query) Row {
 		row.Variants = append(row.Variants, d.variants(s.Items.Value, itemsQuery)...)
 		if s.Items.Ref != "" {
 			q = d.canonicalQuery(s.Items.Value, itemsQuery)
+			target = s.Items.Value
 		}
 	}
 	if ref.Ref != "" || len(s.Properties) > 0 || s.Items != nil || s.AdditionalProperties.Schema != nil || len(row.Variants) > 0 {
-		row.Href = Href(q)
+		link := d.navigationLink(name, target, q)
+		row.Href, row.Circular = link.Href, link.Circular
 	}
 	return row
 }
@@ -400,8 +414,7 @@ func (d *document) variants(s *openapi3.Schema, q Query) []Link {
 			}
 			child := q
 			child.Pointer += "/" + set.name + "/" + strconv.Itoa(i)
-			child = d.canonicalQuery(ref.Value, child)
-			links = append(links, Link{label, Href(child)})
+			links = append(links, d.navigationLink(label, ref.Value, child))
 		}
 	}
 	return links

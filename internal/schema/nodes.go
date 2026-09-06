@@ -19,6 +19,7 @@ func (d *document) indexNodes() error {
 		}
 	}
 	seen := make(map[*openapi3.Schema]bool)
+	edges := make(map[*openapi3.Schema][]*openapi3.Schema)
 	var visit func(*openapi3.SchemaRef, location, int) error
 	visit = func(ref *openapi3.SchemaRef, loc location, depth int) error {
 		if ref == nil || ref.Value == nil || seen[ref.Value] {
@@ -35,6 +36,9 @@ func (d *document) indexNodes() error {
 			d.nodes[s] = loc
 		}
 		child := func(ref *openapi3.SchemaRef, path string) error {
+			if ref != nil && ref.Value != nil {
+				edges[s] = append(edges[s], ref.Value)
+			}
 			return visit(ref, location{loc.resource, loc.path + path}, depth+1)
 		}
 		for _, container := range []struct {
@@ -75,6 +79,7 @@ func (d *document) indexNodes() error {
 		}
 	}
 	d.routes = make([]location, 0, len(d.nodes))
+	d.indexCycles(edges)
 	for _, loc := range d.nodes {
 		d.routes = append(d.routes, loc)
 	}

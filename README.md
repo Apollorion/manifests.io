@@ -6,6 +6,8 @@ Choose a product and version, filter resources, then follow fields into their ty
 
 The resource in the URL selects the schema, while `path` records the field traversal shown in the heading. For example, `/kubernetes/1.34/io.k8s.api.core.v1.PodSpec?path=Deployment.spec.template.spec` displays PodSpec in its Deployment context. Each field click extends that path while linking directly to its target schema. Unnamed inline schemas use a separate JSON Pointer in `pointer`; version switching preserves both values. Schema navigation does not redirect to canonical URLs.
 
+Recursive schemas can be visited three times within a traversal. Links that would visit the same schema a fourth time show a red × and “Circular reference”; unrelated fields remain available. Go identifies recursive components in the resolved schema graph, covering fields, arrays, maps, and schema variants. Only recursive schemas add a `trail` query containing visit counts, so reloads, shared links, browser history, and version switching retain the limit without depending on browser storage. Canonical URLs omit this context. Opening a resource directly starts a new traversal.
+
 ## Run locally
 
 Requirements: Go 1.27+, Node.js 24.15+, and npm.

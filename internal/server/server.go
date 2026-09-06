@@ -147,7 +147,7 @@ func parseQuery(r *http.Request) (schema.Query, error) {
 			return schema.Query{}, fmt.Errorf("duplicate parameter %s", key)
 		}
 	}
-	q := schema.Query{Path: values.Get("path"), Pointer: values.Get("pointer"), OneOf: values.Get("oneOf"), Key: values.Get("key")}
+	q := schema.Query{Path: values.Get("path"), Pointer: values.Get("pointer"), Trail: values.Get("trail"), OneOf: values.Get("oneOf"), Key: values.Get("key")}
 	if q.Path == "" {
 		q.Path = values.Get("linked")
 	}

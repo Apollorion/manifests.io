@@ -6,6 +6,7 @@ export function specURL(page: Page, item: string, version: string): string {
   const query = new URLSearchParams();
   if (page.path) query.set('path', page.path);
   if (page.pointer) query.set('pointer', page.pointer);
+  if (page.trail) query.set('trail', page.trail);
   const suffix = query.size ? `?${query}` : '';
   return `${base}/${encodeURIComponent(page.resource)}${suffix}`;
 }

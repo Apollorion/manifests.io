@@ -6,6 +6,7 @@ export interface Product {
 export interface Link {
   label: string;
   href: string;
+  circular?: boolean;
 }
 
 export interface Row {
@@ -14,6 +15,7 @@ export interface Row {
   description: string;
   required?: boolean;
   href?: string;
+  circular?: boolean;
   constraints?: string[];
   variants?: Link[];
 }
@@ -26,6 +28,7 @@ export interface Page {
   description: string;
   path?: string;
   pointer?: string;
+  trail?: string;
   resources: Row[];
   otherVersions: Link[];
   breadcrumbs: Link[];

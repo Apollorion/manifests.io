@@ -32,13 +32,16 @@ type Query struct {
 	Resource string `json:"resource,omitempty"`
 	Path     string `json:"path,omitempty"`
 	Pointer  string `json:"pointer,omitempty"`
+	Trail    string `json:"trail,omitempty"`
 	OneOf    string `json:"oneOf,omitempty"`
 	Key      string `json:"key,omitempty"`
+	visits   map[*openapi3.Schema]int
 }
 
 type Link struct {
-	Label string `json:"label"`
-	Href  string `json:"href"`
+	Label    string `json:"label"`
+	Href     string `json:"href"`
+	Circular bool   `json:"circular,omitempty"`
 }
 
 type Row struct {
@@ -47,6 +50,7 @@ type Row struct {
 	Description string   `json:"description"`
 	Required    bool     `json:"required,omitempty"`
 	Href        string   `json:"href,omitempty"`
+	Circular    bool     `json:"circular,omitempty"`
 	Constraints []string `json:"constraints,omitempty"`
 	Variants    []Link   `json:"variants,omitempty"`
 }
@@ -60,6 +64,7 @@ type Page struct {
 	Description   string    `json:"description"`
 	Path          string    `json:"path,omitempty"`
 	Pointer       string    `json:"pointer,omitempty"`
+	Trail         string    `json:"trail,omitempty"`
 	Resources     []Row     `json:"resources"`
 	OtherVersions []Link    `json:"otherVersions"`
 	Breadcrumbs   []Link    `json:"breadcrumbs"`
@@ -75,6 +80,7 @@ type document struct {
 	aliases         map[string]location
 	gvks            map[string][]gvk
 	nodes           map[*openapi3.Schema]location
+	cyclic          map[string]*openapi3.Schema
 	routes          []location
 	refDescriptions map[*openapi3.SchemaRef]string
 }

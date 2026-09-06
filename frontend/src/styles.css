@@ -109,6 +109,9 @@ tbody tr:hover { background: var(--bg); }
 .field-name a { font-weight: 500; text-decoration: none; }
 .field-arrow { display: inline-block; font-size: 13px; transition: transform 120ms ease; }
 .field-name a:hover .field-arrow { transform: translate(2px, -2px); }
+.schema-circular { display: inline-block; max-width: 100%; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.circular-label { display: block; margin-top: 4px; color: var(--required); font-family: 'IBM Plex Sans Variable', sans-serif; font-size: 12px; font-weight: 500; }
+.circular-explanation { display: block; max-width: 30ch; margin-top: 3px; color: var(--muted); font-family: 'IBM Plex Sans Variable', sans-serif; font-size: 12px; line-height: 1.5; }
 .field-meta { display: flex; flex-wrap: wrap; gap: 3px 10px; align-items: baseline; margin-top: 5px; }
 .field-meta code { font-size: 10px; color: var(--muted); overflow-wrap: anywhere; }
 .required { color: var(--required); font-size: 11px; white-space: nowrap; }
