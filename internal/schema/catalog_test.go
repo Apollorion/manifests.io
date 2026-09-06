@@ -153,7 +153,7 @@ func TestNavigation(t *testing.T) {
 			spec = row
 		}
 	}
-	if spec.Href == "" || spec.Type != "PodSpec" {
+	if spec.Href != "/kubernetes/1.34/io.k8s.api.core.v1.PodSpec" || spec.Type != "PodSpec" {
 		t.Fatalf("spec row: %+v", spec)
 	}
 	q.Path = "/properties/spec/properties/containers/items"
@@ -187,6 +187,42 @@ func TestNavigation(t *testing.T) {
 	}
 	if len(p.Variants) != 2 {
 		t.Fatal("array item alternatives missing")
+	}
+}
+
+func TestReferenceNavigationUsesTargetURLs(t *testing.T) {
+	c, err := corpus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := Query{Item: "kubernetes", Version: "1.34", Resource: "io.k8s.api.apps.v1.Deployment"}
+	for _, step := range []struct{ field, target string }{
+		{"spec", "io.k8s.api.apps.v1.DeploymentSpec"},
+		{"template", "io.k8s.api.core.v1.PodTemplateSpec"},
+		{"spec", "io.k8s.api.core.v1.PodSpec"},
+		{"containers", "io.k8s.api.core.v1.Container"},
+	} {
+		page, err := c.Page(q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var href string
+		for _, row := range page.Resources {
+			if row.Name == step.field {
+				href = row.Href
+			}
+		}
+		if want := "/kubernetes/1.34/" + step.target; href != want {
+			t.Fatalf("%s.%s links to %q, want %q", q.Resource, step.field, href, want)
+		}
+		q = queryFromHref(t, href)
+	}
+	page, err := c.Page(Query{Item: "kubernetes", Version: "1.34", Resource: "io.k8s.api.apps.v1.Deployment", Path: "/properties/spec/properties/template/properties/spec"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.Resource != "io.k8s.api.core.v1.PodSpec" || page.Path != "" || page.Title != "PodSpec" {
+		t.Fatalf("contextual URL did not resolve to PodSpec: resource=%s path=%s title=%s", page.Resource, page.Path, page.Title)
 	}
 }
 

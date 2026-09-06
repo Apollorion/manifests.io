@@ -134,6 +134,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, r, http.StatusOK, page)
 		return
 	}
+	if query.Resource != "" {
+		canonical, err := url.Parse(page.Canonical)
+		if err == nil && canonical.Scheme == "" && canonical.Host == "" && canonical.Path != r.URL.Path {
+			target, err := parseQuery(&http.Request{URL: canonical})
+			if err == nil && target.Resource != "" {
+				http.Redirect(w, r, page.Canonical, http.StatusPermanentRedirect)
+				return
+			}
+		}
+	}
 	s.servePage(w, r, http.StatusOK, page)
 }
 

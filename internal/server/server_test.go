@@ -126,6 +126,63 @@ func TestErrorsRemainMachineReadable(t *testing.T) {
 	}
 }
 
+type canonicalCatalog struct {
+	fakeCatalog
+	page schema.Page
+}
+
+func (c canonicalCatalog) Page(schema.Query) (schema.Page, error) {
+	return c.page, nil
+}
+
+func TestNamedReferencesRedirectToTheirCanonicalResource(t *testing.T) {
+	const deployment = "/kubernetes/1.34/io.k8s.api.apps.v1.Deployment"
+	const podSpec = "/kubernetes/1.34/io.k8s.api.core.v1.PodSpec"
+	const context = "?path=/properties/spec/properties/template/properties/spec"
+	for _, tc := range []struct {
+		name      string
+		method    string
+		url       string
+		canonical string
+		status    int
+	}{
+		{"nested reference", "GET", deployment + context, podSpec, http.StatusPermanentRedirect},
+		{"nested reference head", "HEAD", deployment + context, podSpec, http.StatusPermanentRedirect},
+		{"legacy linked reference", "GET", deployment + context + "&linked=Workload", podSpec, http.StatusPermanentRedirect},
+		{"canonical resource", "GET", podSpec, podSpec, http.StatusOK},
+		{"canonical linked resource", "GET", podSpec + "?linked=Workload", podSpec, http.StatusOK},
+		{"inline schema", "GET", deployment + "?path=/properties/status", deployment + "?path=%2Fproperties%2Fstatus", http.StatusOK},
+		{"resource listing", "GET", "/kubernetes/1.34", podSpec, http.StatusOK},
+		{"API reference", "GET", "/api/page?item=kubernetes&version=1.34&resource=io.k8s.api.apps.v1.Deployment&path=/properties/spec/properties/template/properties/spec", podSpec, http.StatusOK},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := testServer(t)
+			s.catalog = canonicalCatalog{page: schema.Page{Canonical: tc.canonical, Title: "PodSpec"}}
+			w := httptest.NewRecorder()
+			s.ServeHTTP(w, httptest.NewRequest(tc.method, tc.url, nil))
+			if w.Code != tc.status {
+				t.Fatalf("status=%d want=%d body=%s", w.Code, tc.status, w.Body)
+			}
+			if tc.status == http.StatusPermanentRedirect {
+				if location := w.Header().Get("Location"); location != tc.canonical {
+					t.Fatalf("location=%q want=%q", location, tc.canonical)
+				}
+			} else if w.Header().Get("Location") != "" {
+				t.Fatal("non-redirect response includes Location")
+			}
+			if tc.method == "HEAD" && w.Body.Len() != 0 {
+				t.Fatal("HEAD redirect returned a body")
+			}
+			if strings.HasPrefix(tc.url, "/api/") {
+				var page schema.Page
+				if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil || page.Canonical != podSpec {
+					t.Fatalf("API did not return canonical page JSON: %s", w.Body)
+				}
+			}
+		})
+	}
+}
+
 func TestRejectInvalidSiteOrigin(t *testing.T) {
 	s := testServer(t)
 	for _, origin := range []string{"javascript:alert(1)", "https://user:pass@example.com", "https://example.com/?x=1", "https://example.com/path"} {

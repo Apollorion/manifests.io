@@ -83,6 +83,7 @@ func (c *Catalog) Page(q Query) (Page, error) {
 		selected = property.Value.OneOf[found].Value
 		q.OneOf, q.Key = "", ""
 	}
+	q = d.canonicalQuery(selected, q)
 	p.Resource, p.Path, p.Linked = q.Resource, q.Path, q.Linked
 	p.Title = shortName(q.Resource) + displayPath(q.Path)
 	if q.Linked != "" {
@@ -91,9 +92,6 @@ func (c *Catalog) Page(q Query) (Page, error) {
 	p.Description = selected.Description
 	canonical := q
 	canonical.Linked = ""
-	if loc, ok := d.nodes[selected]; ok {
-		canonical.Resource, canonical.Path = loc.resource, loc.path
-	}
 	p.Canonical = Href(canonical)
 	root := base
 	root.Resource = q.Resource
@@ -113,12 +111,12 @@ func (c *Catalog) Page(q Query) (Page, error) {
 			}
 		}
 	}
-	p.Variants = variants(selected, q)
+	p.Variants = d.variants(selected, q)
 	rowSchema, rowQuery := selected, q
 	if selected.Items != nil && selected.Items.Value != nil {
 		rowSchema = selected.Items.Value
 		rowQuery.Path += "/items"
-		p.Variants = append(p.Variants, variants(rowSchema, rowQuery)...)
+		p.Variants = append(p.Variants, d.variants(rowSchema, rowQuery)...)
 	}
 	for _, name := range sortedKeys(rowSchema.Properties) {
 		child := rowSchema.Properties[name]
@@ -316,11 +314,16 @@ func (d *document) buildRow(name string, ref *openapi3.SchemaRef, q Query) Row {
 		row.Description = description
 	}
 	row.Constraints = constraints(s)
-	row.Variants = variants(s, q)
+	q = d.canonicalQuery(s, q)
+	q.Linked = ""
+	row.Variants = d.variants(s, q)
 	if s.Items != nil && s.Items.Value != nil {
 		itemsQuery := q
 		itemsQuery.Path += "/items"
-		row.Variants = append(row.Variants, variants(s.Items.Value, itemsQuery)...)
+		row.Variants = append(row.Variants, d.variants(s.Items.Value, itemsQuery)...)
+		if s.Items.Ref != "" {
+			q = d.canonicalQuery(s.Items.Value, itemsQuery)
+		}
 	}
 	if ref.Ref != "" || len(s.Properties) > 0 || s.Items != nil || s.AdditionalProperties.Schema != nil || len(row.Variants) > 0 {
 		row.Href = Href(q)
@@ -378,7 +381,14 @@ func schemaType(ref *openapi3.SchemaRef, seen map[*openapi3.Schema]bool, depth i
 	return "any"
 }
 
-func variants(s *openapi3.Schema, q Query) []Link {
+func (d *document) canonicalQuery(s *openapi3.Schema, q Query) Query {
+	if loc, ok := d.nodes[s]; ok {
+		q.Resource, q.Path = loc.resource, loc.path
+	}
+	return q
+}
+
+func (d *document) variants(s *openapi3.Schema, q Query) []Link {
 	var links []Link
 	for _, set := range []struct {
 		name string
@@ -391,6 +401,8 @@ func variants(s *openapi3.Schema, q Query) []Link {
 			}
 			child := q
 			child.Path += "/" + set.name + "/" + strconv.Itoa(i)
+			child = d.canonicalQuery(ref.Value, child)
+			child.Linked = ""
 			links = append(links, Link{label, Href(child)})
 		}
 	}

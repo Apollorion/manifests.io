@@ -182,7 +182,7 @@ func TestBoundedCyclicNavigation(t *testing.T) {
 		}
 		q = queryFromHref(t, p.Resources[0].Href)
 	}
-	q.Path += "/properties/self"
+	q.Path = strings.Repeat("/properties/self", 65)
 	if _, err := c.Page(q); !errors.Is(err, ErrBadQuery) {
 		t.Fatalf("depth limit: %v", err)
 	}
