@@ -27,6 +27,7 @@ FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=backend /src/build/manifests /app/manifests
 COPY --from=render /src/frontend/dist/ /app/frontend/dist/
+COPY --from=render /src/frontend/dist-render/ /app/frontend/dist-render/
 COPY --from=render /src/frontend/prerender/ /app/frontend/prerender/
 COPY --from=render /src/oaspec/ /app/oaspec/
 COPY --from=render /src/ETL/ /app/ETL/

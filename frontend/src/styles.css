@@ -68,6 +68,7 @@ select { width: 100%; min-height: 44px; padding: 8px; border: 1px solid var(--li
 .resource-nav { display: flex; gap: 10px; align-items: center; padding: 11px 12px; margin-top: 18px; border-radius: 4px; text-decoration: none; font-size: 13px; }
 .resource-nav > :last-child { margin-left: auto; }
 .resource-nav.active, .resource-nav:hover { background: var(--accent-bg); }
+.about-link { display: inline-block; margin-top: 12px; font-size: 12px; }
 .sidebar-note { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 26px; font-size: 12px; color: var(--muted); }
 .notation { display: block; font-family: var(--mono); color: var(--accent); font-size: 20px; padding-bottom: 10px; }
 .sidebar-note p { max-width: 195px; padding-bottom: 12px; }
@@ -89,6 +90,7 @@ h1 { font-size: clamp(27px, 2.6vw, 38px); font-weight: 500; letter-spacing: -1.3
 .related-links .eyebrow { font-size: 10px; letter-spacing: 1px; }
 .related-links ul { display: flex; flex-wrap: wrap; gap: 5px 16px; list-style: none; margin: 5px 0 0; padding: 0; }
 .related-links a { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.related-links a[aria-current='page'] { font-weight: 600; text-decoration: underline; }
 .schema-panel { margin-top: 28px; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: var(--surface); }
 .table-toolbar { padding: 14px 18px; display: flex; align-items: center; gap: 18px; border-bottom: 1px solid var(--line); }
 .search-wrap { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
@@ -134,8 +136,6 @@ tbody tr:hover { background: var(--bg); }
 .site-footer p { margin-top: 5px; }
 .credits { text-align: right; }
 .heart { color: var(--required); }
-.boot-error { max-width: 650px; margin: 10vh auto; padding: 30px; }
-.boot-error p { margin-top: 16px; }
 @media (max-width: 1552px) { .site-footer { margin-left: 48px; margin-right: 48px; } }
 @media (max-width: 1100px) {
   .header-inner { padding: 20px 28px; }
@@ -159,6 +159,7 @@ tbody tr:hover { background: var(--bg); }
   select { max-width: 100%; }
   .resource-nav { margin: 0; min-height: 44px; padding: 8px; font-size: 12px; }
   .resource-nav > :first-child { display: none; }
+  .about-link { grid-column: 1 / -1; justify-self: end; margin-top: 4px; }
   main { padding: 20px 0 35px; }
   .breadcrumbs { margin-bottom: 20px; }
   .page-symbol { font-size: 38px; }

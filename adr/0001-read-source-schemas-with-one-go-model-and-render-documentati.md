@@ -4,7 +4,9 @@ Date: 2026-09-06
 
 ## Status
 
-Accepted.
+Accepted. Rendering contextual pages only at build time is superseded by [ADR-0002](0002-render-contextual-react-pages-inside-the-go-backend.md).
+
+The kin-openapi model, original schema inputs, legacy aliases and single React renderer remain in force.
 
 ## Context and Problem Statement
 

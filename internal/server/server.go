@@ -11,6 +11,7 @@ import (
 	"html"
 	"io"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -21,10 +22,11 @@ import (
 )
 
 type Config struct {
-	WebDir    string
-	RenderDir string
-	PublicDir string
-	SiteURL   string
+	WebDir       string
+	RenderDir    string
+	PublicDir    string
+	SiteURL      string
+	RendererFile string
 }
 
 type Catalog interface {
@@ -33,9 +35,10 @@ type Catalog interface {
 }
 
 type Server struct {
-	catalog Catalog
-	config  Config
-	shell   []byte
+	catalog  Catalog
+	config   Config
+	shell    []byte
+	renderer *reactRenderer
 }
 
 func New(catalog Catalog, config Config) (*Server, error) {
@@ -56,7 +59,14 @@ func New(catalog Catalog, config Config) (*Server, error) {
 		return nil, errors.New("SITE_URL must be an HTTP(S) origin")
 	}
 	config.SiteURL = strings.TrimRight(config.SiteURL, "/")
-	return &Server{catalog: catalog, config: config, shell: shell}, nil
+	if config.RendererFile == "" {
+		config.RendererFile = filepath.Join(config.WebDir, "..", "dist-render", "renderer.js")
+	}
+	renderer, err := newReactRenderer(config.RendererFile)
+	if err != nil {
+		return nil, err
+	}
+	return &Server{catalog: catalog, config: config, shell: shell, renderer: renderer}, nil
 }
 
 func RenderFilename(canonical string) string {
@@ -194,6 +204,7 @@ func (s *Server) failure(w http.ResponseWriter, r *http.Request, status int, mes
 	if query, err := parseQuery(r); err == nil {
 		if _, err := s.catalog.Page(schema.Query{Item: query.Item, Version: query.Version}); err == nil {
 			page.Item, page.Version = query.Item, query.Version
+			page.Resource = query.Resource
 		}
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/") {
@@ -205,11 +216,11 @@ func (s *Server) failure(w http.ResponseWriter, r *http.Request, status int, mes
 
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, page schema.Page) {
 	body := s.shell
-	dynamic := true
-	if status == http.StatusOK {
+	prerendered := false
+	if status == http.StatusOK && r.URL.RequestURI() == page.Canonical && page.Path == "" && page.Trail == "" {
 		if rendered, err := readRendered(filepath.Join(s.config.RenderDir, RenderFilename(page.Canonical))); err == nil {
 			body = rendered
-			dynamic = r.URL.RequestURI() != page.Canonical || page.Path != ""
+			prerendered = true
 		}
 	}
 	data, err := json.Marshal(page)
@@ -217,12 +228,16 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, p
 		http.Error(w, "Could not render documentation", http.StatusInternalServerError)
 		return
 	}
-	body = bytes.ReplaceAll(body, []byte("<!--page-data-->"), append(append([]byte(`<script id="__PAGE_DATA__" type="application/json">`), data...), []byte("</script>")...))
-	body = bytes.ReplaceAll(body, []byte("<!--app-html-->"), nil)
-	if dynamic {
-		body = bytes.ReplaceAll(body, []byte(`id="root"`), []byte(`id="root" data-dynamic="true" inert`))
-		body = bytes.ReplaceAll(body, []byte("</body>"), []byte(`<noscript><p>Enable JavaScript to follow schema links in this navigation path.</p></noscript></body>`))
+	if !prerendered {
+		rendered, err := s.renderer.render(r.Context(), data)
+		if err != nil {
+			slog.ErrorContext(r.Context(), "React rendering failed")
+			http.Error(w, "Could not render documentation", http.StatusServiceUnavailable)
+			return
+		}
+		body = bytes.ReplaceAll(body, []byte("<!--app-html-->"), rendered)
 	}
+	body = bytes.ReplaceAll(body, []byte("<!--page-data-->"), append(append([]byte(`<script id="__PAGE_DATA__" type="application/json">`), data...), []byte("</script>")...))
 	canonical := s.config.SiteURL + page.Canonical
 	title := html.EscapeString(page.Title + " | Manifests.io")
 	description := page.Description
@@ -233,6 +248,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, p
 		description = string([]rune(description)[:min(160, len([]rune(description)))])
 	}
 	head := `<title>` + title + `</title><meta name="description" content="` + html.EscapeString(description) + `"><link rel="canonical" href="` + html.EscapeString(canonical) + `"><meta property="og:title" content="` + title + `"><meta property="og:description" content="` + html.EscapeString(description) + `"><meta property="og:url" content="` + html.EscapeString(canonical) + `"><meta property="og:image" content="` + s.config.SiteURL + `/ogimage.png">`
+	head += `<meta property="og:site_name" content="Manifests.io"><meta property="og:image:alt" content="Manifests.io"><meta property="og:image:width" content="887"><meta property="og:image:height" content="465"><meta property="og:image:type" content="image/png">`
 	if status != http.StatusOK {
 		head += `<meta name="robots" content="noindex">`
 	}

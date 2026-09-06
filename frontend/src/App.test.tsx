@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-import { App } from './App';
+import { describe, expect, it, vi } from 'vitest';
+import { App, AppBoundary, RecoveryPage } from './App';
 import { render as renderPage } from './entry-server';
 import { pageQuery, specURL } from './navigation';
 import type { Page } from './types';
@@ -52,6 +52,34 @@ describe('schema browser', () => {
     expect(screen.getByRole('option', { name: 'kubernetes / 1.33' })).toHaveValue(specURL(nested, 'kubernetes', '1.33'));
   });
 
+  it('identifies the selected API version independently of traversal context', () => {
+    const selected = {
+      ...page, path: 'Workload.pod',
+      otherVersions: [
+        { label: 'v1beta1', href: '/kubernetes/1.34/io.k8s.api.core.v1beta1.Pod' },
+        { label: 'v1', href: page.canonical },
+      ],
+    };
+    render(<App initialPage={selected}/>);
+    const versions = within(screen.getByRole('navigation', { name: 'API versions' }));
+    expect(versions.getByRole('link', { name: 'v1' })).toHaveAttribute('aria-current', 'page');
+    expect(versions.getByRole('link', { name: 'v1beta1' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('keeps the header home in its current product and exposes the footer jump outside the desktop note', () => {
+    const { container } = render(<App initialPage={{ ...page, item: 'flux', version: '2.0.1' }}/>);
+    expect(screen.getByRole('link', { name: 'Manifests.io home' })).toHaveAttribute('href', '/flux/2.0.1');
+    const about = screen.getByRole('link', { name: 'About this project' });
+    expect(about).toHaveAttribute('href', '#about');
+    expect(about.closest('.sidebar-note')).toBeNull();
+    expect(container.querySelector('#about')).toBeInTheDocument();
+  });
+
+  it('explains that unlisted definitions can still be opened directly', () => {
+    render(<App initialPage={{ ...page, resource: undefined }}/>);
+    expect(screen.getByText('You can open any definition in this specification by its URL, including definitions not listed below.')).toBeVisible();
+  });
+
   it('preserves an inline selector independently from its displayed navigation path', () => {
     const inline = { ...page, pointer: '/properties/spec', path: 'Workload.spec' };
     expect(specURL(inline, 'kubernetes', '1.33')).toBe('/kubernetes/1.33/io.k8s.api.core.v1.Pod?path=Workload.spec&pointer=%2Fproperties%2Fspec');
@@ -99,6 +127,31 @@ describe('schema browser', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Unknown resource.');
     expect(screen.getByRole('link', { name: 'Browse available resources' })).toHaveAttribute('href', '/kubernetes/1.34');
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+  });
+
+  it('retains the specification selector and contextual issue report after a client rendering error', () => {
+    function Broken(): never { throw new Error('Rendering failed'); }
+    const capture = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      render(<AppBoundary page={page} onError={capture}><Broken/></AppBoundary>);
+      expect(capture).toHaveBeenCalledOnce();
+      expect(screen.getByRole('alert')).toHaveTextContent('choose another specification or version');
+      expect(screen.getByRole('combobox', { name: 'Specification & version' })).toBeVisible();
+      expect(screen.getByRole('option', { name: 'kubernetes / 1.33' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'flux / 2.0.1' })).toHaveValue('/flux/2.0.1');
+      expect(screen.getByRole('link', { name: 'Browse available resources' })).toHaveAttribute('href', '/kubernetes/1.34');
+      const issue = new URL(screen.getByRole('link', { name: 'See an issue here?' }).getAttribute('href')!);
+      expect(issue.searchParams.get('title')).toBe('kubernetes - io.k8s.api.core.v1.Pod');
+      expect(issue.searchParams.get('body')).toBe('## Description of issue\n');
+    } finally { consoleError.mockRestore(); }
+  });
+
+  it('offers the same recovery layout when startup only knows the route and catalog', () => {
+    render(<RecoveryPage page={{ item: 'flux', version: '2.0.1', catalog: page.catalog }}/>);
+    expect(screen.getByRole('option', { name: 'kubernetes / 1.34' })).toHaveValue('/kubernetes/1.34');
+    expect(screen.getByRole('link', { name: 'Browse available resources' })).toHaveAttribute('href', '/flux/2.0.1');
+    expect(screen.getByRole('link', { name: 'See an issue here?' })).toBeVisible();
   });
 
   it('supports keyboard focus, Escape clearing, and persisted theme choice', () => {

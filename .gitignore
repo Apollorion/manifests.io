@@ -1,6 +1,7 @@
 node_modules/
 frontend/dist/
 frontend/dist-server/
+frontend/dist-render/
 frontend/prerender/
 frontend/prerender.tmp/
 build/

@@ -108,9 +108,19 @@ for (let visit = 1; visit <= 3; visit++) {
     const reloaded = await (await fetch(`${base}/api/page?${query}`)).json();
     assert.deepEqual(reloaded, current, 'Refresh changed the recursion limit');
     const html = await (await fetch(cyclicURL)).text();
-    assert(html.includes('data-dynamic="true" inert'), 'Stale prerendered links are interactive before React commits');
+    assert(!html.includes(' inert'), 'Server-rendered navigation is disabled');
+    assert(html.includes('Circular reference'), 'Circular state was not server-rendered');
+    assert(!/<a[^>]*>allOf<span/.test(html), 'Server-rendered recursive link bypasses the limit');
+    assert(html.includes('<h1>JSONSchemaProps.allOf.allOf</h1>'), 'Server-rendered title lost traversal');
     const embedded = JSON.parse(html.match(/<script id="__PAGE_DATA__" type="application\/json">(.*?)<\/script>/s)[1]);
     assert(embedded.resources.find(row => row.name === 'allOf').circular, 'HTML page data lost circular state');
   }
 }
+const hpa = await (await fetch(`${base}/kubernetes/1.34/io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler`)).text();
+assert(/href="\/kubernetes\/1\.34\/io\.k8s\.api\.autoscaling\.v2\.HorizontalPodAutoscaler" aria-current="page"/.test(hpa), 'Current API version is not marked');
+for (const property of ['og:site_name', 'og:image:alt', 'og:image:width', 'og:image:height', 'og:image:type']) {
+  assert(hpa.includes(`property="${property}"`), `Missing ${property}`);
+}
+const missing = await (await fetch(`${base}/kubernetes/1.34/missing`)).text();
+assert(missing.includes('Specification &amp; version') && missing.includes('See an issue here?'), 'Server error lost recovery controls');
 console.log('Container smoke checks passed: API, descriptions, traversal URLs, circular limits, no resource redirects, nested SSR, required fields, errors, and headers.');

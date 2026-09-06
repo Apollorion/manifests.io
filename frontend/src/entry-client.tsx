@@ -1,22 +1,16 @@
-import { useLayoutEffect, type ReactNode } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
-import { App, AppBoundary } from './App';
+import { App, AppBoundary, RecoveryPage } from './App';
 import { pageQuery } from './navigation';
 import type { Page } from './types';
 import { captureError, initializeObservability } from './telemetry';
 import './styles.css';
 
-function Ready({ container, children }: { container: HTMLElement; children: ReactNode }) {
-  useLayoutEffect(() => { container.removeAttribute('inert'); }, [container]);
-  return children;
-}
-
 async function start() {
   const container = document.getElementById('root');
   if (!container) throw new Error('Missing application root');
+  let page: Page | undefined;
   try {
     const data = document.getElementById('__PAGE_DATA__')?.textContent;
-    let page: Page;
     if (data?.trim()) {
       page = JSON.parse(data) as Page;
     } else {
@@ -24,13 +18,27 @@ async function start() {
       if (!response.ok) throw new Error('The documentation could not be loaded. Please try again.');
       page = await response.json() as Page;
     }
-    const app = <Ready container={container}><AppBoundary onError={captureError}><App initialPage={page}/></AppBoundary></Ready>;
-    if (data?.trim() && container.hasChildNodes() && !container.hasAttribute('data-dynamic')) hydrateRoot(container, app);
+    if (!page) throw new Error('The documentation response was empty.');
+    const app = <AppBoundary page={page} onError={captureError}><App initialPage={page}/></AppBoundary>;
+    if (data?.trim() && container.hasChildNodes()) hydrateRoot(container, app);
     else createRoot(container).render(app);
     try { initializeObservability(); } catch (error) { captureError(error); }
   } catch (error) {
     captureError(error);
-    createRoot(container).render(<Ready container={container}><main className="boot-error" role="alert"><h1>Documentation unavailable.</h1><p>We couldn’t load this page. Try reloading or open the resource library.</p><a className="action-button" href="/">Open the library</a></main></Ready>);
+    const recovery: Partial<Page> = page ?? {};
+    if (!page) {
+      try {
+        const query = new URLSearchParams(pageQuery(window.location));
+        recovery.item = query.get('item') || undefined;
+        recovery.version = query.get('version') || undefined;
+        recovery.resource = query.get('resource') || undefined;
+      } catch { /* A malformed route still gets the default library and issue link. */ }
+      try {
+        const response = await fetch('/api/catalog');
+        if (response.ok) recovery.catalog = await response.json();
+      } catch { /* Recovery remains available if the catalog is unreachable. */ }
+    }
+    createRoot(container).render(<RecoveryPage page={recovery}/>);
   }
 }
 

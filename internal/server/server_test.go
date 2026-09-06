@@ -33,7 +33,11 @@ func testServer(t *testing.T) *Server {
 	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte(`<html><head><!--page-head--></head><body><div id="root"><!--app-html--></div><!--page-data--></body></html>`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	s, err := New(fakeCatalog{}, Config{WebDir: dir, RenderDir: dir, PublicDir: dir})
+	rendererFile := filepath.Join(dir, "renderer.js")
+	if err := os.WriteFile(rendererFile, []byte(`var ManifestsRenderer = {renderPage: function(data) { var page = JSON.parse(data); return "<main>Fresh rendered fields</main>"; }};`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	s, err := New(fakeCatalog{}, Config{WebDir: dir, RenderDir: dir, PublicDir: dir, RendererFile: rendererFile})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +83,7 @@ func TestPageDataCannotEscapeScript(t *testing.T) {
 	if strings.Contains(body, "<script>alert(1)</script>") || !strings.Contains(body, `\u003c/script\u003e`) {
 		t.Fatalf("unsafe serialization: %s", body)
 	}
-	if !strings.Contains(body, `data-dynamic="true"`) || !strings.Contains(body, `rel="canonical"`) || strings.Contains(body, "<!--page-") {
+	if !strings.Contains(body, "Fresh rendered fields") || !strings.Contains(body, `rel="canonical"`) || strings.Contains(body, "<!--page-") {
 		t.Fatal("incomplete template")
 	}
 }
@@ -115,8 +119,8 @@ func TestPrerenderCachingAndDynamicQueries(t *testing.T) {
 	}
 	dynamic := httptest.NewRecorder()
 	s.ServeHTTP(dynamic, httptest.NewRequest("GET", "/kubernetes/1.34?path=Deployment.spec.template.spec", nil))
-	if !strings.Contains(dynamic.Body.String(), "Server rendered fields") || !strings.Contains(dynamic.Body.String(), `data-dynamic="true" inert`) {
-		t.Fatal("contextual query lost its selected schema HTML or fresh page data")
+	if !strings.Contains(dynamic.Body.String(), "Fresh rendered fields") || strings.Contains(dynamic.Body.String(), "Server rendered fields") || strings.Contains(dynamic.Body.String(), " inert") {
+		t.Fatal("contextual query did not render fresh interactive HTML")
 	}
 }
 

@@ -31,4 +31,4 @@ dev-web:
 	npm --prefix frontend run dev -- --host 127.0.0.1
 
 clean:
-	rm -rf build frontend/dist frontend/dist-server frontend/prerender frontend/prerender.tmp
+	rm -rf build frontend/dist frontend/dist-server frontend/dist-render frontend/prerender frontend/prerender.tmp

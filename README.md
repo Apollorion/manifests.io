@@ -55,7 +55,9 @@ The reader accepts OpenAPI v2 definitions and OpenAPI v3 component schemas, incl
 
 Nested schemas use `path`, a JSON Pointer through schema keywords such as `/properties/spec/properties/containers/items`. References are resolved by the library. Canonical schema locations make recursive references navigable without infinitely expanding the tree. Field filters remain local to the browser and are never sent to the API.
 
-Prerendering calls the same React component used by the browser. Pages are stored compressed to bound image size. The Go server serves the selected schema's generated HTML, supplies current navigation data, and handles metadata, errors, conditional requests, and static assets. Contextual legacy links retain readable schema content while React applies their navigation context. Unknown resources return HTTP 404; malformed queries return HTTP 400.
+Prerendering calls the same React component used by the browser. Pages are stored compressed to bound image size. Canonical requests can use this cache; contextual URLs and errors render the same React App inside Go using [Goja](https://github.com/dop251/goja). The response already contains current headings, traversal links, circular-reference limits, and recovery controls before browser JavaScript loads. React hydrates that markup for filtering, version selection, and theme controls. Unknown resources return HTTP 404; malformed queries return HTTP 400.
+
+The build bundles the synchronous React renderer with a URLSearchParams polyfill into `frontend/dist-render/renderer.js`. Production runs two isolated Goja workers with exclusive access, a two-second rendering deadline, cancellation, and a call-stack limit. JavaScript receives page JSON and no filesystem or network bindings. See [ADR 0002](adr/0002-render-contextual-react-pages-inside-the-go-backend.md) for the runtime-rendering trade-offs and React upgrade checks.
 
 ## Verification
 

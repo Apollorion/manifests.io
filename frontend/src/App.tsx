@@ -26,20 +26,20 @@ function ThemeButton() {
   </button>;
 }
 
-function SchemaLink({ label, href, circular }: { label: string; href?: string; circular?: boolean }) {
+function SchemaLink({ label, href, circular, current }: { label: string; href?: string; circular?: boolean; current?: boolean }) {
   if (circular) return <span className="schema-circular">
     <span>{label}</span>
     <span className="circular-label"><span aria-hidden="true">× </span>Circular reference</span>
     <span className="circular-explanation">This schema has already been visited 3 times in this path.</span>
   </span>;
-  return href ? <a href={href}>{label}<span className="field-arrow" aria-hidden="true"> ↗</span></a> : <>{label}</>;
+  return href ? <a href={href} aria-current={current ? 'page' : undefined}>{label}<span className="field-arrow" aria-hidden="true"> ↗</span></a> : <>{label}</>;
 }
 
-function LinkList({ links, label }: { links: Link[]; label: string }) {
+function LinkList({ links, label, currentHref }: { links: Link[]; label: string; currentHref?: string }) {
   if (!links?.length) return null;
   return <nav className="related-links" aria-label={label}>
     <span className="eyebrow">{label}</span>
-    <ul>{links.map((link, index) => <li key={`${link.href}-${link.label}-${index}`}><SchemaLink {...link}/></li>)}</ul>
+    <ul>{links.map((link, index) => <li key={`${link.href}-${link.label}-${index}`}><SchemaLink {...link} current={currentHref !== undefined && link.href.split('?')[0] === currentHref}/></li>)}</ul>
   </nav>;
 }
 
@@ -106,7 +106,7 @@ export function App({ initialPage: page }: { initialPage: Page }) {
     <a className="skip-link" href="#main">Skip to documentation</a>
     <header className="site-header">
       <div className="header-inner">
-        <a className="brand" href="/" aria-label="Manifests.io home"><span className="brand-mark" aria-hidden="true">{'{m}'}</span><span>manifests<span className="brand-domain">.io</span></span></a>
+        <a className="brand" href={listURL} aria-label="Manifests.io home"><span className="brand-mark" aria-hidden="true">{'{m}'}</span><span>manifests<span className="brand-domain">.io</span></span></a>
         <span className="header-tagline">Kubernetes, documented.</span>
         <div className="header-actions"><a className="github-link" href={repository}>GitHub <span aria-hidden="true">↗</span></a><ThemeButton/></div>
       </div>
@@ -122,15 +122,17 @@ export function App({ initialPage: page }: { initialPage: Page }) {
             {(page.catalog ?? []).map(product => <optgroup key={product.name} label={product.name}>{product.versions.map(version => <option key={version} value={specURL(page, product.name, version)}>{product.name} / {version}</option>)}</optgroup>)}
           </select>
           <a className={`resource-nav ${!page.resource && !page.error ? 'active' : ''}`} href={listURL}><span aria-hidden="true">▦</span> All resources<span aria-hidden="true">↗</span></a>
-          <div className="sidebar-note"><span className="notation" aria-hidden="true">spec:</span><p>Explore a resource, then follow its fields to see what goes inside.</p><a href="#about">About this project</a></div>
+          <a className="about-link" href="#about">About this project</a>
+          <div className="sidebar-note"><span className="notation" aria-hidden="true">spec:</span><p>Explore a resource, then follow its fields to see what goes inside.</p></div>
         </div>
       </aside>
       <main id="main" tabIndex={-1}>
         <nav className="breadcrumbs" aria-label="Breadcrumb"><ol>{(page.breadcrumbs ?? []).map((link, index, links) => <li key={`${link.href}-${index}`}><a href={link.href} aria-current={index === links.length - 1 ? 'page' : undefined}>{link.label}</a></li>)}</ol></nav>
         <div className="page-heading"><div><span className="eyebrow">{page.item} <span className="version-tag">v{page.version}</span></span><h1>{page.title || 'Documentation'}</h1></div><span className="page-symbol" aria-hidden="true">{page.resource ? '{}' : '[]'}</span></div>
         {page.description && <p className="page-description">{page.description}</p>}
+        {!page.resource && !page.error && <p className="page-description">You can open any definition in this specification by its URL, including definitions not listed below.</p>}
         {page.error ? <section className="error-state" role="alert"><h2>We couldn’t open this schema.</h2><p>{page.error}</p><a className="action-button" href={listURL}>Browse available resources</a></section> : <>
-          <LinkList links={page.otherVersions ?? []} label="API versions"/>
+          <LinkList links={page.otherVersions ?? []} label="API versions" currentHref={page.canonical.split('?')[0]}/>
           <LinkList links={page.variants ?? []} label="Schema variants"/>
           <SchemaTable key={page.canonical} page={page}/>
         </>}
@@ -141,11 +143,24 @@ export function App({ initialPage: page }: { initialPage: Page }) {
   </>;
 }
 
-export class AppBoundary extends Component<{ children: ReactNode; onError?: (error: unknown) => void }, { failed: boolean }> {
+export function RecoveryPage({ page, message = 'Reload the page, choose another specification or version, or report the issue below.' }: { page?: Partial<Page>; message?: string }) {
+  const item = page?.item || 'kubernetes';
+  const version = page?.version || '1.34';
+  const catalog = page?.catalog?.length ? page.catalog : [{ name: item, versions: [version] }];
+  const recovery: Page = {
+    item, version, resource: page?.resource, catalog,
+    title: 'Documentation unavailable.', description: '', error: message,
+    resources: [], otherVersions: [], variants: [], breadcrumbs: [],
+    canonical: `/${encodeURIComponent(item)}/${encodeURIComponent(version)}`,
+  };
+  return <App initialPage={recovery}/>;
+}
+
+export class AppBoundary extends Component<{ children: ReactNode; page?: Page; onError?: (error: unknown) => void }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   componentDidCatch(error: Error) { this.props.onError?.(error); }
   render() {
-    return this.state.failed ? <main className="boot-error" role="alert"><h1>Something went wrong.</h1><p>Reload the page to try again, or return to the resource library.</p><a className="action-button" href="/">Open the library</a></main> : this.props.children;
+    return this.state.failed ? <RecoveryPage page={this.props.page}/> : this.props.children;
   }
 }
