@@ -9,6 +9,12 @@ variable "region" {
   default     = "us-east1"
 }
 
+variable "manage_project_apis" {
+  description = "Disable when shared project infrastructure already owns the required API resources."
+  type        = bool
+  default     = true
+}
+
 variable "service_name" {
   description = "Cloud Run service and dedicated runtime service account name."
   type        = string
