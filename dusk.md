@@ -19,7 +19,7 @@ attributes:
 
 Browse Kubernetes and custom resource schemas through one React renderer and one Go backend. Kubernetes OpenAPI JSON and original CRD YAML share kin-openapi's schema model; product/version discovery is automatic and there is no Python conversion step. The image includes its source corpus and prerendered pages. Contextual pages and errors render the same React App inside Goja in the Go process, so navigation and circular-reference limits work before browser JavaScript loads.
 
-Production runs on Cloud Run service manifests-production in GCP project nwf-shared, us-east1. Cloudflare owns public DNS/TLS and routes www.manifests.io through a fixed-origin Worker proxy. GitHub Actions verifies and publishes images using OIDC. The manifests-production Spacelift stack resolves the production candidate tag to an immutable digest and performs an approved deployment; image publication alone does not deploy.
+Production runs on Cloud Run service manifests-production in GCP project nwf-shared, us-east1. Cloudflare owns public DNS/TLS and routes [the public site](https://www.manifests.io) through a fixed-origin Worker proxy. GitHub Actions verifies and publishes images using OIDC. The manifests-production Spacelift stack resolves the production candidate tag to an immutable digest and performs an approved deployment; image publication alone does not deploy.
 
 Named schema URLs identify the actual target. `path` retains the readable traversal; `pointer` selects unnamed inline schemas. Recursive nodes allow three visits, then disable fourth-visit links. Backend OpenTelemetry and browser Grafana Faro are active.
 
