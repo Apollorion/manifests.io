@@ -1,92 +1,103 @@
 # Manifests.io
 
-Easy to use online kubernetes documentation.
+Browse Kubernetes and custom resource schemas with a Go backend and one React renderer.
 
-## Important URLS
-- Production: www.manifests.io
+Choose a product and version, filter resources, then follow fields into their types. Descriptions, required fields, arrays, maps, unions, validation constraints, and alternate API versions come from the original schemas. Existing resource URLs and the legacy `linked`, `oneOf`, and `key` parameters remain supported.
 
-## Devving this repo
-1. clone this repository
-2. `cd manifests.io`
-3. `yarn install`
-4. `yarn dev`
+## Run locally
 
-You can support more kubernetes versions by dropping any k8s version's [Open API spec](https://github.com/kubernetes/kubernetes/blob/master/api/openapi-spec/swagger.json) into `oaspec/kubernetes` and updating `lib/oaspec.tsx`.
+Requirements: Go 1.27+, Node.js 24.15+, and npm.
 
-## OpenTelemetry Tracing
-
-This project includes OpenTelemetry instrumentation for distributed tracing. Tracing is **disabled by default** and requires configuration to enable.
-
-### Local Development
-
-To enable tracing locally:
-
-1. Copy `.env.example` to `.env`
-2. Set the `OTEL_EXPORTER_OTLP_ENDPOINT` to your OTLP collector endpoint:
-   ```bash
-   OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-   OTEL_SERVICE_NAME=manifestsio
-   OTEL_DEPLOYMENT_ENVIRONMENT=development
-   ```
-3. Start your application with `yarn dev`
-
-If `OTEL_EXPORTER_OTLP_ENDPOINT` is not set or empty, tracing will be disabled automatically.
-
-### Production Deployment
-
-For Kubernetes deployments, configure the environment variables in `deployment.yaml`:
-
-```yaml
-env:
-  - name: OTEL_EXPORTER_OTLP_ENDPOINT
-    value: "http://otel-collector.observability.svc.cluster.local:4318"
-  - name: OTEL_SERVICE_NAME
-    value: "manifestsio"
-  - name: OTEL_DEPLOYMENT_ENVIRONMENT
-    value: "production"
+```sh
+make build
+PORT=18080 ./build/manifests
 ```
 
-### What's Instrumented
+Open [localhost:18080](http://localhost:18080). `make build` installs locked frontend dependencies, builds the browser and server rendering bundles, compiles Go, and prerenders documentation. Node runs during the build only. Production uses one Go process.
 
-The application automatically traces:
-- **HTTP requests** - All incoming requests to the Next.js server
-- **Spec loading** - OpenAPI spec fetch operations (`oaspecFetch`)
-- **Server-side rendering** - Page rendering with `getServerSideProps`
+For live frontend development after the first build:
 
-Custom spans include attributes like:
-- `manifestsio.item` - The product being viewed (e.g., "kubernetes")
-- `manifestsio.version` - The version being viewed (e.g., "1.34")
-- `manifestsio.resource` - The specific resource being viewed (e.g., "Pod")
-
-### Testing with Jaeger
-
-For local testing, you can run Jaeger all-in-one:
-
-```bash
-docker run -d --name jaeger \
-  -e COLLECTOR_OTLP_ENABLED=true \
-  -p 16686:16686 \
-  -p 4318:4318 \
-  jaegertracing/all-in-one:latest
+```sh
+make dev
 ```
 
-Then set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` in your `.env` file and access the Jaeger UI at http://localhost:16686.
+Vite listens on port 5173 and proxies `/api` to the Go service on port 8080. Use the built Go server to verify prerendering, status codes, and security headers. Vite's development fallback serves the application shell for every URL.
 
-# Supporting new k8s/product versions
+## Source schemas
 
-### New kubernetes versions
-Kubernetes versions are easily updated.
-1. Clone the kubernetes project `git clone git@github.com:kubernetes/kubernetes.git`
-2. Change to the branch of the version in kubernetes project `git checkout release-1.22`
-3. Copy the open API spec from the kubernetes project in `api/openapi-spec/swagger.json` to this project at `oaspec/kubernetes/<k8s_version>.json`
-4. Add the version to the frontend application at `lib/oaspec.tsx`
+There is no converter or generated CRD JSON to maintain.
 
+| Source | Location |
+| --- | --- |
+| Kubernetes OpenAPI JSON | `oaspec/kubernetes/<version>.json` |
+| Original CRD YAML or JSON | `ETL/crds/<product>-<version>/` |
 
-### New CRD versions
-CRDs copied into `./ETL/crds/*/*.yaml` will be combined into a product version based off the directory name under `./ETL/crds`
-So for instance `./ETC/crds/certmanager-1.7/*.yaml` will generate a product name called `certmanager` for version `1.7` that supports any of the CRDs under its directory.
+`ETL/crds` retains its existing path to preserve source history; the ETL executable is gone. Drop a new version into the appropriate directory and rebuild. Product/version discovery is automatic. Six existing product display-name aliases preserve URLs containing spaces; Gateway API keeps its existing standard/experimental labels. The default landing page remains Kubernetes 1.34 for compatibility.
 
-1. Create a new directory under `./ETL/crds/` and name it appropriately.
-2. Copy all supported CRD YAML files under the new directory
-3. Add the version to the frontend application at `./lib/oaspec.tsx`
-4. Run the ETL script (python3 required) `yarn etl`
+The reader accepts OpenAPI v2 definitions and OpenAPI v3 component schemas, including schema-only documents. CRDs may be individual documents, multi-document YAML, or Kubernetes Lists. It extracts each CRD version's `openAPIV3Schema`, with support for older `spec.validation` schemas. Unresolved or external references fail loading instead of reading arbitrary files or making network requests.
+
+[kin-openapi](https://github.com/getkin/kin-openapi) supplies the OpenAPI types, v2-to-v3 conversion, and reference resolution. Both sources use its `openapi3.Schema` model. Our code handles catalog discovery, navigation, legacy URL aliases, and the finite page data consumed by React. Kubernetes extensions are retained. See [ADR 0001](adr/0001-read-source-schemas-with-one-go-model-and-render-documentati.md) for the trade-offs.
+
+## HTTP interface
+
+| Route | Response |
+| --- | --- |
+| `/` | Redirect to `/kubernetes/1.34` |
+| `/<item>/<version>` | Resource index |
+| `/<item>/<version>/<resource>` | Schema documentation |
+| `/api/catalog` | Products and versions as JSON |
+| `/api/page?item=...&version=...&resource=...` | The same page data used by React |
+| `/healthz`, `/readyz` | Ready after the corpus loads successfully |
+
+Nested schemas use `path`, a JSON Pointer through schema keywords such as `/properties/spec/properties/containers/items`. References are resolved by the library. Canonical schema locations make recursive references navigable without infinitely expanding the tree. Field filters remain local to the browser and are never sent to the API.
+
+Prerendering calls the same React component used by the browser. Pages are stored compressed to bound image size. The Go server serves the selected schema's generated HTML, supplies current navigation data, and handles metadata, errors, conditional requests, and static assets. Contextual legacy links retain readable schema content while React applies their navigation context. Unknown resources return HTTP 404; malformed queries return HTTP 400.
+
+## Verification
+
+```sh
+make build
+make test
+go vet ./...
+npm --prefix frontend run typecheck
+tofu -chdir=infra init -backend=false
+tofu -chdir=infra validate
+```
+
+Go tests cover the entire original corpus, including the 7,174 legacy definition names captured before removing generated files. Additional tests cover references and cycles, CRD envelopes, unions, required fields, invalid input, HTTP errors, script-safe serialization, and OTLP correlation/privacy. Frontend tests exercise filters, selectors, navigation, error states, and the real Faro transport.
+
+## Container and Cloud Run
+
+```sh
+docker build --platform linux/amd64 --build-arg VERSION="$(git rev-parse --short HEAD)" -t manifests:local .
+docker run --rm -p 18080:8080 manifests:local
+```
+
+With the container running, `node scripts/smoke.mjs http://localhost:18080` verifies its API, original field descriptions, nested HTML, legacy links, required fields, and error responses.
+
+The image includes the immutable corpus, prerendered HTML, and browser assets. It runs as a non-root user, listens on `0.0.0.0:$PORT`, and needs no database, persistent disk, cluster access, or Node runtime. Schema changes require a new build. SIGTERM drains requests and flushes telemetry within Cloud Run's shutdown window.
+
+The [OpenTofu deployment root](infra/README.md) defines one Cloud Run service with an immutable image digest, a dedicated service account, telemetry secret access, and scale-to-zero behavior. It uses an existing GCP project and Secret Manager secret. Creating an image or branch does not publish it or change the live domain.
+
+Runtime configuration:
+
+| Variable | Default |
+| --- | --- |
+| `PORT` | `8080` |
+| `DATA_DIR` | `.` |
+| `WEB_DIR` | `frontend/dist` |
+| `RENDER_DIR` | `frontend/prerender` |
+| `PUBLIC_DIR` | `public` |
+| `SITE_URL` | `https://www.manifests.io` |
+
+Directory options also have corresponding command flags; run `./build/manifests -help`. The `-export` flag emits page data as NDJSON for the React prerender build.
+
+## Observability
+
+Structured stdout logs include trace/span IDs. Configure `OTEL_EXPORTER_OTLP_ENDPOINT` and runtime-only `OTEL_EXPORTER_OTLP_HEADERS` for OTLP HTTP/protobuf traces and logs. Without an endpoint, export is disabled. `OTEL_SDK_DISABLED=true` disables export explicitly. W3C TraceContext and Baggage propagation are configured in both cases.
+
+Production browser telemetry uses the existing public Grafana Faro collector. The existing PostHog integration retains manual pageview events on the production domains, with automatic capture, recording, persistence, and person profiles disabled. Local previews do not send production telemetry. Search values, query strings, request bodies, cookies, authorization headers, raw URLs, and freeform exceptions are excluded from exported telemetry. General OTLP credentials never enter the browser build. See [deployment telemetry configuration](infra/README.md#telemetry-configuration) for details.
+
+## License
+
+[MIT](LICENSE). Original authorship and design credits remain in the site footer.
