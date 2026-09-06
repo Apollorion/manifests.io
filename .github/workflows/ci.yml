@@ -3,6 +3,7 @@ name: Verify
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -10,6 +11,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
@@ -23,8 +25,96 @@ jobs:
       - run: make build
       - run: make test
       - run: go vet ./...
-      - run: docker build --build-arg VERSION="${GITHUB_SHA}" -t manifests:test .
+      - run: docker build --platform linux/amd64 --build-arg VERSION="${GITHUB_SHA}" -t manifests:test .
       - run: |
           docker run -d --name manifests -p 8080:8080 manifests:test
           node scripts/smoke.mjs
           docker stop --timeout 10 manifests
+      - name: Export verified image
+        if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: docker save manifests:test -o "${RUNNER_TEMP}/manifests-image.tar"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        with:
+          name: verified-image
+          path: ${{ runner.temp }}/manifests-image.tar
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  publish:
+    needs: verify
+    if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: manifests-production-image
+      cancel-in-progress: false
+    env:
+      IMAGE: us-east1-docker.pkg.dev/nwf-shared/apps/manifests-io
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: verified-image
+          path: ${{ runner.temp }}
+      - run: |
+          docker load -i "${RUNNER_TEMP}/manifests-image.tar"
+          printf 'DOCKER_CONFIG=%s/manifests-docker\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: nwf-shared
+          workload_identity_provider: projects/155511170166/locations/global/workloadIdentityPools/github/providers/github
+          service_account: manifests-builder@nwf-shared.iam.gserviceaccount.com
+          token_format: access_token
+          create_credentials_file: false
+      - name: Authenticate to Artifact Registry
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: printf '%s' "$ACCESS_TOKEN" | docker login -u oauth2accesstoken --password-stdin https://us-east1-docker.pkg.dev
+      - name: Check immutable revision tag
+        id: revision
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs';
+          const endpoint = `https://artifactregistry.googleapis.com/v1/projects/nwf-shared/locations/us-east1/repositories/apps/packages/manifests-io/tags/${process.env.GITHUB_SHA}`;
+          const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${process.env.ACCESS_TOKEN}` } });
+          if (response.status !== 404 && !response.ok) throw new Error(`Revision lookup failed: HTTP ${response.status}`);
+          appendFileSync(process.env.GITHUB_OUTPUT, `exists=${response.ok}\n`);
+          NODE
+      - name: Verify existing revision is unchanged
+        if: steps.revision.outputs.exists == 'true'
+        run: |
+          docker pull "$IMAGE:$GITHUB_SHA"
+          expected=$(docker image inspect manifests:test --format '{{.Id}}')
+          published=$(docker image inspect "$IMAGE:$GITHUB_SHA" --format '{{.Id}}')
+          if [ "$expected" != "$published" ]; then
+            echo '::error::This commit already has a different immutable image. Publish a new commit instead of replacing it.'
+            exit 1
+          fi
+      - name: Publish immutable revision
+        if: steps.revision.outputs.exists != 'true'
+        run: |
+          docker tag manifests:test "$IMAGE:$GITHUB_SHA"
+          docker push "$IMAGE:$GITHUB_SHA"
+      - name: Update production candidate
+        run: |
+          current_main=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [ "$current_main" != "$GITHUB_SHA" ]; then
+            echo 'A newer commit is on main; keeping its production candidate.'
+            exit 0
+          fi
+          docker tag manifests:test "$IMAGE:production"
+          docker push "$IMAGE:production"
+          printf 'Published production candidate %s:%s. Start and approve the manifests production run in Spacelift to deploy it.\n' "$IMAGE" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove registry credentials
+        if: always()
+        run: docker logout us-east1-docker.pkg.dev

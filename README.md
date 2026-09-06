@@ -53,7 +53,7 @@ The reader accepts OpenAPI v2 definitions and OpenAPI v3 component schemas, incl
 | `/api/page?item=...&version=...&resource=...` | The same page data used by React |
 | `/healthz`, `/readyz` | Ready after the corpus loads successfully |
 
-Nested schemas use `path`, a JSON Pointer through schema keywords such as `/properties/spec/properties/containers/items`. References are resolved by the library. Canonical schema locations make recursive references navigable without infinitely expanding the tree. Field filters remain local to the browser and are never sent to the API.
+Nested inline schemas use `pointer`, a JSON Pointer through schema keywords such as `/properties/spec/properties/containers/items`; `path` carries the displayed field traversal. References are resolved by the library. Canonical schema locations make recursive references navigable without infinitely expanding the tree. Field filters remain local to the browser and are never sent to the API.
 
 Prerendering calls the same React component used by the browser. Pages are stored compressed to bound image size. Canonical requests can use this cache; contextual URLs and errors render the same React App inside Go using [Goja](https://github.com/dop251/goja). The response already contains current headings, traversal links, circular-reference limits, and recovery controls before browser JavaScript loads. React hydrates that markup for filtering, version selection, and theme controls. Unknown resources return HTTP 404; malformed queries return HTTP 400.
 
@@ -83,7 +83,21 @@ With the container running, `node scripts/smoke.mjs http://localhost:18080` veri
 
 The image includes the immutable corpus, prerendered HTML, and browser assets. It runs as a non-root user, listens on `0.0.0.0:$PORT`, and needs no database, persistent disk, cluster access, or Node runtime. Schema changes require a new build. SIGTERM drains requests and flushes telemetry within Cloud Run's shutdown window.
 
-The [OpenTofu deployment root](infra/README.md) defines one Cloud Run service with an immutable image digest, a dedicated service account, telemetry secret access, and scale-to-zero behavior. It uses an existing GCP project and Secret Manager secret. Creating an image or branch does not publish it or change the live domain.
+The [OpenTofu service module](infra/README.md) defines one Cloud Run service with an immutable image digest, a dedicated service account, telemetry secret access, and scale-to-zero behavior. It uses an existing GCP project and Secret Manager secret.
+
+### Production releases through Spacelift
+
+The [Verify workflow](.github/workflows/ci.yml) runs the application checks and smoke-tests a Linux AMD64 container. After a successful push to `main`, or a manual workflow run against `main`, its publish job sends that exact tested image to `us-east1-docker.pkg.dev/nwf-shared/apps/manifests-io`. The full Git commit SHA is the immutable revision tag. The `production` tag identifies the latest verified candidate from the current `main` commit. Older runs cannot replace a newer candidate, and an existing SHA tag cannot be overwritten with a different image.
+
+Publishing uses [GitHub OIDC through Google Workload Identity Federation](https://github.com/google-github-actions/auth) with `manifests-builder@nwf-shared.iam.gserviceaccount.com`; no service-account key is stored in GitHub. Only the publish job requests an identity token. Pull requests and other branches run verification without publishing.
+
+The production Spacelift stack uses [`TheOutdoorProgrammer/configurations`, `manifests/production`](https://github.com/TheOutdoorProgrammer/configurations/tree/main/manifests/production). Its OpenTofu configuration resolves the `production` tag to an immutable digest and plans the Cloud Run update. GitHub Actions publishes images; Spacelift owns infrastructure and deployment.
+
+1. Merge the application change into `main` and wait for both Verify jobs to succeed. A manual run on `main` follows the same checks.
+2. Start a production run in Spacelift and review the planned container digest and infrastructure changes.
+3. Approve the plan to deploy the candidate. Publishing an image alone does not change the live service.
+
+To rebuild an already published commit with updated dependencies or base images, create a new commit so the revision tag remains immutable.
 
 Runtime configuration:
 
@@ -106,4 +120,4 @@ Production browser telemetry uses the existing public Grafana Faro collector. Th
 
 ## License
 
-[MIT](LICENSE). Original authorship and design credits remain in the site footer.
+[MIT](LICENSE). Original authorship remains in the site footer.
