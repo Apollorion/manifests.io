@@ -220,7 +220,8 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, p
 	body = bytes.ReplaceAll(body, []byte("<!--page-data-->"), append(append([]byte(`<script id="__PAGE_DATA__" type="application/json">`), data...), []byte("</script>")...))
 	body = bytes.ReplaceAll(body, []byte("<!--app-html-->"), nil)
 	if dynamic {
-		body = bytes.ReplaceAll(body, []byte(`id="root"`), []byte(`id="root" data-dynamic="true"`))
+		body = bytes.ReplaceAll(body, []byte(`id="root"`), []byte(`id="root" data-dynamic="true" inert`))
+		body = bytes.ReplaceAll(body, []byte("</body>"), []byte(`<noscript><p>Enable JavaScript to follow schema links in this navigation path.</p></noscript></body>`))
 	}
 	canonical := s.config.SiteURL + page.Canonical
 	title := html.EscapeString(page.Title + " | Manifests.io")

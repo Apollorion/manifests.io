@@ -108,6 +108,7 @@ for (let visit = 1; visit <= 3; visit++) {
     const reloaded = await (await fetch(`${base}/api/page?${query}`)).json();
     assert.deepEqual(reloaded, current, 'Refresh changed the recursion limit');
     const html = await (await fetch(cyclicURL)).text();
+    assert(html.includes('data-dynamic="true" inert'), 'Stale prerendered links are interactive before React commits');
     const embedded = JSON.parse(html.match(/<script id="__PAGE_DATA__" type="application\/json">(.*?)<\/script>/s)[1]);
     assert(embedded.resources.find(row => row.name === 'allOf').circular, 'HTML page data lost circular state');
   }

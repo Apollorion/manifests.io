@@ -103,6 +103,9 @@ func TestPrerenderCachingAndDynamicQueries(t *testing.T) {
 	if !strings.Contains(w.Body.String(), "Server rendered fields") {
 		t.Fatal("prerendered content absent")
 	}
+	if strings.Contains(w.Body.String(), " inert") {
+		t.Fatal("canonical page navigation was disabled")
+	}
 	r := httptest.NewRequest("GET", "/kubernetes/1.34", nil)
 	r.Header.Set("If-None-Match", w.Header().Get("ETag"))
 	cached := httptest.NewRecorder()
@@ -112,7 +115,7 @@ func TestPrerenderCachingAndDynamicQueries(t *testing.T) {
 	}
 	dynamic := httptest.NewRecorder()
 	s.ServeHTTP(dynamic, httptest.NewRequest("GET", "/kubernetes/1.34?path=Deployment.spec.template.spec", nil))
-	if !strings.Contains(dynamic.Body.String(), "Server rendered fields") || !strings.Contains(dynamic.Body.String(), "data-dynamic") {
+	if !strings.Contains(dynamic.Body.String(), "Server rendered fields") || !strings.Contains(dynamic.Body.String(), `data-dynamic="true" inert`) {
 		t.Fatal("contextual query lost its selected schema HTML or fresh page data")
 	}
 }

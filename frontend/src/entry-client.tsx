@@ -1,9 +1,15 @@
+import { useLayoutEffect, type ReactNode } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { App, AppBoundary } from './App';
 import { pageQuery } from './navigation';
 import type { Page } from './types';
 import { captureError, initializeObservability } from './telemetry';
 import './styles.css';
+
+function Ready({ container, children }: { container: HTMLElement; children: ReactNode }) {
+  useLayoutEffect(() => { container.removeAttribute('inert'); }, [container]);
+  return children;
+}
 
 async function start() {
   const container = document.getElementById('root');
@@ -18,13 +24,13 @@ async function start() {
       if (!response.ok) throw new Error('The documentation could not be loaded. Please try again.');
       page = await response.json() as Page;
     }
-    const app = <AppBoundary onError={captureError}><App initialPage={page}/></AppBoundary>;
+    const app = <Ready container={container}><AppBoundary onError={captureError}><App initialPage={page}/></AppBoundary></Ready>;
     if (data?.trim() && container.hasChildNodes() && !container.hasAttribute('data-dynamic')) hydrateRoot(container, app);
     else createRoot(container).render(app);
     try { initializeObservability(); } catch (error) { captureError(error); }
   } catch (error) {
     captureError(error);
-    createRoot(container).render(<main className="boot-error" role="alert"><h1>Documentation unavailable.</h1><p>We couldn’t load this page. Try reloading or open the resource library.</p><a className="action-button" href="/">Open the library</a></main>);
+    createRoot(container).render(<Ready container={container}><main className="boot-error" role="alert"><h1>Documentation unavailable.</h1><p>We couldn’t load this page. Try reloading or open the resource library.</p><a className="action-button" href="/">Open the library</a></main></Ready>);
   }
 }
 
