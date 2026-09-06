@@ -82,6 +82,10 @@ resource "google_cloud_run_v2_service" "app" {
         }
       }
       env {
+        name  = "SITE_URL"
+        value = var.site_url
+      }
+      env {
         name  = "OTEL_EXPORTER_OTLP_ENDPOINT"
         value = var.otlp_endpoint
       }

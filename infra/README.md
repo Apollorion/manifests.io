@@ -27,6 +27,8 @@ otlp_headers_secret_version = "1"
 
 Use an existing remote state backend in the deployment runner. Validate and review the OpenTofu plan before applying it. Deletion protection is enabled. This root leaves the current public domain unchanged; move DNS or a load balancer only after smoke checks and a deliberate cutover decision.
 
+For a preview, set `service_name = "manifests-preview"` and `site_url` to its Cloud Run HTTPS origin so canonical links and the sitemap point at the preview. Google exposes a deterministic origin as `https://SERVICE-PROJECT_NUMBER.REGION.run.app`; use the project's numeric identifier, not its project ID.
+
 ## Verify the revision
 
 ```sh

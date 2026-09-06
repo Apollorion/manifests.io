@@ -19,6 +19,16 @@ variable "service_name" {
   }
 }
 
+variable "site_url" {
+  description = "Canonical HTTPS origin. Set to the Cloud Run URL for a preview deployment."
+  type        = string
+  default     = "https://www.manifests.io"
+  validation {
+    condition     = can(regex("^https://[^/@?#:]+(:[0-9]+)?$", var.site_url))
+    error_message = "Use an HTTPS origin without a path, credentials, query, or fragment."
+  }
+}
+
 variable "image" {
   description = "Existing linux/amd64 container image pinned to its immutable SHA256 digest."
   type        = string
