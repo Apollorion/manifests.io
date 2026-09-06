@@ -5,30 +5,22 @@ kind: repository
 name: manifests.io
 title: Manifests.io
 attributes:
-  language: typescript
+  language: go
+  frontend: react-typescript
   url: https://www.manifests.io
   public: true
-  deploys_to: cloudflare-workers
+  deploys_to: gcp-cloud-run
+  project: nwf-shared
+  region: us-east1
+  service: manifests-production
+  edge: cloudflare-workers
+  deployment: spacelift
 ---
 
-The Kubernetes API reference as a browsable site.
-Pick a product, a version and a resource, and get its fields expanded out of the OpenAPI spec, with links between versions of the same resource.
-Next.js 15 on the Pages Router, TypeScript, yarn 4.
+Browse Kubernetes and custom resource schemas through one React renderer and one Go backend. Kubernetes OpenAPI JSON and original CRD YAML share kin-openapi's schema model; product/version discovery is automatic and there is no Python conversion step. The image includes its source corpus and prerendered pages. Contextual pages and errors render the same React App inside Goja in the Go process, so navigation and circular-reference limits work before browser JavaScript loads.
 
-None of the content is fetched at runtime.
-Every spec is a JSON file committed under `oaspec/`, roughly 28 MB of them, and `lib/oaspec.tsx` statically `import`s each one and maps it to an item and a version.
-Adding a version is therefore always two edits and never one: drop the file into `oaspec/`, then add its import and its case to `lib/oaspec.tsx`, or the site will not know it exists.
+Production runs on Cloud Run service manifests-production in GCP project nwf-shared, us-east1. Cloudflare owns public DNS/TLS and routes www.manifests.io through a fixed-origin Worker proxy. GitHub Actions verifies and publishes images using OIDC. The manifests-production Spacelift stack resolves the production candidate tag to an immutable digest and performs an approved deployment; image publication alone does not deploy.
 
-The two content pipelines differ.
-Kubernetes versions are copied straight from the kubernetes repository's `api/openapi-spec/swagger.json`.
-Everything else is CRD-derived: YAML placed under `ETL/crds/<product>-<version>/` is folded into `oaspec/<product>/<version>.json` by the Python in `ETL/`, run with `yarn etl`, and the directory name is what becomes the product name and version.
+Named schema URLs identify the actual target. `path` retains the readable traversal; `pointer` selects unnamed inline schemas. Recursive nodes allow three visits, then disable fourth-visit links. Backend OpenTelemetry and browser Grafana Faro are active.
 
-Routing is `/[item]/[version]/[resource]`, rendered through `getServerSideProps`, and `middleware.ts` redirects `/` to whatever `defaultItemVersion()` currently returns.
-
-## Gotchas
-
-**Deployment is Cloudflare Workers, and most of the deployment files still in the tree are dead.** `yarn build:cf` runs OpenNext to produce `.open-next/worker.js`, which is what `wrangler.jsonc` publishes. The `Dockerfile`, `deployment.yaml`, `netlify.toml`, and `output: "standalone"` in `next.config.js` are all leftovers from earlier hosting, and nothing reads them any more. The commit that removed the build pipelines said as much.
-
-**Production currently deploys through Wrangler, not a Git build trigger.** Cloudflare reports `last_deployed_from: wrangler`, and a push to `main` does not change the live Worker by itself. Run `yarn build:cf` and then `yarn wrangler deploy` with the account credentials from 1Password. When uploading Grafana source maps, provide `FARO_SOURCEMAP_API_KEY` during that same build so the maps carry the exact Git hash and asset names of the bundle Wrangler publishes. If a Workers Builds trigger is added later, verify it through the Builds API before treating a push as a deployment.
-
-**The README's OpenTelemetry section is stale.** Tracing was replaced by PostHog and `instrumentation.ts` is a PostHog client now, but the OTel dependencies in `package.json` and the whole README section about Jaeger and `OTEL_EXPORTER_OTLP_ENDPOINT` were left behind.
+Operational runbooks and deployment evidence live in Dusk notes attached to this repository and service:stout/nwf-shared.
