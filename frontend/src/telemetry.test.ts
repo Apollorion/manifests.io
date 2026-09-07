@@ -89,6 +89,7 @@ describe('browser telemetry', () => {
 
   it.each([
     ['/api/catalog?q=customer%40example.com#secret', '/api/catalog'],
+    ['/api/definitions?item=kubernetes&version=1.34&q=private', '/api/definitions'],
     ['/api/page?item=private&resource=customer%40example.com', '/api/page'],
     ['/kubernetes/v1.30/Pod?token=secret', '/:item/:version/:resource'],
     ['/cert-manager/v1.14?token=secret', '/:item/:version'],
@@ -127,6 +128,8 @@ describe('browser telemetry', () => {
       } })
       faro.api.pushEvent('faro.performance.resource', { name: url, httpHost: secret, duration: '32', responseStatus: '200' })
       faro.api.pushEvent('faro.navigation', { fromUrl: url, toUrl: window.location.href, duration: '18', text: secret })
+      faro.api.pushEvent('search_open', { query: secret, selectedType: secret })
+      faro.api.pushEvent('search_select', { query: secret })
       faro.api.pushEvent(secret, { 'faro.action.user.name': secret, name: secret, form: secret })
       faro.api.pushEvent('click', {}, undefined, {
         customPayloadTransformer: (payload) => ({ ...payload, action: { name: secret, parentId: secretID } }),
@@ -149,6 +152,8 @@ describe('browser telemetry', () => {
       expect(exported).not.toContain(secret)
       expect(exported).not.toContain(encodeURIComponent(secret))
       expect(exported).not.toContain(secretID)
+      expect(exported).toContain('search_open')
+      expect(exported).toContain('search_select')
       expect(exported).not.toContain('secret-fragment')
       expect(exported).not.toContain('authorization')
       expect(exported).toContain('/api/page')

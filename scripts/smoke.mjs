@@ -16,6 +16,17 @@ const products = await (await fetch(`${base}/api/catalog`)).json();
 assert(products.some(product => product.name === 'kubernetes' && product.versions.includes('1.34')));
 assert(products.some(product => product.name === 'gateway api'));
 
+for (const [item, version, name, title] of [['kubernetes', '1.34', 'ContainerStatus', 'ContainerStatus'], ['certmanager', '1.14', 'CertificateSpec', 'Certificate.spec']]) {
+  const response = await fetch(`${base}/api/definitions?${new URLSearchParams({ item, version })}`);
+  assert.equal(response.status, 200);
+  const definitions = await response.json();
+  const match = definitions.find(definition => definition.name === name);
+  assert(match, `Quick search cannot find nested type ${name}`);
+  const document = await fetch(new URL(match.href, base));
+  assert.equal(document.status, 200);
+  assert((await document.text()).includes(`<h1>${title}</h1>`), `Search result opened the wrong type for ${name}`);
+}
+
 const pod = '/kubernetes/1.34/io.k8s.api.core.v1.Pod';
 const podSpec = '/kubernetes/1.34/io.k8s.api.core.v1.PodSpec';
 const deployment = '/kubernetes/1.34/io.k8s.api.apps.v1.Deployment';
@@ -51,6 +62,7 @@ for (const path of [pod, `${podSpec}?path=Deployment.spec.template.spec`, `${pod
   assert(body.includes('id="__PAGE_DATA__"'), `No browser data at ${path}`);
   assert(!body.includes('<!--page-'), `Incomplete template at ${path}`);
   assert(!body.includes('baadaa'), 'Old design credit is still rendered');
+  assert(body.includes('Search all types'), 'Quick search entry point is missing');
   if (path === pod) assert(body.includes(`href="${podSpec}?path=Pod.spec"`), 'Rendered spec link lost target or traversal');
   if (path.includes('path=Deployment.spec.template.spec')) assert(body.includes('<title>Deployment.spec.template.spec | Manifests.io</title>'));
   assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
@@ -123,4 +135,4 @@ for (const property of ['og:site_name', 'og:image:alt', 'og:image:width', 'og:im
 }
 const missing = await (await fetch(`${base}/kubernetes/1.34/missing`)).text();
 assert(missing.includes('Specification &amp; version') && missing.includes('See an issue here?'), 'Server error lost recovery controls');
-console.log('Container smoke checks passed: API, descriptions, traversal URLs, circular limits, no resource redirects, nested SSR, required fields, errors, and headers.');
+console.log('Container smoke checks passed: API, quick search, descriptions, traversal URLs, circular limits, no resource redirects, nested SSR, required fields, errors, and headers.');

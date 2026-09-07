@@ -57,6 +57,28 @@ code, kbd { font-family: var(--mono); }
 .github-link { color: var(--muted); font-size: 13px; text-decoration: none; white-space: nowrap; }
 .theme-button { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; width: 40px; height: 40px; font-size: 24px; line-height: 1; }
 .theme-button:hover { background: var(--subtle); }
+.quick-search-trigger { display: flex; align-items: center; gap: 10px; margin-left: auto; min-height: 44px; min-width: 230px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--muted); text-align: left; font-size: 13px; }
+.quick-search-trigger:hover { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+.quick-search-trigger > :first-child { font-size: 24px; line-height: 1; color: var(--accent); }
+.quick-search-trigger kbd { margin-left: auto; white-space: nowrap; }
+.quick-search-trigger ~ .header-actions { margin-left: 0; }
+.quick-search-dialog { width: min(660px, calc(100% - 32px)); max-height: calc(100dvh - 40px); margin: 8vh auto auto; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); box-shadow: 0 20px 80px #0005; }
+.quick-search-dialog::backdrop { background: #061a22a6; }
+.quick-search-content { display: flex; flex-direction: column; max-height: min(720px, 80dvh); }
+.quick-search-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 22px 14px; }
+.quick-search-heading h2 { font-size: 21px; font-weight: 500; letter-spacing: -.5px; }
+.quick-search-heading p { color: var(--muted); font-size: 12px; }
+.quick-search-close { flex-shrink: 0; width: 44px; height: 44px; background: var(--subtle); border: 1px solid var(--line); border-radius: 5px; font-size: 25px; }
+.quick-search-close:hover { color: var(--accent); border-color: var(--accent); }
+#type-search { flex-shrink: 0; width: calc(100% - 44px); margin: 0 22px; padding: 12px; border: 1px solid var(--accent); border-radius: 5px; background: var(--bg); font-size: 16px; }
+.quick-search-status { color: var(--muted); font-size: 12px; padding: 12px 22px; }
+.quick-search-results { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 10px 10px; }
+.quick-search-results a { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; min-height: 58px; border: 1px solid transparent; border-radius: 5px; text-decoration: none; overflow-wrap: anywhere; }
+.quick-search-results a[aria-selected='true'] { background: var(--accent-bg); border-color: var(--accent); }
+.quick-search-results strong { font-family: var(--mono); font-size: 14px; font-weight: 500; }
+.quick-search-results a > span { font-size: 11px; color: var(--muted); }
+.quick-search-help { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; flex-shrink: 0; padding: 12px 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+.search-retry { align-self: flex-start; margin: 0 22px 18px; }
 .workspace { max-width: 1552px; margin: auto; display: grid; grid-template-columns: 274px minmax(0, 1fr); padding: 0 48px; min-height: calc(100vh - 266px); }
 .workspace-sidebar { padding: 41px 28px 40px 0; border-right: 1px solid var(--line); }
 .sidebar-inner { position: sticky; top: 30px; }
@@ -148,7 +170,9 @@ tbody tr:hover { background: var(--bg); }
   thead th { padding-left: 16px; }
 }
 @media (max-width: 960px) {
-  .header-inner { padding: 15px 20px; }
+  .header-inner { padding: 15px 20px; flex-wrap: wrap; gap: 14px; }
+  .quick-search-trigger { order: 3; flex-basis: 100%; }
+  .quick-search-trigger ~ .header-actions { margin-left: auto; }
   .brand { font-size: 21px; gap: 10px; }
   .header-actions { gap: 16px; }
   .workspace { display: block; padding: 0 20px; }
@@ -169,6 +193,11 @@ tbody tr:hover { background: var(--bg); }
   .credits { text-align: left; }
 }
 @media (max-width: 480px) {
+  .quick-search-dialog { margin-top: 16px; width: calc(100% - 20px); }
+  .quick-search-content { max-height: calc(100dvh - 32px); }
+  .quick-search-heading { padding: 14px 14px 12px; }
+  #type-search { width: calc(100% - 28px); margin: 0 14px; }
+  .quick-search-status, .quick-search-help { padding: 12px 14px; }
   .header-inner { padding: 13px 16px; gap: 10px; }
   .header-actions { gap: 12px; }
   .github-link { font-size: 11px; }

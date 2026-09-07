@@ -20,6 +20,10 @@ func (fakeCatalog) Products() []schema.Product {
 	return []schema.Product{{Name: "kubernetes", Versions: []string{"1.34"}}}
 }
 
+func (fakeCatalog) Definitions(schema.Query) ([]schema.Definition, error) {
+	return []schema.Definition{}, nil
+}
+
 func (fakeCatalog) Page(q schema.Query) (schema.Page, error) {
 	if q.Item != "kubernetes" || q.Version != "1.34" || q.Resource == "missing" {
 		return schema.Page{}, schema.ErrNotFound
@@ -130,6 +134,71 @@ func TestErrorsRemainMachineReadable(t *testing.T) {
 	var page schema.Page
 	if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil || page.Error == "" || len(page.Catalog) == 0 {
 		t.Fatalf("error lacks recovery context: %s", w.Body)
+	}
+}
+
+func TestDefinitionsHTTPContract(t *testing.T) {
+	catalog, err := schema.Load("../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := testServer(t)
+	s.catalog = catalog
+	for _, tc := range []struct {
+		method string
+		query  string
+		status int
+	}{
+		{"GET", "item=kubernetes&version=1.34", 200},
+		{"HEAD", "item=kubernetes&version=1.34", 200},
+		{"GET", "item=missing&version=1.34", 404},
+		{"GET", "item=kubernetes&version=missing", 404},
+		{"HEAD", "item=kubernetes&version=missing", 404},
+		{"GET", "item=kubernetes", 400},
+		{"GET", "item=kubernetes&item=flux&version=1.34", 400},
+		{"GET", "item=%ZZ&version=1.34", 400},
+		{"GET", "item=kubernetes%2F1.34&version=1.34", 400},
+		{"GET", "item=kubernetes&version=1.34&resource=Pod", 400},
+		{"GET", "item=kubernetes&version=1.34&pointer=%2Fproperties%2Fspec", 400},
+		{"POST", "item=kubernetes&version=1.34", 405},
+	} {
+		t.Run(tc.method+tc.query, func(t *testing.T) {
+			r := httptest.NewRequest(tc.method, "/api/definitions?"+tc.query, nil)
+			w := httptest.NewRecorder()
+			s.ServeHTTP(w, r)
+			if w.Code != tc.status {
+				t.Fatalf("status=%d want=%d body=%s", w.Code, tc.status, w.Body)
+			}
+			if tc.status != 405 && r.Pattern != "/api/definitions" {
+				t.Fatalf("missing low-cardinality route: %q", r.Pattern)
+			}
+			if tc.method == "HEAD" {
+				if w.Body.Len() != 0 {
+					t.Fatal("HEAD returned a body")
+				}
+				return
+			}
+			if tc.status == 200 {
+				var definitions []schema.Definition
+				if err := json.Unmarshal(w.Body.Bytes(), &definitions); err != nil {
+					t.Fatal(err)
+				}
+				found := false
+				for _, definition := range definitions {
+					if definition.Resource == "io.k8s.api.core.v1.ContainerStatus" {
+						found = definition.Name == "ContainerStatus" && definition.Href == "/kubernetes/1.34/io.k8s.api.core.v1.ContainerStatus"
+					}
+				}
+				if !found {
+					t.Fatal("nested ContainerStatus definition missing from endpoint")
+				}
+			} else if tc.status != 405 {
+				var page schema.Page
+				if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil || page.Error == "" || len(page.Catalog) == 0 {
+					t.Fatalf("error lacks recovery context: %s", w.Body)
+				}
+			}
+		})
 	}
 }
 

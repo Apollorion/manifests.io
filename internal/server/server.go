@@ -32,6 +32,7 @@ type Config struct {
 type Catalog interface {
 	Page(schema.Query) (schema.Page, error)
 	Products() []schema.Product
+	Definitions(schema.Query) ([]schema.Definition, error)
 }
 
 type Server struct {
@@ -102,6 +103,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Pattern = "/api/catalog"
 		writeJSON(w, r, http.StatusOK, s.catalog.Products())
 		return
+	case "/api/definitions":
+		r.Pattern = "/api/definitions"
 	}
 	if strings.HasPrefix(r.URL.Path, "/assets/") {
 		r.Pattern = "/assets/{file}"
@@ -122,6 +125,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.failure(w, r, status, "This documentation URL is invalid.")
 		return
 	}
+	if r.URL.Path == "/api/definitions" {
+		definitions, err := s.catalog.Definitions(query)
+		if err != nil {
+			s.schemaFailure(w, r, err)
+			return
+		}
+		writeJSON(w, r, http.StatusOK, definitions)
+		return
+	}
 	if r.URL.Path == "/api/page" {
 		r.Pattern = "/api/page"
 	} else if query.Resource != "" {
@@ -131,13 +143,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	page, err := s.catalog.Page(query)
 	if err != nil {
-		status, message := http.StatusInternalServerError, "The documentation could not be loaded."
-		if errors.Is(err, schema.ErrNotFound) {
-			status, message = http.StatusNotFound, "This resource or version was not found."
-		} else if errors.Is(err, schema.ErrBadQuery) {
-			status, message = http.StatusBadRequest, "This documentation URL is invalid."
-		}
-		s.failure(w, r, status, message)
+		s.schemaFailure(w, r, err)
 		return
 	}
 	if r.URL.Path == "/api/page" {
@@ -161,7 +167,7 @@ func parseQuery(r *http.Request) (schema.Query, error) {
 	if q.Path == "" {
 		q.Path = values.Get("linked")
 	}
-	if r.URL.Path == "/api/page" {
+	if r.URL.Path == "/api/page" || r.URL.Path == "/api/definitions" {
 		q.Item, q.Version, q.Resource = values.Get("item"), values.Get("version"), values.Get("resource")
 	} else {
 		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
@@ -197,6 +203,16 @@ func (s *Server) serveFile(w http.ResponseWriter, r *http.Request, root string, 
 		w.Header().Set("Cache-Control", "public, max-age=3600")
 	}
 	http.ServeFile(w, r, file)
+}
+
+func (s *Server) schemaFailure(w http.ResponseWriter, r *http.Request, err error) {
+	status, message := http.StatusInternalServerError, "The documentation could not be loaded."
+	if errors.Is(err, schema.ErrNotFound) {
+		status, message = http.StatusNotFound, "This resource or version was not found."
+	} else if errors.Is(err, schema.ErrBadQuery) {
+		status, message = http.StatusBadRequest, "This documentation URL is invalid."
+	}
+	s.failure(w, r, status, message)
 }
 
 func (s *Server) failure(w http.ResponseWriter, r *http.Request, status int, message string) {

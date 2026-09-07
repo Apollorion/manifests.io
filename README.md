@@ -51,6 +51,7 @@ The reader accepts OpenAPI v2 definitions and OpenAPI v3 component schemas, incl
 | `/<item>/<version>/<resource>` | Schema documentation |
 | `/api/catalog` | Products and versions as JSON |
 | `/api/page?item=...&version=...&resource=...` | The same page data used by React |
+| `/api/definitions?item=kubernetes&version=1.34` | All named types and nested CRD aliases for quick search |
 | `/healthz`, `/readyz` | Ready after the corpus loads successfully |
 
 Nested inline schemas use `pointer`, a JSON Pointer through schema keywords such as `/properties/spec/properties/containers/items`; `path` carries the displayed field traversal. References are resolved by the library. Canonical schema locations make recursive references navigable without infinitely expanding the tree. Field filters remain local to the browser and are never sent to the API.
@@ -58,6 +59,12 @@ Nested inline schemas use `pointer`, a JSON Pointer through schema keywords such
 Prerendering calls the same React component used by the browser. Pages are stored compressed to bound image size. Canonical requests can use this cache; contextual URLs and errors render the same React App inside Go using [Goja](https://github.com/dop251/goja). The response already contains current headings, traversal links, circular-reference limits, and recovery controls before browser JavaScript loads. React hydrates that markup for filtering, version selection, and theme controls. Unknown resources return HTTP 404; malformed queries return HTTP 400.
 
 The build bundles the synchronous React renderer with a URLSearchParams polyfill into `frontend/dist-render/renderer.js`. Production runs two isolated Goja workers with exclusive access, a two-second rendering deadline, cancellation, and a call-stack limit. JavaScript receives page JSON and no filesystem or network bindings. See [ADR 0002](adr/0002-render-contextual-react-pages-inside-the-go-backend.md) for the runtime-rendering trade-offs and React upgrade checks.
+
+### Quick type search
+
+Use **Search all types** in the header, or press **Ctrl/Cmd+K** (also **Ctrl/Cmd+P**), to jump directly to any named type in the selected specification and version. This includes nested types such as `ContainerStatus`, not just top-level resources. Search tolerates typos and shows full type identifiers to distinguish API versions. Use arrow keys and Enter to open a result, or Escape to close the dialog and return focus.
+
+The browser loads the selected specification's definition index when search is first opened, then uses Fuse.js locally. Search text never enters URLs, API requests, logs, or telemetry. The existing `/` shortcut still focuses the current table's field filter. Search requires JavaScript; documentation and field navigation remain server-rendered.
 
 ## Verification
 
