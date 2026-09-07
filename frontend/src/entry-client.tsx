@@ -2,7 +2,7 @@ import { createRoot, hydrateRoot } from 'react-dom/client';
 import { App, AppBoundary, RecoveryPage } from './App';
 import { pageQuery } from './navigation';
 import type { Page } from './types';
-import { captureError, initializeObservability } from './telemetry';
+import { captureError, captureSearchEvent, initializeObservability } from './telemetry';
 import './styles.css';
 
 async function start() {
@@ -19,7 +19,7 @@ async function start() {
       page = await response.json() as Page;
     }
     if (!page) throw new Error('The documentation response was empty.');
-    const app = <AppBoundary page={page} onError={captureError}><App initialPage={page}/></AppBoundary>;
+    const app = <AppBoundary page={page} onError={captureError}><App initialPage={page} onSearchEvent={captureSearchEvent}/></AppBoundary>;
     if (data?.trim() && container.hasChildNodes()) hydrateRoot(container, app);
     else createRoot(container).render(app);
     try { initializeObservability(); } catch (error) { captureError(error); }

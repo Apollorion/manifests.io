@@ -26,6 +26,12 @@ type Product struct {
 	Versions []string `json:"versions"`
 }
 
+type Definition struct {
+	Name     string `json:"name"`
+	Resource string `json:"resource"`
+	Href     string `json:"href"`
+}
+
 type Query struct {
 	Item     string `json:"item"`
 	Version  string `json:"version"`
@@ -204,6 +210,37 @@ func (c *Catalog) Products() []Product {
 		result[i] = Product{p.Name, slices.Clone(p.Versions)}
 	}
 	return result
+}
+
+func (c *Catalog) Definitions(q Query) ([]Definition, error) {
+	if q.Item == "" || q.Version == "" || strings.ContainsAny(q.Item+q.Version, "/\\\x00") || q.Resource != "" || q.Path != "" || q.Pointer != "" || q.Trail != "" || q.OneOf != "" || q.Key != "" {
+		return nil, ErrBadQuery
+	}
+	d := c.documents[q.Item+"/"+q.Version]
+	if d == nil {
+		return nil, ErrNotFound
+	}
+	definitions := make([]Definition, 0, len(d.schemas)+len(d.aliases))
+	for resource := range d.schemas {
+		link := q
+		link.Resource = resource
+		definitions = append(definitions, Definition{Name: shortName(resource), Resource: resource, Href: Href(link)})
+	}
+	for resource, loc := range d.aliases {
+		if d.schemas[resource] != nil {
+			continue
+		}
+		link := q
+		link.Resource, link.Pointer = loc.resource, loc.path
+		definitions = append(definitions, Definition{Name: shortName(resource), Resource: resource, Href: Href(link)})
+	}
+	slices.SortFunc(definitions, func(a, b Definition) int {
+		if order := strings.Compare(a.Name, b.Name); order != 0 {
+			return order
+		}
+		return strings.Compare(a.Resource, b.Resource)
+	})
+	return definitions, nil
 }
 
 func (c *Catalog) Routes() []Query {

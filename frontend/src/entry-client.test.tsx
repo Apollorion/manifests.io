@@ -9,7 +9,7 @@ vi.mock('react-dom/client', async importOriginal => {
   const actual = await importOriginal<typeof import('react-dom/client')>();
   return { ...actual, createRoot: vi.fn(actual.createRoot), hydrateRoot: vi.fn(actual.hydrateRoot) };
 });
-vi.mock('./telemetry', () => ({ captureError: vi.fn(), initializeObservability: vi.fn() }));
+vi.mock('./telemetry', () => ({ captureError: vi.fn(), captureSearchEvent: vi.fn(), initializeObservability: vi.fn() }));
 
 it('hydrates contextual server markup with the circular limit already rendered', async () => {
   const page: Page = {

@@ -7,7 +7,7 @@ vi.mock('react-dom/client', async importOriginal => {
   const actual = await importOriginal<typeof import('react-dom/client')>();
   return { ...actual, createRoot: vi.fn(actual.createRoot) };
 });
-vi.mock('./telemetry', () => ({ captureError: vi.fn(), initializeObservability: vi.fn() }));
+vi.mock('./telemetry', () => ({ captureError: vi.fn(), captureSearchEvent: vi.fn(), initializeObservability: vi.fn() }));
 
 it('recovers from invalid startup data with the route, full catalog, and issue reporting', async () => {
   const previousURL = window.location.href;

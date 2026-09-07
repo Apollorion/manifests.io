@@ -12,11 +12,13 @@ import {
 } from '@grafana/faro-web-sdk'
 import { TracingInstrumentation } from '@grafana/faro-web-tracing'
 import type { CaptureResult, PostHogConfig } from 'posthog-js'
+import type { SearchEvent } from './QuickSearch'
 
 const eventNames = new Set([
   'click', 'navigation', 'view_changed', 'session_start', 'session_resume', 'session_extend',
   'route_change', 'faro.navigation', 'faro.performance.navigation', 'faro.performance.resource',
   'faro.tracing.fetch', 'faro.tracing.xml-http-request', 'faro.user.action', 'securitypolicyviolation',
+  'search_open', 'search_select', 'search_load_failed',
 ])
 const methods = new Set(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
 const urlAttributes = new Set(['url', 'http.url', 'url.full', 'http.target', 'fromUrl', 'toUrl', 'name', 'documentURL', 'blockedURL'])
@@ -48,6 +50,7 @@ export function telemetryURL(value: string): string {
     else if (parts[0] === 'api') {
       if (parts[1] === 'catalog') path = '/api/catalog'
       else if (parts[1] === 'page') path = '/api/page'
+      else if (parts[1] === 'definitions') path = '/api/definitions'
       else path = '/api/:path'
     } else if (parts[0] === 'assets') path = '/assets/:asset'
     else if (parts.length === 1 && ['healthz', 'readyz'].includes(parts[0])) path = `/${parts[0]}`
@@ -218,6 +221,10 @@ export function initializeObservability() {
 
 export function captureError(error: unknown) {
   faro?.api.pushError(error instanceof Error ? error : new Error('Browser error'))
+}
+
+export function captureSearchEvent(event: SearchEvent) {
+  faro?.api.pushEvent(event)
 }
 
 const analyticsHost = 'https://g.theoutdoorprogrammer.com'

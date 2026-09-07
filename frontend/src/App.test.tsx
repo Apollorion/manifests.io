@@ -77,7 +77,7 @@ describe('schema browser', () => {
 
   it('explains that unlisted definitions can still be opened directly', () => {
     render(<App initialPage={{ ...page, resource: undefined }}/>);
-    expect(screen.getByText('You can open any definition in this specification by its URL, including definitions not listed below.')).toBeVisible();
+    expect(screen.getByText('Use Search all types to jump to any definition, including nested types not listed below.')).toBeVisible();
   });
 
   it('preserves an inline selector independently from its displayed navigation path', () => {

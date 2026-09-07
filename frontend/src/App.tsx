@@ -1,6 +1,7 @@
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react';
 import { specURL } from './navigation';
 import type { Link, Page, Row } from './types';
+import { QuickSearch, type SearchEvent } from './QuickSearch';
 
 const repository = 'https://github.com/TheOutdoorProgrammer/manifests.io';
 
@@ -99,7 +100,7 @@ function SchemaTable({ page }: { page: Page }) {
   </section>;
 }
 
-export function App({ initialPage: page }: { initialPage: Page }) {
+export function App({ initialPage: page, onSearchEvent }: { initialPage: Page; onSearchEvent?: (event: SearchEvent) => void }) {
   const listURL = `/${encodeURIComponent(page.item)}/${encodeURIComponent(page.version)}`;
   const issueURL = `${repository}/issues/new?${new URLSearchParams({ title: page.resource ? `${page.item} - ${page.resource}` : page.item, body: '## Description of issue\n' })}`;
   return <>
@@ -108,6 +109,7 @@ export function App({ initialPage: page }: { initialPage: Page }) {
       <div className="header-inner">
         <a className="brand" href={listURL} aria-label="Manifests.io home"><span className="brand-mark" aria-hidden="true">{'{m}'}</span><span>manifests<span className="brand-domain">.io</span></span></a>
         <span className="header-tagline">Kubernetes, documented.</span>
+        <QuickSearch key={`${page.item}/${page.version}`} item={page.item} version={page.version} onEvent={onSearchEvent}/>
         <div className="header-actions"><a className="github-link" href={repository}>GitHub <span aria-hidden="true">↗</span></a><ThemeButton/></div>
       </div>
     </header>
@@ -130,7 +132,7 @@ export function App({ initialPage: page }: { initialPage: Page }) {
         <nav className="breadcrumbs" aria-label="Breadcrumb"><ol>{(page.breadcrumbs ?? []).map((link, index, links) => <li key={`${link.href}-${index}`}><a href={link.href} aria-current={index === links.length - 1 ? 'page' : undefined}>{link.label}</a></li>)}</ol></nav>
         <div className="page-heading"><div><span className="eyebrow">{page.item} <span className="version-tag">v{page.version}</span></span><h1>{page.title || 'Documentation'}</h1></div><span className="page-symbol" aria-hidden="true">{page.resource ? '{}' : '[]'}</span></div>
         {page.description && <p className="page-description">{page.description}</p>}
-        {!page.resource && !page.error && <p className="page-description">You can open any definition in this specification by its URL, including definitions not listed below.</p>}
+        {!page.resource && !page.error && <p className="page-description">Use Search all types to jump to any definition, including nested types not listed below.</p>}
         {page.error ? <section className="error-state" role="alert"><h2>We couldn’t open this schema.</h2><p>{page.error}</p><a className="action-button" href={listURL}>Browse available resources</a></section> : <>
           <LinkList links={page.otherVersions ?? []} label="API versions" currentHref={page.canonical.split('?')[0]}/>
           <LinkList links={page.variants ?? []} label="Schema variants"/>
