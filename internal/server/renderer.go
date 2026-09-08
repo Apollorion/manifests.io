@@ -9,6 +9,7 @@ import (
 
 	"github.com/dop251/goja"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
 
@@ -65,10 +66,16 @@ func (r *reactRenderer) render(ctx context.Context, data []byte) (html []byte, e
 	ctx, span := otel.Tracer("manifests.io/render").Start(ctx, "react.render")
 	defer func() {
 		if err != nil {
-			span.SetStatus(codes.Error, "React rendering failed")
+			span.SetAttributes(attribute.String("render.failure", renderFailureKind(err)))
+			if !errors.Is(err, context.Canceled) {
+				span.SetStatus(codes.Error, "React rendering failed")
+			}
 		}
 		span.End()
 	}()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	var worker *reactWorker
 	select {
 	case worker = <-r.workers:
@@ -104,4 +111,22 @@ func (r *reactRenderer) render(ctx context.Context, data []byte) (html []byte, e
 		return nil, err
 	}
 	return []byte(result.String()), nil
+}
+
+// Only emit fixed categories: JavaScript errors can contain page or request data.
+func renderFailureKind(err error) string {
+	var exception *goja.Exception
+	var overflow *goja.StackOverflowError
+	switch {
+	case errors.Is(err, context.Canceled):
+		return "canceled"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "deadline_exceeded"
+	case errors.As(err, &overflow):
+		return "stack_overflow"
+	case errors.As(err, &exception):
+		return "javascript_exception"
+	default:
+		return "internal"
+	}
 }

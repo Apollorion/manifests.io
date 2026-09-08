@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -273,7 +274,11 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, p
 	if !prerendered {
 		rendered, err := s.renderer.render(r.Context(), data)
 		if err != nil {
-			slog.ErrorContext(r.Context(), "React rendering failed")
+			if errors.Is(err, context.Canceled) {
+				// The requester has gone away; this is not a service failure.
+				return
+			}
+			slog.ErrorContext(r.Context(), "React rendering failed", "render.failure", renderFailureKind(err))
 			http.Error(w, "Could not render documentation", http.StatusServiceUnavailable)
 			return
 		}

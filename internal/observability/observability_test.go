@@ -214,3 +214,36 @@ func TestOTLPHTTPExportsCorrelatedLogsAndTraces(t *testing.T) {
 		t.Fatalf("exported trace/log correlation missing: %x / %x", traceID, logTraceID)
 	}
 }
+
+func TestRenderFailureDiagnosticsSurvivePrivacyFilter(t *testing.T) {
+	exporter := tracetest.NewInMemoryExporter()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSyncer(privateExporter{SpanExporter: exporter}))
+	t.Cleanup(func() { _ = provider.Shutdown(context.Background()) })
+	ctx, span := provider.Tracer("test").Start(t.Context(), "react.render")
+	span.SetAttributes(attribute.String("render.failure", "javascript_exception"), attribute.String("error", "private-render-marker"))
+	span.RecordError(errors.New("private-render-marker"))
+	span.SetStatus(codes.Error, "private-render-marker")
+	var output bytes.Buffer
+	logger := slog.New(correlatedHandler{Handler: slog.NewJSONHandler(&output, nil)})
+	logger.ErrorContext(ctx, "React rendering failed", "render.failure", "javascript_exception", "error", "private-render-marker")
+	span.End()
+	spans := exporter.GetSpans()
+	if len(spans) != 1 || spans[0].Name != "react.render" || spans[0].Status.Code != codes.Error {
+		t.Fatalf("render span identity/status lost: %v", spans)
+	}
+	encoded, err := json.Marshal(spans)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, text := range []string{string(encoded), output.String()} {
+		if !strings.Contains(text, "render.failure") || !strings.Contains(text, "javascript_exception") {
+			t.Fatalf("bounded failure category lost: %s", text)
+		}
+		if strings.Contains(text, "private-render-marker") {
+			t.Fatalf("raw exception exposed: %s", text)
+		}
+	}
+	if !strings.Contains(output.String(), span.SpanContext().TraceID().String()) {
+		t.Fatal("render log lost trace correlation")
+	}
+}

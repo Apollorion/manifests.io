@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -61,8 +62,8 @@ func TestRendererCancellationAndConcurrentIsolation(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
-	if _, err := r.render(ctx, []byte("loop")); err == nil {
-		t.Fatal("unbounded renderer ignored cancellation")
+	if _, err := r.render(ctx, []byte("loop")); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("renderer did not preserve deadline: %v", err)
 	}
 	var wg sync.WaitGroup
 	for range 12 {
