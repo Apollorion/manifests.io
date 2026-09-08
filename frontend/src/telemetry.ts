@@ -69,6 +69,19 @@ function safeAttribute(key: string, value: unknown): string | number | undefined
   return undefined
 }
 
+export function telemetryScript(value: string): string {
+  try {
+    const url = new URL(value, window.location.origin)
+    const scripts = Array.from(document.querySelectorAll('script[type="module"][src], link[rel="modulepreload"][href]'))
+    if (url.origin === window.location.origin && url.pathname.startsWith('/assets/') &&
+      scripts.some(script => {
+        const source = new URL(script.getAttribute('src') ?? script.getAttribute('href') ?? '', window.location.origin)
+        return source.origin === url.origin && source.pathname === url.pathname
+      })) return `${url.origin}${url.pathname}`
+  } catch { /* Unknown frames retain only a route template. */ }
+  return telemetryURL(value)
+}
+
 function safeAttributes(attributes: Record<string, string> = {}): Record<string, string> {
   return Object.fromEntries(Object.entries(attributes).flatMap(([key, value]) => {
     const safe = safeAttribute(key, value)
@@ -158,7 +171,7 @@ export function sanitizeTelemetry(item: TransportItem): TransportItem | null {
         trace: payload.trace,
         fatal: payload.fatal,
         stacktrace: payload.stacktrace ? { frames: payload.stacktrace.frames.map((frame) => ({
-          filename: telemetryURL(frame.filename),
+          filename: telemetryScript(frame.filename),
           function: '(anonymous)',
           lineno: frame.lineno,
           colno: frame.colno,

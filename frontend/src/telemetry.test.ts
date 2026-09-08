@@ -3,7 +3,7 @@ import { BaseTransport, initializeFaro, type TransportItem, TransportItemType } 
 import { FaroTraceExporter, TracingInstrumentation } from '@grafana/faro-web-tracing'
 import { WebTracerProvider, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-web'
 import { SpanKind, SpanStatusCode } from '@opentelemetry/api'
-import { analyticsConfig, initializeAnalytics, initializeObservability, telemetryConfig, telemetryURL } from './telemetry'
+import { analyticsConfig, initializeAnalytics, initializeObservability, telemetryConfig, telemetryScript, telemetryURL } from './telemetry'
 
 class CaptureTransport extends BaseTransport {
   name = 'test-capture'
@@ -16,6 +16,17 @@ class CaptureTransport extends BaseTransport {
 }
 
 describe('browser telemetry', () => {
+  it('retains the loaded public bundle identity without exporting arbitrary filenames or URL values', () => {
+    const script = document.createElement('script')
+    script.type = 'module'
+    script.src = '/assets/index-Public01.js'
+    document.head.append(script)
+    try {
+      expect(telemetryScript(`${script.src}?private=value#secret`)).toBe(`${window.location.origin}/assets/index-Public01.js`)
+      expect(telemetryScript('/assets/customer@example.test.js')).toBe(`${window.location.origin}/assets/:asset`)
+      expect(telemetryScript('https://external.invalid/assets/index-Public01.js')).toBe('https://external.invalid/:path')
+    } finally { script.remove() }
+  })
   it('sends one private pageview through the actual PostHog SDK transport', async () => {
     const requests: { url: string, body: string, credentials?: RequestCredentials, referrerPolicy?: ReferrerPolicy }[] = []
     const request = vi.fn(async (url: string | URL | Request, options?: RequestInit) => {
