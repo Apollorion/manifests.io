@@ -148,13 +148,14 @@ func TestDefinitionsHTTPContract(t *testing.T) {
 	}
 	s := testServer(t)
 	s.catalog = catalog
+	version := schema.DefaultQuery(catalog.Products()).Version
 	for _, tc := range []struct {
 		method string
 		query  string
 		status int
 	}{
-		{"GET", "item=kubernetes&version=1.34", 200},
-		{"HEAD", "item=kubernetes&version=1.34", 200},
+		{"GET", "item=kubernetes&version=" + version, 200},
+		{"HEAD", "item=kubernetes&version=" + version, 200},
 		{"GET", "item=missing&version=1.34", 404},
 		{"GET", "item=kubernetes&version=missing", 404},
 		{"HEAD", "item=kubernetes&version=missing", 404},
@@ -190,7 +191,7 @@ func TestDefinitionsHTTPContract(t *testing.T) {
 				found := false
 				for _, definition := range definitions {
 					if definition.Resource == "io.k8s.api.core.v1.ContainerStatus" {
-						found = definition.Name == "ContainerStatus" && definition.Href == "/kubernetes/1.34/io.k8s.api.core.v1.ContainerStatus"
+						found = definition.Name == "ContainerStatus" && definition.Href == "/kubernetes/"+version+"/io.k8s.api.core.v1.ContainerStatus"
 					}
 				}
 				if !found {

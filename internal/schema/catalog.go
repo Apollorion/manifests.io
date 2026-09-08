@@ -16,14 +16,16 @@ import (
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/getkin/kin-openapi/openapi3"
 	"go.yaml.in/yaml/v3"
+	"golang.org/x/mod/semver"
 )
 
 var ErrNotFound = errors.New("schema not found")
 var ErrBadQuery = errors.New("invalid schema query")
 
 type Product struct {
-	Name     string   `json:"name"`
-	Versions []string `json:"versions"`
+	Name           string   `json:"name"`
+	Versions       []string `json:"versions"`
+	DefaultVersion string   `json:"defaultVersion,omitempty"`
 }
 
 type Definition struct {
@@ -172,7 +174,7 @@ func Load(root string) (*Catalog, error) {
 	}
 	for _, name := range sortedKeys(versions) {
 		slices.SortFunc(versions[name], compareVersions)
-		c.products = append(c.products, Product{name, versions[name]})
+		c.products = append(c.products, Product{Name: name, Versions: versions[name]})
 	}
 	return c, nil
 }
@@ -206,10 +208,33 @@ func compareVersions(a, b string) int {
 
 func (c *Catalog) Products() []Product {
 	result := make([]Product, len(c.products))
+	defaultQuery := DefaultQuery(c.products)
 	for i, p := range c.products {
-		result[i] = Product{p.Name, slices.Clone(p.Versions)}
+		result[i] = Product{Name: p.Name, Versions: slices.Clone(p.Versions)}
+		if p.Name == defaultQuery.Item {
+			result[i].DefaultVersion = defaultQuery.Version
+		}
 	}
 	return result
+}
+
+func DefaultQuery(products []Product) Query {
+	query := Query{Item: "kubernetes"}
+	for _, product := range products {
+		if product.Name != query.Item {
+			continue
+		}
+		for _, version := range product.Versions {
+			candidate := "v" + strings.TrimPrefix(version, "v")
+			if !semver.IsValid(candidate) || semver.Prerelease(candidate) != "" {
+				continue
+			}
+			if query.Version == "" || semver.Compare(candidate, "v"+strings.TrimPrefix(query.Version, "v")) > 0 {
+				query.Version = version
+			}
+		}
+	}
+	return query
 }
 
 func (c *Catalog) Definitions(q Query) ([]Definition, error) {

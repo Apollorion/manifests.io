@@ -4,7 +4,9 @@ Date: 2026-09-08
 
 ## Status
 
-Accepted.
+Accepted. Unlimited snapshot retention is superseded by [ADR-0004](0004-retain-five-schema-versions-per-release-track-and-default-to.md).
+
+Immutable retained snapshots, reviewed upstream update PRs, source validation and Spacelift promotion remain in force.
 
 ## Context and Problem Statement
 

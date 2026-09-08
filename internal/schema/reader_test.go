@@ -74,7 +74,7 @@ func TestCRDWrappersAndSchemaFeatures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c := &Catalog{products: []Product{{"example", []string{"1"}}}, documents: map[string]*document{"example/1": d}}
+	c := &Catalog{products: []Product{{Name: "example", Versions: []string{"1"}}}, documents: map[string]*document{"example/1": d}}
 	q := Query{Item: "example", Version: "1", Resource: "io.example.v1.Example", Pointer: "/properties/spec"}
 	p, err := c.Page(q)
 	if err != nil {

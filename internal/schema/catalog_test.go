@@ -55,13 +55,14 @@ func TestCorpusAndLegacyRoutes(t *testing.T) {
 		t.Fatalf("products: %d", len(c.Products()))
 	}
 	count := 0
-	for key := range legacyCorpus {
-		if c.documents[key] == nil {
-			t.Errorf("missing historical version %s", key)
-		}
-	}
 	for _, product := range c.Products() {
+		tracks := map[string]int{}
 		for _, version := range product.Versions {
+			track := "standard"
+			if strings.HasSuffix(version, " experimental") {
+				track = "experimental"
+			}
+			tracks[track]++
 			q := Query{Item: product.Name, Version: version}
 			page, err := c.Page(q)
 			if err != nil {
@@ -91,6 +92,11 @@ func TestCorpusAndLegacyRoutes(t *testing.T) {
 				count++
 			}
 		}
+		for track, versions := range tracks {
+			if versions > 5 {
+				t.Errorf("%s %s retains %d versions; maximum is five", product.Name, track, versions)
+			}
+		}
 	}
 	t.Logf("validated %d legacy definition URLs", count)
 }
@@ -112,12 +118,12 @@ func TestFiniteCanonicalRoutes(t *testing.T) {
 		}
 		seen[p.Canonical] = q.String()
 	}
-	q := Query{Item: "kubernetes", Version: "1.34", Resource: "io.k8s.api.core.v1.Pod", Pointer: "/properties/spec/properties/containers/items"}
+	q := Query{Item: "kubernetes", Version: DefaultQuery(c.Products()).Version, Resource: "io.k8s.api.core.v1.Pod", Pointer: "/properties/spec/properties/containers/items"}
 	p, err := c.Page(q)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.Canonical != "/kubernetes/1.34/io.k8s.api.core.v1.Container" {
+	if p.Canonical != "/kubernetes/"+q.Version+"/io.k8s.api.core.v1.Container" {
 		t.Fatalf("ref boundary canonical: %s", p.Canonical)
 	}
 	for _, p := range c.Products() {
@@ -142,7 +148,7 @@ func TestNavigation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	q := Query{Item: "kubernetes", Version: "1.34", Resource: "io.k8s.api.core.v1.Pod"}
+	q := Query{Item: "kubernetes", Version: DefaultQuery(c.Products()).Version, Resource: "io.k8s.api.core.v1.Pod"}
 	p, err := c.Page(q)
 	if err != nil {
 		t.Fatal(err)
@@ -153,7 +159,7 @@ func TestNavigation(t *testing.T) {
 			spec = row
 		}
 	}
-	if spec.Href != "/kubernetes/1.34/io.k8s.api.core.v1.PodSpec?path=Pod.spec" || spec.Type != "PodSpec" {
+	if spec.Href != "/kubernetes/"+q.Version+"/io.k8s.api.core.v1.PodSpec?path=Pod.spec" || spec.Type != "PodSpec" {
 		t.Fatalf("spec row: %+v", spec)
 	}
 	q.Pointer = "/properties/spec/properties/containers/items"
@@ -180,7 +186,17 @@ func TestNavigation(t *testing.T) {
 	if _, err := c.Page(q); !errors.Is(err, ErrNotFound) {
 		t.Fatal(err)
 	}
-	q = Query{Item: "gateway api", Version: "1.2.0 standard", Resource: "io.k8s.networking.gateway.v1.Gateway", Pointer: "/properties/spec/properties/addresses"}
+	var gatewayVersion string
+	for _, product := range c.Products() {
+		if product.Name == "gateway api" {
+			for _, version := range product.Versions {
+				if strings.HasSuffix(version, " standard") && (gatewayVersion == "" || compareVersions(version, gatewayVersion) > 0) {
+					gatewayVersion = version
+				}
+			}
+		}
+	}
+	q = Query{Item: "gateway api", Version: gatewayVersion, Resource: "io.k8s.networking.gateway.v1.Gateway", Pointer: "/properties/spec/properties/addresses"}
 	p, err = c.Page(q)
 	if err != nil {
 		t.Fatal(err)
@@ -195,7 +211,7 @@ func TestReferenceNavigationUsesTargetURLs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	q := Query{Item: "kubernetes", Version: "1.34", Resource: "io.k8s.api.apps.v1.Deployment"}
+	q := Query{Item: "kubernetes", Version: DefaultQuery(c.Products()).Version, Resource: "io.k8s.api.apps.v1.Deployment"}
 	context := "Deployment"
 	for _, step := range []struct{ field, target string }{
 		{"spec", "io.k8s.api.apps.v1.DeploymentSpec"},
@@ -214,7 +230,7 @@ func TestReferenceNavigationUsesTargetURLs(t *testing.T) {
 			}
 		}
 		context += "." + step.field
-		if want := "/kubernetes/1.34/" + step.target + "?path=" + context; href != want {
+		if want := "/kubernetes/" + q.Version + "/" + step.target + "?path=" + context; href != want {
 			t.Fatalf("%s.%s links to %q, want %q", q.Resource, step.field, href, want)
 		}
 		q = queryFromHref(t, href)
@@ -223,7 +239,7 @@ func TestReferenceNavigationUsesTargetURLs(t *testing.T) {
 			t.Fatalf("target lost traversal context: page=%+v error=%v", target, err)
 		}
 	}
-	page, err := c.Page(Query{Item: "kubernetes", Version: "1.34", Resource: "io.k8s.api.core.v1.PodSpec", Path: "Deployment.spec.template.spec"})
+	page, err := c.Page(Query{Item: "kubernetes", Version: q.Version, Resource: "io.k8s.api.core.v1.PodSpec", Path: "Deployment.spec.template.spec"})
 	if err != nil {
 		t.Fatal(err)
 	}

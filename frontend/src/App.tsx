@@ -101,7 +101,7 @@ function SchemaTable({ page }: { page: Page }) {
 }
 
 export function App({ initialPage: page, onSearchEvent }: { initialPage: Page; onSearchEvent?: (event: SearchEvent) => void }) {
-  const listURL = `/${encodeURIComponent(page.item)}/${encodeURIComponent(page.version)}`;
+  const listURL = page.item && page.version ? `/${encodeURIComponent(page.item)}/${encodeURIComponent(page.version)}` : '/';
   const issueURL = `${repository}/issues/new?${new URLSearchParams({ title: page.resource ? `${page.item} - ${page.resource}` : page.item, body: '## Description of issue\n' })}`;
   return <>
     <a className="skip-link" href="#main">Skip to documentation</a>
@@ -109,7 +109,7 @@ export function App({ initialPage: page, onSearchEvent }: { initialPage: Page; o
       <div className="header-inner">
         <a className="brand" href={listURL} aria-label="Manifests.io home"><span className="brand-mark" aria-hidden="true">{'{m}'}</span><span>manifests<span className="brand-domain">.io</span></span></a>
         <span className="header-tagline">Kubernetes, documented.</span>
-        <QuickSearch key={`${page.item}/${page.version}`} item={page.item} version={page.version} onEvent={onSearchEvent}/>
+        {page.item && page.version && <QuickSearch key={`${page.item}/${page.version}`} item={page.item} version={page.version} onEvent={onSearchEvent}/>}
         <div className="header-actions"><a className="github-link" href={repository}>GitHub <span aria-hidden="true">↗</span></a><ThemeButton/></div>
       </div>
     </header>
@@ -146,14 +146,16 @@ export function App({ initialPage: page, onSearchEvent }: { initialPage: Page; o
 }
 
 export function RecoveryPage({ page, message = 'Reload the page, choose another specification or version, or report the issue below.' }: { page?: Partial<Page>; message?: string }) {
-  const item = page?.item || 'kubernetes';
-  const version = page?.version || '1.34';
-  const catalog = page?.catalog?.length ? page.catalog : [{ name: item, versions: [version] }];
+  const products = page?.catalog ?? [];
+  const explicitVersion = page?.item && page.version && (!products.length || products.some(product => product.name === page.item && product.versions.includes(page.version!)));
+  const item = explicitVersion ? page.item! : 'kubernetes';
+  const version = explicitVersion ? page.version! : products.find(product => product.name === item)?.defaultVersion || '';
+  const catalog = products.length ? products : version ? [{ name: item, versions: [version] }] : [];
   const recovery: Page = {
-    item, version, resource: page?.resource, catalog,
+    item, version, resource: explicitVersion ? page?.resource : undefined, catalog,
     title: 'Documentation unavailable.', description: '', error: message,
     resources: [], otherVersions: [], variants: [], breadcrumbs: [],
-    canonical: `/${encodeURIComponent(item)}/${encodeURIComponent(version)}`,
+    canonical: version ? `/${encodeURIComponent(item)}/${encodeURIComponent(version)}` : '/',
   };
   return <App initialPage={recovery}/>;
 }

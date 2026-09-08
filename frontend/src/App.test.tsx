@@ -154,6 +154,24 @@ describe('schema browser', () => {
     expect(screen.getByRole('link', { name: 'See an issue here?' })).toBeVisible();
   });
 
+  it('uses the catalog default for recovery instead of assuming version or array order', () => {
+    render(<RecoveryPage page={{ item: 'kubernetes', version: 'removed', resource: 'OldKind', catalog: [
+      { name: 'flux', versions: ['99.0.0'] },
+      { name: 'kubernetes', versions: ['1.9', '1.100', '1.99'], defaultVersion: '1.100' },
+    ] }}/>);
+    expect(screen.getByRole('link', { name: 'Manifests.io home' })).toHaveAttribute('href', '/kubernetes/1.100');
+    expect(screen.getByRole('link', { name: 'Browse available resources' })).toHaveAttribute('href', '/kubernetes/1.100');
+    expect(screen.getByRole('combobox', { name: 'Specification & version' })).toHaveValue('/kubernetes/1.100');
+  });
+
+  it('lets the backend choose the default if startup cannot load a catalog or route', () => {
+    render(<RecoveryPage/>);
+    expect(screen.getByRole('link', { name: 'Manifests.io home' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Browse available resources' })).toHaveAttribute('href', '/');
+    expect(screen.queryByRole('button', { name: 'Search all types' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
+  });
+
   it('supports keyboard focus, Escape clearing, and persisted theme choice', () => {
     render(<App initialPage={page}/>);
     fireEvent.keyDown(document.body, { key: '/' });

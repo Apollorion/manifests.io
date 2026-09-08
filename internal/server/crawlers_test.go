@@ -106,10 +106,17 @@ func TestCrawlerDocumentsCoverOnlyFiniteCanonicalRoutes(t *testing.T) {
 	if len(seen) != 0 {
 		t.Fatalf("sitemap includes %d noncanonical URLs", len(seen))
 	}
+	kubeBase := schema.Href(schema.DefaultQuery(catalog.Products()))
+	var certBase string
+	for _, product := range catalog.Products() {
+		if product.Name == "certmanager" && len(product.Versions) > 0 {
+			certBase = schema.Href(schema.Query{Item: product.Name, Version: product.Versions[len(product.Versions)-1]})
+		}
+	}
 	for _, expected := range []string{
-		"/kubernetes/1.34/io.k8s.api.core.v1.ContainerStatus",
-		"/kubernetes/1.34/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps",
-		"/certmanager/1.14/io.cert-manager.v1.Certificate?pointer=%2Fproperties%2Fspec",
+		kubeBase + "/io.k8s.api.core.v1.ContainerStatus",
+		kubeBase + "/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps",
+		certBase + "/io.cert-manager.v1.Certificate?pointer=%2Fproperties%2Fspec",
 	} {
 		if !slices.Contains(locations, site+expected) {
 			t.Errorf("missing crawler destination %s", expected)

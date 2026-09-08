@@ -19,19 +19,20 @@ import (
 
 func main() {
 	root := flag.String("root", ".", "repository containing the schema corpus")
-	apply := flag.Bool("apply", false, "download, validate and add new versions; default only discovers updates")
+	apply := flag.Bool("apply", false, "apply validated additions and retire versions older than the newest five")
+	pruneOnly := flag.Bool("prune-only", false, "plan retention without checking upstream releases")
 	flag.Parse()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
-	if err := run(ctx, *root, *apply); err != nil {
+	if err := run(ctx, *root, *apply, *pruneOnly); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, root string, apply bool) error {
+func run(ctx context.Context, root string, apply, pruneOnly bool) error {
 	shutdown, err := observability.SetupWithWriter(ctx, "schema-updater", os.Stderr)
 	if err != nil {
 		return err
@@ -50,14 +51,25 @@ func run(ctx context.Context, root string, apply bool) error {
 		return err
 	}
 	client := upstream.NewClient(os.Getenv("GITHUB_TOKEN"))
-	updates, err := client.Discover(ctx, root, sources)
+	updates := []upstream.Update{}
+	if !pruneOnly {
+		updates, err = client.Discover(ctx, root, sources)
+	}
 	if err != nil {
 		span.SetStatus(codes.Error, "discovery failed")
 		slog.ErrorContext(ctx, "schema release discovery failed")
 		return err
 	}
+	if updates == nil {
+		updates = []upstream.Update{}
+	}
+	retired, err := upstream.PlanRetention(root, updates)
+	if err != nil {
+		return err
+	}
+	report := upstream.Report{Updates: updates, Retired: retired}
 	if apply {
-		if err := client.Apply(ctx, root, updates); err != nil {
+		if err := client.ApplyPlan(ctx, root, report); err != nil {
 			span.SetStatus(codes.Error, "update failed")
 			slog.ErrorContext(ctx, "schema update failed")
 			return err
@@ -66,5 +78,5 @@ func run(ctx context.Context, root string, apply bool) error {
 	slog.InfoContext(ctx, "schema update completed", "schema.updates", len(updates))
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(updates)
+	return encoder.Encode(report)
 }

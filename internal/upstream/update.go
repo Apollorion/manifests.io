@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -377,7 +378,23 @@ func isNewer(root string, source Source, version string) (bool, error) {
 }
 
 func (c *Client) Apply(ctx context.Context, root string, updates []Update) error {
-	if len(updates) == 0 {
+	retired, err := PlanRetention(root, updates)
+	if err != nil {
+		return err
+	}
+	return c.ApplyPlan(ctx, root, Report{Updates: updates, Retired: retired})
+}
+
+func (c *Client) ApplyPlan(ctx context.Context, root string, report Report) error {
+	updates := report.Updates
+	expected, err := PlanRetention(root, updates)
+	if err != nil {
+		return err
+	}
+	if !slices.EqualFunc(expected, report.Retired, func(a, b Retirement) bool { return reflect.DeepEqual(a, b) }) {
+		return errors.New("retirement plan does not match current corpus")
+	}
+	if len(updates) == 0 && len(report.Retired) == 0 {
 		return nil
 	}
 	if err := validateCorpusRoot(root); err != nil {
@@ -390,7 +407,12 @@ func (c *Client) Apply(ctx context.Context, root string, updates []Update) error
 	if err != nil {
 		return err
 	}
-	defer func() { _ = os.RemoveAll(stage) }()
+	keepBackup := false
+	defer func() {
+		if !keepBackup {
+			_ = os.RemoveAll(stage)
+		}
+	}()
 	for _, dir := range []string{"oaspec", "ETL/crds"} {
 		if err := os.CopyFS(filepath.Join(stage, dir), os.DirFS(filepath.Join(root, dir))); err != nil {
 			return err
@@ -446,6 +468,11 @@ func (c *Client) Apply(ctx context.Context, root string, updates []Update) error
 		}
 		destinations = append(destinations, update.Target)
 	}
+	for _, target := range retirementTargets(report.Retired) {
+		if err := os.RemoveAll(filepath.Join(stage, target)); err != nil {
+			return err
+		}
+	}
 	validationCtx, validationSpan := otel.Tracer("manifests.io/upstream").Start(ctx, "schema.validate")
 	_, validationErr := schema.Load(stage)
 	if validationErr != nil {
@@ -459,34 +486,10 @@ func (c *Client) Apply(ctx context.Context, root string, updates []Update) error
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("staged catalog validation failed: %w", err)
 	}
-	var installed []string
-	for _, destination := range destinations {
-		from, to := filepath.Join(stage, destination), filepath.Join(root, destination)
-		err := ctx.Err()
-		var info os.FileInfo
-		if err == nil {
-			info, err = os.Stat(from)
-		}
-		if err == nil {
-			if info.IsDir() {
-				err = os.Mkdir(to, 0755)
-				if err == nil {
-					installed = append(installed, to)
-					err = os.CopyFS(to, os.DirFS(from))
-				}
-			} else {
-				err = os.Link(from, to)
-				if err == nil {
-					installed = append(installed, to)
-				}
-			}
-		}
-		if err != nil {
-			for _, file := range installed {
-				_ = os.RemoveAll(file)
-			}
-			return err
-		}
+	keepBackup, err = installPlan(ctx, root, stage, destinations, report.Retired)
+	if err != nil {
+		span.SetStatus(codes.Error, "installation failed")
+		return err
 	}
 	slog.InfoContext(ctx, "schema snapshots installed", "schema.updates", len(updates))
 	return nil
