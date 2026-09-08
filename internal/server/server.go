@@ -273,7 +273,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, p
 	if !prerendered {
 		rendered, err := s.renderer.render(r.Context(), data)
 		if err != nil {
-			slog.ErrorContext(r.Context(), "React rendering failed")
+			slog.ErrorContext(r.Context(), "React rendering failed", "render.failure", renderFailureKind(err))
 			http.Error(w, "Could not render documentation", http.StatusServiceUnavailable)
 			return
 		}

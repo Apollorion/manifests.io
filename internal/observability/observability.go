@@ -104,7 +104,7 @@ func (h correlatedHandler) WithGroup(name string) slog.Handler {
 
 func safeLogKey(key string) bool {
 	switch key {
-	case "http.request.method", "http.route", "http.response.status_code", "duration_ms", "version", "port", "documents", "definitions", "schema.product", "schema.operation", "schema.updates":
+	case "http.request.method", "http.route", "http.response.status_code", "duration_ms", "version", "port", "documents", "definitions", "schema.product", "schema.operation", "schema.updates", "render.failure":
 		return true
 	}
 	return false
@@ -188,7 +188,7 @@ type privateSpan struct{ sdktrace.ReadOnlySpan }
 
 func (s privateSpan) Name() string {
 	switch s.ReadOnlySpan.Name() {
-	case "catalog.load", "schema.update", "schema.discover", "schema.download", "schema.validate", "schema.install":
+	case "catalog.load", "schema.update", "schema.discover", "schema.download", "schema.validate", "schema.install", "react.render":
 		return s.ReadOnlySpan.Name()
 	}
 	for _, attr := range s.Attributes() {
@@ -203,7 +203,7 @@ func (s privateSpan) Attributes() []attribute.KeyValue {
 	var safe []attribute.KeyValue
 	for _, attr := range s.ReadOnlySpan.Attributes() {
 		switch attr.Key {
-		case "http.request.method", "http.route", "http.response.status_code", "schema.product", "schema.operation", "schema.updates":
+		case "http.request.method", "http.route", "http.response.status_code", "schema.product", "schema.operation", "schema.updates", "render.failure":
 			safe = append(safe, attr)
 		}
 	}
