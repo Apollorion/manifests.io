@@ -1,0 +1,15 @@
+{
+  "product": "kubernetes",
+  "version": "1.37",
+  "repository": "kubernetes/kubernetes",
+  "tag": "v1.37.0",
+  "commit": "f54c212e3a2f75d674b717a9b29052b20b60aefc",
+  "files": [
+    {
+      "path": "api__openapi-spec__swagger.json",
+      "url": "https://raw.githubusercontent.com/kubernetes/kubernetes/f54c212e3a2f75d674b717a9b29052b20b60aefc/api/openapi-spec/swagger.json",
+      "sha256": "465276aedf437726de5a6ed23a41b86d78bb0d347edf251a755ae26a93cdd8a6"
+    }
+  ],
+  "target": "oaspec/kubernetes/1.37.json"
+}

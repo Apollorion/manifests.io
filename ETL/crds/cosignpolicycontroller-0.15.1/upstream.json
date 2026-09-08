@@ -1,0 +1,20 @@
+{
+  "product": "cosignpolicycontroller",
+  "version": "0.15.1",
+  "repository": "sigstore/policy-controller",
+  "tag": "v0.15.1",
+  "commit": "cc75baab1d34d3bae47bde7bd934bf79e5ca3afc",
+  "files": [
+    {
+      "path": "config__300-clusterimagepolicy.yaml",
+      "url": "https://raw.githubusercontent.com/sigstore/policy-controller/cc75baab1d34d3bae47bde7bd934bf79e5ca3afc/config/300-clusterimagepolicy.yaml",
+      "sha256": "e23467593124763d9937b1180d48cefe89dc72cf04e9bcf84cbf29822d51b20c"
+    },
+    {
+      "path": "config__300-trustroot.yaml",
+      "url": "https://raw.githubusercontent.com/sigstore/policy-controller/cc75baab1d34d3bae47bde7bd934bf79e5ca3afc/config/300-trustroot.yaml",
+      "sha256": "aeda3d8b1399fc41f23d2fd00a5aa34fabe9b9f56bb273129035d7ce51672155"
+    }
+  ],
+  "target": "ETL/crds/cosignpolicycontroller-0.15.1"
+}
