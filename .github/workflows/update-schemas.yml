@@ -51,7 +51,9 @@ jobs:
         if: steps.update.outputs.changed == 'true'
         with:
           name: schema-updates
-          path: ${{ runner.temp }}/schema-updates.tar.gz
+          path: |
+            ${{ runner.temp }}/schema-updates.tar.gz
+            ${{ runner.temp }}/schema-updates.json
           if-no-files-found: error
           retention-days: 7
       - if: steps.update.outputs.changed == 'true'
@@ -104,6 +106,8 @@ jobs:
       - name: Restore verified snapshots without overwriting existing versions
         run: |
           python3 - <<'PY'
+          import hashlib
+          import json
           import os
           import pathlib
           import re
@@ -111,34 +115,92 @@ jobs:
 
           root = pathlib.Path.cwd().resolve()
           pattern = re.compile(r'(?:ETL/crds/[a-z0-9]+-[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:experimental)?/[A-Za-z0-9_.-]+\.(?:yaml|yml|json)|oaspec/kubernetes/[0-9]+\.[0-9]+\.(?:json|source))')
+
+          def checked_path(name):
+              if not isinstance(name, str) or not pattern.fullmatch(name):
+                  raise ValueError('Unsafe schema artifact path')
+              target = root / name
+              if target.is_symlink():
+                  raise ValueError('Schema artifact target is a symlink')
+              for parent in target.parents:
+                  if parent == root:
+                      break
+                  if parent.is_symlink():
+                      raise ValueError('Schema artifact parent is a symlink')
+              return target
+
+          report_path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'schema-updates.json'
+          if report_path.stat().st_size > 8 * 1024 * 1024:
+              raise ValueError('Schema retirement report is too large')
+          report = json.loads(report_path.read_text())
+          retirements = report['retired']
+          if not isinstance(retirements, list) or len(retirements) > 4096:
+              raise ValueError('Invalid schema retirements')
+          removed = set()
+          retired_targets = set()
+          retired_directories = []
+          for retirement in retirements:
+              product, version, target = retirement['product'], retirement['version'], retirement['target']
+              if not re.fullmatch(r'[a-z0-9]+', product) or not re.fullmatch(r'[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:experimental)?', version):
+                  raise ValueError('Invalid retired product or version')
+              expected = f'oaspec/kubernetes/{version}.json' if product == 'kubernetes' else f'ETL/crds/{product}-{version}'
+              if target != expected or target in retired_targets:
+                  raise ValueError('Invalid retired snapshot target')
+              retired_targets.add(target)
+              files = retirement['files']
+              if not isinstance(files, list) or not files:
+                  raise ValueError('Retired snapshot has no files')
+              listed = set()
+              for file in files:
+                  name, checksum = file['path'], file['sha256']
+                  actual = checked_path(name)
+                  belongs = name in {target, target.removesuffix('.json') + '.source'} if product == 'kubernetes' else str(pathlib.PurePosixPath(name).parent) == target
+                  if not belongs or name in removed or not re.fullmatch(r'[0-9a-f]{64}', checksum):
+                      raise ValueError('Invalid retired schema file')
+                  if not actual.is_file() or actual.stat().st_size > 64 * 1024 * 1024 or hashlib.sha256(actual.read_bytes()).hexdigest() != checksum:
+                      raise ValueError('Retired schema file changed since validation')
+                  removed.add(name)
+                  listed.add(name)
+              if product == 'kubernetes':
+                  existing = {target}
+                  source = target.removesuffix('.json') + '.source'
+                  if (root / source).exists() or (root / source).is_symlink():
+                      existing.add(source)
+              else:
+                  directory = root / target
+                  existing = {str(file.relative_to(root)) for file in directory.iterdir()}
+                  retired_directories.append(directory)
+              if listed != existing or len(removed) > 4096:
+                  raise ValueError('Retirement must include the complete snapshot')
           with tarfile.open(pathlib.Path(os.environ['RUNNER_TEMP']) / 'schema-updates.tar.gz', 'r:gz') as archive:
               members = archive.getmembers()
-              if not members or len(members) > 4096 or sum(member.size for member in members) > 256 * 1024 * 1024:
+              if (not members and not removed) or len(members) > 4096 or sum(member.size for member in members) > 256 * 1024 * 1024:
                   raise ValueError('Invalid schema artifact size')
               names = set()
               for member in members:
                   if not member.isfile() or not pattern.fullmatch(member.name) or member.name in names or member.size > 64 * 1024 * 1024:
                       raise ValueError('Unsafe schema artifact member')
                   names.add(member.name)
-                  target = root / member.name
-                  if target.exists() or target.is_symlink():
+                  target = checked_path(member.name)
+                  if target.exists():
                       raise ValueError('Schema artifact would overwrite an existing file')
-                  for parent in target.parents:
-                      if parent == root:
-                          break
-                      if parent.is_symlink():
-                          raise ValueError('Schema artifact parent is a symlink')
+                  if member.name in removed or any(member.name.startswith(retired + '/') for retired in retired_targets):
+                      raise ValueError('Schema artifact adds files to a retired snapshot')
               archive.extractall(root, members=members, filter='data')
+          for name in removed:
+              (root / name).unlink()
+          for directory in retired_directories:
+              directory.rmdir()
           PY
       - name: Open schema update pull request
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676
         with:
           token: ${{ github.token }}
           branch: automation/schema-updates
-          commit-message: 'chore(schemas): add current upstream releases'
-          title: 'chore(schemas): add current upstream releases'
+          commit-message: 'chore(schemas): refresh releases and retain newest five versions'
+          title: 'chore(schemas): refresh releases and retain newest five versions'
           body: |
-            Adds new Kubernetes and CRD schema snapshots from stable upstream releases. Existing version files are preserved. Each snapshot includes its source URL, release tag, resolved commit where available, and SHA-256 checksum.
+            Adds stable upstream Kubernetes and CRD snapshots and retires versions beyond the newest five per product and release track. Retained files are unchanged. New snapshots include source provenance and SHA-256 checksums; retired documentation URLs age out. The newest imported Kubernetes version becomes the default automatically.
 
             The update workflow validated the complete corpus, rendered documentation, ran Go and frontend tests, and smoke-tested the production container and browser interactions before opening this PR.
 

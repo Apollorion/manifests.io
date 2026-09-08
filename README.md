@@ -36,7 +36,7 @@ There is no converter or generated CRD JSON to maintain.
 | Kubernetes OpenAPI JSON | `oaspec/kubernetes/<version>.json` |
 | Original CRD YAML or JSON | `ETL/crds/<product>-<version>/` |
 
-`ETL/crds` retains its existing path to preserve source history; the ETL executable is gone. Drop a new version into the appropriate directory and rebuild. Product/version discovery is automatic. Six existing product display-name aliases preserve URLs containing spaces; Gateway API keeps its existing standard/experimental labels. The default landing page remains Kubernetes 1.34 for compatibility.
+`ETL/crds` retains its existing path to preserve source history; the ETL executable is gone. Product/version discovery is automatic. Six existing product display-name aliases preserve URLs containing spaces; Gateway API keeps its existing standard/experimental labels. The default landing page automatically selects the newest stable Kubernetes version in the catalog using semantic version ordering. Explicit version URLs continue selecting that version while it is retained.
 
 The reader accepts OpenAPI v2 definitions and OpenAPI v3 component schemas, including schema-only documents. CRDs may be individual documents, multi-document YAML, or Kubernetes Lists. It extracts each CRD version's `openAPIV3Schema`, with support for older `spec.validation` schemas. Unresolved or external references fail loading instead of reading arbitrary files or making network requests.
 
@@ -44,14 +44,17 @@ The reader accepts OpenAPI v2 definitions and OpenAPI v3 component schemas, incl
 
 ### Automated upstream updates
 
-The [source registry](internal/upstream/sources.json) maps every supported product to its upstream GitHub repository and CRD assets or source files, including separate standard and experimental Gateway API tracks. The updater discovers each project's latest stable release. Kubernetes keeps minor-version URLs; CRD additions use the full release version. Existing versions are never overwritten, including later Kubernetes patches within an already imported minor version.
+The [source registry](internal/upstream/sources.json) maps every supported product to its upstream GitHub repository and CRD assets or source files, including separate standard and experimental Gateway API tracks. The updater discovers each project's latest stable release and retains at most the five newest versions per product and track. Kubernetes keeps minor-version URLs; CRD additions use the full release version. Retained versions are never overwritten, including later Kubernetes patches within an already imported minor version.
 
 ```sh
 make update-schemas
 make update-schemas UPDATE_ARGS=-apply
+make update-schemas UPDATE_ARGS='-prune-only -apply'
 ```
 
-The first command only reports available additions as JSON. `-apply` downloads into staging and validates the combined corpus with the production reader before installing new snapshots. It records source URLs, release tags, resolved commits for repository files, and SHA-256 checksums. The command reads an optional `GITHUB_TOKEN` from the environment for GitHub API limits; never put the token in command arguments. Structured job logs go to stderr, leaving stdout as machine-readable JSON. The updater also supports `-root` to operate on a separate corpus checkout.
+The first command reports proposed additions and retirements as JSON without changing files. `-apply` downloads into staging, removes expired snapshots there, and validates the remaining corpus with the production reader before committing the file changes. New snapshots record source provenance and SHA-256 checksums; the retirement report includes checksums for every removed file. `-prune-only` skips upstream discovery and applies the same retention policy to the existing corpus. Cleanup also runs when there is no new upstream release. The command reads an optional `GITHUB_TOKEN` from the environment for GitHub API limits; never put the token in command arguments. Structured job logs go to stderr, leaving stdout as machine-readable JSON. The updater also supports `-root` to operate on a separate corpus checkout.
+
+Retired snapshots disappear from the version selector, API and sitemaps, and their documentation URLs return 404 with recovery links. Git history remains the archive. Gateway API standard and experimental each retain five versions independently. [ADR 0004](adr/0004-retain-five-schema-versions-per-release-track-and-default-to.md) replaces unlimited retention while preserving immutable retained snapshots and reviewed releases.
 
 The [Update schemas workflow](.github/workflows/update-schemas.yml) runs Tuesdays at 08:23 UTC and supports manual dispatch on `main`. It validates new data with the build, Go/frontend tests, container smoke checks, and Chromium suite before opening or updating `automation/schema-updates`. A separate job has the permissions to propose the PR. Review its source changes and approve any approval-required GitHub Actions runs before merging; deployment remains an explicit Spacelift promotion. [ADR 0003](adr/0003-import-immutable-upstream-schema-snapshots-through-reviewed.md) records why updates are immutable snapshots.
 

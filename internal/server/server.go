@@ -103,7 +103,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case "/":
 		r.Pattern = "/"
-		http.Redirect(w, r, "/kubernetes/1.34", http.StatusTemporaryRedirect)
+		query := schema.DefaultQuery(s.catalog.Products())
+		if query.Version == "" {
+			s.failure(w, r, http.StatusServiceUnavailable, "No Kubernetes documentation is available.")
+			return
+		}
+		http.Redirect(w, r, schema.Href(query), http.StatusTemporaryRedirect)
 		return
 	case "/api/catalog":
 		r.Pattern = "/api/catalog"
@@ -231,7 +236,9 @@ func (s *Server) schemaFailure(w http.ResponseWriter, r *http.Request, err error
 }
 
 func (s *Server) failure(w http.ResponseWriter, r *http.Request, status int, message string) {
-	page := schema.Page{Item: "kubernetes", Version: "1.34", Title: "Documentation unavailable", Error: message, Catalog: s.catalog.Products(), Canonical: "/"}
+	products := s.catalog.Products()
+	defaultQuery := schema.DefaultQuery(products)
+	page := schema.Page{Item: defaultQuery.Item, Version: defaultQuery.Version, Title: "Documentation unavailable", Error: message, Catalog: products, Canonical: "/"}
 	if query, err := parseQuery(r); err == nil {
 		if _, err := s.catalog.Page(schema.Query{Item: query.Item, Version: query.Version}); err == nil {
 			page.Item, page.Version = query.Item, query.Version

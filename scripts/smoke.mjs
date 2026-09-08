@@ -13,7 +13,17 @@ for (let attempt = 0; attempt < 30; attempt++) {
 assert(ready, 'Server never became ready');
 
 const products = await (await fetch(`${base}/api/catalog`)).json();
-assert(products.some(product => product.name === 'kubernetes' && product.versions.includes('1.34')));
+const kubernetes = products.find(product => product.name === 'kubernetes');
+assert(kubernetes?.defaultVersion && kubernetes.versions.includes(kubernetes.defaultVersion));
+const kubeVersion = kubernetes.defaultVersion;
+const kubeBase = `/kubernetes/${encodeURIComponent(kubeVersion)}`;
+const certmanager = products.find(product => product.name === 'certmanager');
+assert(certmanager?.versions.length);
+const certVersion = certmanager.versions.at(-1);
+const certBase = `/certmanager/${encodeURIComponent(certVersion)}`;
+const home = await fetch(base + '/', { redirect: 'manual' });
+assert.equal(home.status, 307);
+assert.equal(home.headers.get('location'), kubeBase);
 assert(products.some(product => product.name === 'gateway api'));
 
 const robotsResponse = await fetch(`${base}/robots.txt`);
@@ -53,18 +63,18 @@ for (const chunk of sitemapChunks) {
   }
 }
 for (const route of [
-  '/kubernetes/1.34/io.k8s.api.core.v1.ContainerStatus',
-  '/kubernetes/1.34/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps',
-  '/certmanager/1.14/io.cert-manager.v1.Certificate?pointer=%2Fproperties%2Fspec',
+  `${kubeBase}/io.k8s.api.core.v1.ContainerStatus`,
+  `${kubeBase}/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps`,
+  `${certBase}/io.cert-manager.v1.Certificate?pointer=%2Fproperties%2Fspec`,
 ]) assert(crawlerLocations.has(siteOrigin + route), `Canonical documentation missing from sitemap: ${route}`);
-assert(!crawlerLocations.has(`${siteOrigin}/certmanager/1.14/io.cert-manager.v1.CertificateSpec`), 'Legacy alias leaked into sitemap');
+assert(!crawlerLocations.has(`${siteOrigin}${certBase}/io.cert-manager.v1.CertificateSpec`), 'Legacy alias leaked into sitemap');
 for (const route of ['/robots.txt', '/sitemap.xml', sitemapChunks[0].pathname]) {
   const response = await fetch(new URL(route, base), { method: 'HEAD' });
   assert.equal(response.status, 200);
   assert.equal(await response.text(), '');
 }
 
-for (const [item, version, name, title] of [['kubernetes', '1.34', 'ContainerStatus', 'ContainerStatus'], ['certmanager', '1.14', 'CertificateSpec', 'Certificate.spec']]) {
+for (const [item, version, name, title] of [['kubernetes', kubeVersion, 'ContainerStatus', 'ContainerStatus'], ['certmanager', certVersion, 'CertificateSpec', 'Certificate.spec']]) {
   const response = await fetch(`${base}/api/definitions?${new URLSearchParams({ item, version })}`);
   assert.equal(response.status, 200);
   const definitions = await response.json();
@@ -75,10 +85,10 @@ for (const [item, version, name, title] of [['kubernetes', '1.34', 'ContainerSta
   assert((await document.text()).includes(`<h1>${title}</h1>`), `Search result opened the wrong type for ${name}`);
 }
 
-const pod = '/kubernetes/1.34/io.k8s.api.core.v1.Pod';
-const podSpec = '/kubernetes/1.34/io.k8s.api.core.v1.PodSpec';
-const deployment = '/kubernetes/1.34/io.k8s.api.apps.v1.Deployment';
-const pageResponse = await fetch(`${base}/api/page?item=kubernetes&version=1.34&resource=io.k8s.api.core.v1.Pod`);
+const pod = `${kubeBase}/io.k8s.api.core.v1.Pod`;
+const podSpec = `${kubeBase}/io.k8s.api.core.v1.PodSpec`;
+const deployment = `${kubeBase}/io.k8s.api.apps.v1.Deployment`;
+const pageResponse = await fetch(`${base}/api/page?item=kubernetes&version=${encodeURIComponent(kubeVersion)}&resource=io.k8s.api.core.v1.Pod`);
 assert.equal(pageResponse.status, 200);
 const page = await pageResponse.json();
 const spec = page.resources.find(row => row.name === 'spec');
@@ -101,7 +111,7 @@ for (const path of [
   assert.equal(response.url, `${base}${path}`);
 }
 
-for (const path of [pod, `${podSpec}?path=Deployment.spec.template.spec`, `${podSpec}?linked=Workload.spec`, '/certmanager/1.14/io.cert-manager.v1.CertificateSpec']) {
+for (const path of [pod, `${podSpec}?path=Deployment.spec.template.spec`, `${podSpec}?linked=Workload.spec`, `${certBase}/io.cert-manager.v1.CertificateSpec`]) {
   const response = await fetch(`${base}${path}`);
   assert.equal(response.status, 200, path);
   const body = await response.text();
@@ -125,29 +135,29 @@ for (const [field, target] of [
   ['spec', 'io.k8s.api.core.v1.PodSpec'],
   ['containers', 'io.k8s.api.core.v1.Container'],
 ]) {
-  const selected = await (await fetch(`${base}/api/page?${new URLSearchParams({item:'kubernetes', version:'1.34', resource, path:context})}`)).json();
+  const selected = await (await fetch(`${base}/api/page?${new URLSearchParams({item:'kubernetes', version:kubeVersion, resource, path:context})}`)).json();
   context += `.${field}`;
-  assert.equal(selected.resources.find(row => row.name === field).href, `/kubernetes/1.34/${target}?path=${context}`);
+  assert.equal(selected.resources.find(row => row.name === field).href, `${kubeBase}/${target}?path=${context}`);
   resource = target;
 }
-const selected = await (await fetch(`${base}/api/page?${new URLSearchParams({item:'kubernetes', version:'1.34', resource, path:context})}`)).json();
+const selected = await (await fetch(`${base}/api/page?${new URLSearchParams({item:'kubernetes', version:kubeVersion, resource, path:context})}`)).json();
 assert.equal(selected.title, context);
 assert.equal(selected.resource, resource);
 assert.equal(selected.path, context);
 assert.equal(selected.pointer || '', '');
 
-const container = await (await fetch(`${base}/api/page?item=kubernetes&version=1.34&resource=io.k8s.api.core.v1.Pod&pointer=/properties/spec/properties/containers/items`)).json();
+const container = await (await fetch(`${base}/api/page?item=kubernetes&version=${encodeURIComponent(kubeVersion)}&resource=io.k8s.api.core.v1.Pod&pointer=/properties/spec/properties/containers/items`)).json();
 assert(container.resources.some(row => row.name === 'name' && row.required));
-assert.equal(container.canonical, '/kubernetes/1.34/io.k8s.api.core.v1.Container');
+assert.equal(container.canonical, `${kubeBase}/io.k8s.api.core.v1.Container`);
 assert.equal(container.resource, 'io.k8s.api.core.v1.Container');
 assert.equal(container.path || '', '');
 assert.equal(container.title, 'Container');
-assert.equal((await fetch(`${base}/kubernetes/1.34/missing`)).status, 404);
-assert.equal((await fetch(`${base}/api/page?item=kubernetes&item=flux&version=1.34`)).status, 400);
+assert.equal((await fetch(`${base}${kubeBase}/missing`)).status, 404);
+assert.equal((await fetch(`${base}/api/page?item=kubernetes&item=flux&version=${encodeURIComponent(kubeVersion)}`)).status, 400);
 assert.equal((await fetch(`${base}/api/catalog`, { method: 'POST' })).status, 405);
 assert.equal(await (await fetch(`${base}${pod}`, { method: 'HEAD' })).text(), '');
 
-let cyclicURL = new URL('/kubernetes/1.34/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps', base);
+let cyclicURL = new URL(`${kubeBase}/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps`, base);
 for (let visit = 1; visit <= 3; visit++) {
   const [, item, version, resource] = cyclicURL.pathname.split('/');
   const query = new URLSearchParams(cyclicURL.search);
@@ -177,11 +187,11 @@ for (let visit = 1; visit <= 3; visit++) {
     assert(embedded.resources.find(row => row.name === 'allOf').circular, 'HTML page data lost circular state');
   }
 }
-const hpa = await (await fetch(`${base}/kubernetes/1.34/io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler`)).text();
-assert(/href="\/kubernetes\/1\.34\/io\.k8s\.api\.autoscaling\.v2\.HorizontalPodAutoscaler" aria-current="page"/.test(hpa), 'Current API version is not marked');
+const hpa = await (await fetch(`${base}${kubeBase}/io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler`)).text();
+assert(hpa.includes(`href="${kubeBase}/io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler" aria-current="page"`), 'Current API version is not marked');
 for (const property of ['og:site_name', 'og:image:alt', 'og:image:width', 'og:image:height', 'og:image:type']) {
   assert(hpa.includes(`property="${property}"`), `Missing ${property}`);
 }
-const missing = await (await fetch(`${base}/kubernetes/1.34/missing`)).text();
+const missing = await (await fetch(`${base}${kubeBase}/missing`)).text();
 assert(missing.includes('Specification &amp; version') && missing.includes('See an issue here?'), 'Server error lost recovery controls');
 console.log(`Container smoke checks passed: API, quick search, ${crawlerLocations.size} sitemap URLs, robots policy, descriptions, traversal URLs, circular limits, no resource redirects, nested SSR, required fields, errors, and headers.`);

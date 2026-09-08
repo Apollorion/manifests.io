@@ -1,6 +1,7 @@
 export interface Product {
   name: string;
   versions: string[];
+  defaultVersion?: string;
 }
 
 export interface Link {

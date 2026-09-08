@@ -13,7 +13,8 @@ import (
 
 func (c *Catalog) Page(q Query) (Page, error) {
 	if q.Item == "" && q.Version == "" {
-		q.Item, q.Version = "kubernetes", "1.34"
+		defaultQuery := DefaultQuery(c.products)
+		q.Item, q.Version = defaultQuery.Item, defaultQuery.Version
 	}
 	p := Page{Item: q.Item, Version: q.Version, Resource: q.Resource, Catalog: c.Products(), Resources: []Row{}, OtherVersions: []Link{}, Breadcrumbs: []Link{}, Variants: []Link{}}
 	if len(q.Pointer) > 8192 || len(q.Path) > 8192 || len(q.Resource) > 2048 {
