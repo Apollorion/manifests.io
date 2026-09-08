@@ -1,0 +1,148 @@
+name: Update schemas
+
+on:
+  schedule:
+    - cron: '23 8 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: schema-updates
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      changed: ${{ steps.update.outputs.changed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Discover and validate new upstream snapshots
+        id: update
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          go run ./cmd/update-schemas -apply > "$RUNNER_TEMP/schema-updates.json"
+          if [ -n "$(git status --porcelain -- ETL/crds oaspec)" ]; then
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+          cat "$RUNNER_TEMP/schema-updates.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Package only new schema files
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          git ls-files --others --exclude-standard -z -- ETL/crds oaspec > "$RUNNER_TEMP/schema-files"
+          tar --null -czf "$RUNNER_TEMP/schema-updates.tar.gz" -T "$RUNNER_TEMP/schema-files"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: steps.update.outputs.changed == 'true'
+        with:
+          name: schema-updates
+          path: ${{ runner.temp }}/schema-updates.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+      - if: steps.update.outputs.changed == 'true'
+        run: make build
+      - if: steps.update.outputs.changed == 'true'
+        run: make test
+      - if: steps.update.outputs.changed == 'true'
+        run: go vet ./...
+      - if: steps.update.outputs.changed == 'true'
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - if: steps.update.outputs.changed == 'true'
+        run: docker build --platform linux/amd64 -t manifests:schema-update .
+      - if: steps.update.outputs.changed == 'true'
+        run: docker run -d --name manifests -p 8080:8080 manifests:schema-update
+      - if: steps.update.outputs.changed == 'true'
+        run: node scripts/smoke.mjs
+      - if: steps.update.outputs.changed == 'true'
+        run: npm --prefix frontend run test:browser
+      - name: Upload browser failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: schema-update-browser-failure
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7
+      - name: Stop validation container
+        if: always() && steps.update.outputs.changed == 'true'
+        run: docker stop --timeout 10 manifests || true
+
+  pull-request:
+    needs: validate
+    if: needs.validate.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: schema-updates
+          path: ${{ runner.temp }}
+      - name: Restore verified snapshots without overwriting existing versions
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+          import tarfile
+
+          root = pathlib.Path.cwd().resolve()
+          pattern = re.compile(r'(?:ETL/crds/[a-z0-9]+-[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:experimental)?/[A-Za-z0-9_.-]+\.(?:yaml|yml|json)|oaspec/kubernetes/[0-9]+\.[0-9]+\.(?:json|source))')
+          with tarfile.open(pathlib.Path(os.environ['RUNNER_TEMP']) / 'schema-updates.tar.gz', 'r:gz') as archive:
+              members = archive.getmembers()
+              if not members or len(members) > 4096 or sum(member.size for member in members) > 256 * 1024 * 1024:
+                  raise ValueError('Invalid schema artifact size')
+              names = set()
+              for member in members:
+                  if not member.isfile() or not pattern.fullmatch(member.name) or member.name in names or member.size > 64 * 1024 * 1024:
+                      raise ValueError('Unsafe schema artifact member')
+                  names.add(member.name)
+                  target = root / member.name
+                  if target.exists() or target.is_symlink():
+                      raise ValueError('Schema artifact would overwrite an existing file')
+                  for parent in target.parents:
+                      if parent == root:
+                          break
+                      if parent.is_symlink():
+                          raise ValueError('Schema artifact parent is a symlink')
+              archive.extractall(root, members=members, filter='data')
+          PY
+      - name: Open schema update pull request
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676
+        with:
+          token: ${{ github.token }}
+          branch: automation/schema-updates
+          commit-message: 'chore(schemas): add current upstream releases'
+          title: 'chore(schemas): add current upstream releases'
+          body: |
+            Adds new Kubernetes and CRD schema snapshots from stable upstream releases. Existing version files are preserved. Each snapshot includes its source URL, release tag, resolved commit where available, and SHA-256 checksum.
+
+            The update workflow validated the complete corpus, rendered documentation, ran Go and frontend tests, and smoke-tested the production container and browser interactions before opening this PR.
+
+            Review the schema changes and approve any approval-required GitHub Actions runs before merging. This PR is not automatically merged or deployed; production promotion remains through Spacelift.
+          add-paths: |
+            ETL/crds/
+            oaspec/

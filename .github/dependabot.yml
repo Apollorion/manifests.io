@@ -1,0 +1,43 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      go-patch-and-minor:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    commit-message:
+      prefix: build(deps)
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      frontend-patch-and-minor:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    commit-message:
+      prefix: build(deps)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: build(ci)
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build(deps)
+  - package-ecosystem: terraform
+    directory: /infra
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build(deps)

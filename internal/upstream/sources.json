@@ -1,0 +1,15 @@
+[
+  {"product":"kubernetes","repository":"kubernetes/kubernetes","files":["api/openapi-spec/swagger.json"],"minorVersion":true},
+  {"product":"certmanager","repository":"cert-manager/cert-manager","asset":"cert-manager.crds.yaml"},
+  {"product":"cosignpolicycontroller","repository":"sigstore/policy-controller","files":["config/300-clusterimagepolicy.yaml","config/300-trustroot.yaml"]},
+  {"product":"flagger","repository":"fluxcd/flagger","files":["artifacts/flagger/crd.yaml"]},
+  {"product":"flux","repository":"fluxcd/flux2","asset":"install.yaml"},
+  {"product":"gatewayapi","repository":"kubernetes-sigs/gateway-api","asset":"standard-install.yaml"},
+  {"product":"gatewayapi","repository":"kubernetes-sigs/gateway-api","asset":"experimental-install.yaml","suffix":"experimental"},
+  {"product":"istio","repository":"istio/istio","files":["manifests/charts/base/files/crd-all.gen.yaml"]},
+  {"product":"opagatekeeper","repository":"open-policy-agent/gatekeeper","files":["deploy/gatekeeper.yaml"]},
+  {"product":"prometheusoperator","repository":"prometheus-operator/prometheus-operator","directory":"example/prometheus-operator-crd"},
+  {"product":"rancher","repository":"rancher/rancher","directory":"pkg/crds/yaml"},
+  {"product":"spaceliftoperator","repository":"spacelift-io/spacelift-operator","asset":"manifests.yaml"},
+  {"product":"spaceliftworkerpool","repository":"spacelift-io/spacelift-helm-charts","directory":"spacelift-workerpool-controller/config/crd/bases","versionFile":"spacelift-workerpool-controller/Chart.yaml"}
+]

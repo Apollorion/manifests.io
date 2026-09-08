@@ -14,6 +14,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0
 	go.opentelemetry.io/proto/otlp v1.10.0
 	go.yaml.in/yaml/v3 v3.0.4
+	golang.org/x/mod v0.40.0
 	google.golang.org/protobuf v1.36.11
 )
 
