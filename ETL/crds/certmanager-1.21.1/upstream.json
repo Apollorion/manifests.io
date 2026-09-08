@@ -1,0 +1,14 @@
+{
+  "product": "certmanager",
+  "version": "1.21.1",
+  "repository": "cert-manager/cert-manager",
+  "tag": "v1.21.1",
+  "files": [
+    {
+      "path": "cert-manager.crds.yaml",
+      "url": "https://github.com/cert-manager/cert-manager/releases/download/v1.21.1/cert-manager.crds.yaml",
+      "sha256": "a1383be02862dd2802e6810f19dd1f4784550f336ff4eb27788e842302f76977"
+    }
+  ],
+  "target": "ETL/crds/certmanager-1.21.1"
+}

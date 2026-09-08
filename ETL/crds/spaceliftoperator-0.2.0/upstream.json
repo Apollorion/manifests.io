@@ -1,0 +1,14 @@
+{
+  "product": "spaceliftoperator",
+  "version": "0.2.0",
+  "repository": "spacelift-io/spacelift-operator",
+  "tag": "v0.2.0",
+  "files": [
+    {
+      "path": "manifests.yaml",
+      "url": "https://github.com/spacelift-io/spacelift-operator/releases/download/v0.2.0/manifests.yaml",
+      "sha256": "5b8258352002cfce54822958856aa12df3068013f0a86e6ca752a8c53be5db29"
+    }
+  ],
+  "target": "ETL/crds/spaceliftoperator-0.2.0"
+}

@@ -1,0 +1,15 @@
+{
+  "product": "opagatekeeper",
+  "version": "3.23.1",
+  "repository": "open-policy-agent/gatekeeper",
+  "tag": "v3.23.1",
+  "commit": "2d0b6ad97cf3a8b8436a00a1f4b07b3a56b92ca0",
+  "files": [
+    {
+      "path": "deploy__gatekeeper.yaml",
+      "url": "https://raw.githubusercontent.com/open-policy-agent/gatekeeper/2d0b6ad97cf3a8b8436a00a1f4b07b3a56b92ca0/deploy/gatekeeper.yaml",
+      "sha256": "3c178abe6de4dcdcd2810c2945468a0d7a15ccf0036e324b73308643e94d6f72"
+    }
+  ],
+  "target": "ETL/crds/opagatekeeper-3.23.1"
+}

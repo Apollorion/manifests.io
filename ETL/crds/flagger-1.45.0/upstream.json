@@ -1,0 +1,15 @@
+{
+  "product": "flagger",
+  "version": "1.45.0",
+  "repository": "fluxcd/flagger",
+  "tag": "v1.45.0",
+  "commit": "c781cdc199d44cf84e21e90aedd8ff14c1df450e",
+  "files": [
+    {
+      "path": "artifacts__flagger__crd.yaml",
+      "url": "https://raw.githubusercontent.com/fluxcd/flagger/c781cdc199d44cf84e21e90aedd8ff14c1df450e/artifacts/flagger/crd.yaml",
+      "sha256": "58bd594b9e33deb0edceac81f6ed160b458a7933039fb295552724f656033ee5"
+    }
+  ],
+  "target": "ETL/crds/flagger-1.45.0"
+}
