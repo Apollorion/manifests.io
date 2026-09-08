@@ -84,6 +84,24 @@ func TestHTTPContract(t *testing.T) {
 	}
 }
 
+func TestBrowserSourceMapsStayPrivate(t *testing.T) {
+	s := testServer(t)
+	assets := filepath.Join(s.config.WebDir, "assets")
+	if err := os.Mkdir(assets, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(assets, "index.js.map"), []byte(`{"sourcesContent":["private source"]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, method := range []string{"GET", "HEAD"} {
+		w := httptest.NewRecorder()
+		s.ServeHTTP(w, httptest.NewRequest(method, "/assets/index.js.map", nil))
+		if w.Code != http.StatusNotFound || strings.Contains(w.Body.String(), "private source") {
+			t.Fatalf("%s exposed a browser source map: status=%d", method, w.Code)
+		}
+	}
+}
+
 func TestPageDataCannotEscapeScript(t *testing.T) {
 	w := httptest.NewRecorder()
 	testServer(t).ServeHTTP(w, httptest.NewRequest("GET", "/kubernetes/1.34", nil))

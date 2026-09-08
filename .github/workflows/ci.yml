@@ -52,6 +52,17 @@ jobs:
       - name: Stop production container
         if: always() && steps.container.outcome == 'success'
         run: docker stop --timeout 10 manifests
+      - name: Extract private browser source maps
+        if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: docker build --platform linux/amd64 --target source-maps --build-arg VERSION="${GITHUB_SHA}" --output "type=local,dest=${RUNNER_TEMP}/source-maps" .
+      - name: Upload private browser source maps
+        if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          FARO_SOURCEMAP_API_KEY: ${{ secrets.FARO_SOURCEMAP_API_KEY }}
+        run: node frontend/scripts/upload-source-maps.mjs "${RUNNER_TEMP}/source-maps"
+      - name: Remove private browser source maps
+        if: always()
+        run: rm -rf "${RUNNER_TEMP}/source-maps"
       - name: Export verified image
         if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: docker save manifests:test -o "${RUNNER_TEMP}/manifests-image.tar"

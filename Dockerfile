@@ -7,6 +7,10 @@ COPY public/ /src/public/
 ARG VERSION=dev
 ENV VITE_APP_VERSION=$VERSION
 RUN npm run build
+RUN mkdir /src/source-maps && mv dist/assets/*.js.map /src/source-maps/
+
+FROM scratch AS source-maps
+COPY --from=web /src/source-maps/ /
 
 FROM golang:1.27-bookworm AS backend
 WORKDIR /src
