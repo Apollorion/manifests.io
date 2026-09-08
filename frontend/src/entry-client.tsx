@@ -6,8 +6,12 @@ import { captureError, captureSearchEvent, initializeObservability } from './tel
 import './styles.css';
 
 async function start() {
+  initializeObservability();
   const container = document.getElementById('root');
-  if (!container) throw new Error('Missing application root');
+  if (!container) {
+    captureError(new Error('Missing application root'));
+    return;
+  }
   let page: Page | undefined;
   try {
     const data = document.getElementById('__PAGE_DATA__')?.textContent;
@@ -20,9 +24,9 @@ async function start() {
     }
     if (!page) throw new Error('The documentation response was empty.');
     const app = <AppBoundary page={page} onError={captureError}><App initialPage={page} onSearchEvent={captureSearchEvent}/></AppBoundary>;
-    if (data?.trim() && container.hasChildNodes()) hydrateRoot(container, app);
-    else createRoot(container).render(app);
-    try { initializeObservability(); } catch (error) { captureError(error); }
+    const options = { onUncaughtError: captureError, onRecoverableError: captureError };
+    if (data?.trim() && container.hasChildNodes()) hydrateRoot(container, app, options);
+    else createRoot(container, options).render(app);
   } catch (error) {
     captureError(error);
     const recovery: Partial<Page> = page ?? {};

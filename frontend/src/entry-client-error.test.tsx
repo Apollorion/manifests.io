@@ -1,13 +1,41 @@
 import { act, screen } from '@testing-library/react';
 import { createRoot } from 'react-dom/client';
 import { expect, it, vi } from 'vitest';
-import { captureError } from './telemetry';
+import { type TransportItem, TransportItemType } from '@grafana/faro-web-sdk';
 
 vi.mock('react-dom/client', async importOriginal => {
   const actual = await importOriginal<typeof import('react-dom/client')>();
   return { ...actual, createRoot: vi.fn(actual.createRoot) };
 });
-vi.mock('./telemetry', () => ({ captureError: vi.fn(), captureSearchEvent: vi.fn(), initializeObservability: vi.fn() }));
+const { items } = vi.hoisted(() => ({ items: [] as unknown[] }));
+vi.mock('./telemetry', async importOriginal => {
+  const actual = await importOriginal<typeof import('./telemetry')>();
+  const sdk = await import('@grafana/faro-web-sdk');
+  class CaptureTransport extends sdk.BaseTransport {
+    name = 'startup-capture';
+    version = '1';
+    initialize() {}
+    send(batch: TransportItem | TransportItem[]) {
+      items.push(...JSON.parse(JSON.stringify(Array.isArray(batch) ? batch : [batch])));
+    }
+  }
+  let faro: ReturnType<typeof sdk.initializeFaro> | undefined;
+  return {
+    ...actual,
+    initializeObservability: () => {
+      faro = sdk.initializeFaro({
+        ...actual.telemetryConfig('http://localhost/collect', 'startup-test'),
+        url: undefined,
+        transports: [new CaptureTransport()],
+        instrumentations: [],
+        batching: { enabled: false },
+        isolate: true,
+        preventGlobalExposure: true,
+      });
+    },
+    captureError: (error: unknown) => faro?.api.pushError(error instanceof Error ? error : new Error('Browser error')),
+  };
+});
 
 it('recovers from invalid startup data with the route, full catalog, and issue reporting', async () => {
   const previousURL = window.location.href;
@@ -26,7 +54,9 @@ it('recovers from invalid startup data with the route, full catalog, and issue r
   vi.stubGlobal('fetch', fetchCatalog);
   try {
     await act(async () => { await import('./entry-client'); });
-    expect(captureError).toHaveBeenCalledOnce();
+    expect((items as TransportItem[]).filter(item => item.type === TransportItemType.EXCEPTION)).toHaveLength(1);
+    expect(JSON.stringify(items)).toContain('startup-test');
+    expect(JSON.stringify(items)).toContain('Browser error');
     expect(fetchCatalog).toHaveBeenCalledWith('/api/catalog');
     expect(screen.getByRole('alert')).toBeVisible();
     expect(screen.getByRole('option', { name: 'flux / 0.31.2' })).toHaveValue('/flux/0.31.2/HelmRelease');
