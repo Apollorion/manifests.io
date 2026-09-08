@@ -36,7 +36,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "esbuild": "0.28.2",
     "jsdom": "^30.0.1",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "url-search-params-polyfill": "8.2.5",
     "vite": "^8.2.2",
     "vitest": "^5.0.0"
