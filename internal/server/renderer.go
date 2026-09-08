@@ -67,9 +67,7 @@ func (r *reactRenderer) render(ctx context.Context, data []byte) (html []byte, e
 	defer func() {
 		if err != nil {
 			span.SetAttributes(attribute.String("render.failure", renderFailureKind(err)))
-			if !errors.Is(err, context.Canceled) {
-				span.SetStatus(codes.Error, "React rendering failed")
-			}
+			span.SetStatus(codes.Error, "React rendering failed")
 		}
 		span.End()
 	}()

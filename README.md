@@ -40,6 +40,8 @@ There is no converter or generated CRD JSON to maintain.
 
 The reader accepts OpenAPI v2 definitions and OpenAPI v3 component schemas, including schema-only documents. CRDs may be individual documents, multi-document YAML, or Kubernetes Lists. It extracts each CRD version's `openAPIV3Schema`, with support for older `spec.validation` schemas. Unresolved or external references fail loading instead of reading arbitrary files or making network requests.
 
+API version links include each matching group/version/kind entry once. Shared schemas such as Kubernetes DeleteOptions register the same kind in many API groups; those registrations must not multiply the links rendered on every field page.
+
 [kin-openapi](https://github.com/getkin/kin-openapi) supplies the OpenAPI types, v2-to-v3 conversion, and reference resolution. Both sources use its `openapi3.Schema` model. Our code handles catalog discovery, navigation, legacy URL aliases, and the finite page data consumed by React. Kubernetes extensions are retained. See [ADR 0001](adr/0001-read-source-schemas-with-one-go-model-and-render-documentati.md) for the trade-offs.
 
 ### Automated upstream updates

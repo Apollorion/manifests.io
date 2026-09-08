@@ -99,18 +99,12 @@ func TestRenderFailureReporting(t *testing.T) {
 			if !found {
 				t.Fatalf("missing failure kind %q: %v", tc.kind, spans[0].Attributes)
 			}
-			if tc.kind == "canceled" {
-				if logs.Len() != 0 || response.Body.Len() != 0 || spans[0].Status.Code == codes.Error {
-					t.Fatalf("cancellation reported as service failure: logs=%s response=%s status=%v", &logs, response.Body, spans[0].Status)
-				}
-			} else {
-				var record map[string]any
-				if err := json.Unmarshal(logs.Bytes(), &record); err != nil {
-					t.Fatal(err)
-				}
-				if response.Code != http.StatusServiceUnavailable || record["level"] != "ERROR" || record["msg"] != "React rendering failed" || record["render.failure"] != tc.kind || spans[0].Status.Code != codes.Error {
-					t.Fatalf("failure not reported: response=%d record=%v span=%v", response.Code, record, spans[0].Status)
-				}
+			var record map[string]any
+			if err := json.Unmarshal(logs.Bytes(), &record); err != nil {
+				t.Fatal(err)
+			}
+			if response.Code != http.StatusServiceUnavailable || record["level"] != "ERROR" || record["msg"] != "React rendering failed" || record["render.failure"] != tc.kind || spans[0].Status.Code != codes.Error {
+				t.Fatalf("failure not reported: response=%d record=%v span=%v", response.Code, record, spans[0].Status)
 			}
 			encoded, err := json.Marshal(spans)
 			if err != nil {

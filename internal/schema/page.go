@@ -108,10 +108,14 @@ func (c *Catalog) Page(q Query) (Page, error) {
 		current.Trail = p.Trail
 		p.Breadcrumbs = append(p.Breadcrumbs, Link{Label: p.Title, Href: Href(current)})
 	}
+	kinds := make(map[string]bool)
 	for _, current := range d.gvks[q.Resource] {
+		kinds[current.Kind] = true
+	}
+	if len(kinds) != 0 {
 		for _, name := range sortedKeys(d.gvks) {
 			for _, g := range d.gvks[name] {
-				if g.Kind != current.Kind {
+				if !kinds[g.Kind] {
 					continue
 				}
 				link := base
