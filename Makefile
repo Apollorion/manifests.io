@@ -1,12 +1,19 @@
-BIN := manifests
+BIN := $(HOME)/bin/manifests
 VERSION ?= $(shell git describe --always --dirty)
 
-.PHONY: build frontend test check dev dev-api dev-web clean
+.PHONY: build install update-schemas frontend test check dev dev-api dev-web clean
 
 build: frontend
 	mkdir -p build
-	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$(VERSION)" -o build/$(BIN) ./cmd/manifests
+	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$(VERSION)" -o build/manifests ./cmd/manifests
 	node frontend/scripts/prerender.mjs
+
+install: build
+	install -d $(dir $(BIN))
+	install -m 755 build/manifests $(BIN)
+
+update-schemas:
+	go run ./cmd/update-schemas $(UPDATE_ARGS)
 
 frontend:
 	npm --prefix frontend ci --no-audit --no-fund

@@ -1,6 +1,6 @@
 # Manifests.io
 
-Browse Kubernetes and custom resource schemas with a Go backend and one React renderer.
+Browse Kubernetes and custom resource schemas with a Go backend, one React renderer, and automated upstream schema updates.
 
 Choose a product and version, filter resources, then follow fields into their types. Descriptions, required fields, arrays, maps, unions, validation constraints, and alternate API versions come from the original schemas. Existing resource URLs and the legacy `linked`, `oneOf`, and `key` parameters remain supported.
 
@@ -42,6 +42,19 @@ The reader accepts OpenAPI v2 definitions and OpenAPI v3 component schemas, incl
 
 [kin-openapi](https://github.com/getkin/kin-openapi) supplies the OpenAPI types, v2-to-v3 conversion, and reference resolution. Both sources use its `openapi3.Schema` model. Our code handles catalog discovery, navigation, legacy URL aliases, and the finite page data consumed by React. Kubernetes extensions are retained. See [ADR 0001](adr/0001-read-source-schemas-with-one-go-model-and-render-documentati.md) for the trade-offs.
 
+### Automated upstream updates
+
+The [source registry](internal/upstream/sources.json) maps every supported product to its upstream GitHub repository and CRD assets or source files, including separate standard and experimental Gateway API tracks. The updater discovers each project's latest stable release. Kubernetes keeps minor-version URLs; CRD additions use the full release version. Existing versions are never overwritten, including later Kubernetes patches within an already imported minor version.
+
+```sh
+make update-schemas
+make update-schemas UPDATE_ARGS=-apply
+```
+
+The first command only reports available additions as JSON. `-apply` downloads into staging and validates the combined corpus with the production reader before installing new snapshots. It records source URLs, release tags, resolved commits for repository files, and SHA-256 checksums. The command reads an optional `GITHUB_TOKEN` from the environment for GitHub API limits; never put the token in command arguments. Structured job logs go to stderr, leaving stdout as machine-readable JSON. The updater also supports `-root` to operate on a separate corpus checkout.
+
+The [Update schemas workflow](.github/workflows/update-schemas.yml) runs Tuesdays at 08:23 UTC and supports manual dispatch on `main`. It validates new data with the build, Go/frontend tests, container smoke checks, and Chromium suite before opening or updating `automation/schema-updates`. A separate job has the permissions to propose the PR. Review its source changes and approve any approval-required GitHub Actions runs before merging; deployment remains an explicit Spacelift promotion. [ADR 0003](adr/0003-import-immutable-upstream-schema-snapshots-through-reviewed.md) records why updates are immutable snapshots.
+
 ## HTTP interface
 
 | Route | Response |
@@ -52,9 +65,13 @@ The reader accepts OpenAPI v2 definitions and OpenAPI v3 component schemas, incl
 | `/api/catalog` | Products and versions as JSON |
 | `/api/page?item=...&version=...&resource=...` | The same page data used by React |
 | `/api/definitions?item=kubernetes&version=1.34` | All named types and nested CRD aliases for quick search |
+| `/robots.txt` | Crawl policy and the configured site's sitemap location |
+| `/sitemap.xml`, `/sitemap-<number>.xml` | Sitemap index and canonical documentation URLs |
 | `/healthz`, `/readyz` | Ready after the corpus loads successfully |
 
 Nested inline schemas use `pointer`, a JSON Pointer through schema keywords such as `/properties/spec/properties/containers/items`; `path` carries the displayed field traversal. References are resolved by the library. Canonical schema locations make recursive references navigable without infinitely expanding the tree. Field filters remain local to the browser and are never sent to the API.
+
+Sitemaps use the same finite catalog routes as prerendering. They include canonical inline pointers, omit traversal history and legacy aliases, and split at the sitemap protocol's URL-count and byte limits. Their origin comes from `SITE_URL`, never the incoming Host header. The old `apiextensions` crawler exclusion is removed; recursive documentation uses the same finite navigation rules as other pages.
 
 Prerendering calls the same React component used by the browser. Pages are stored compressed to bound image size. Canonical requests can use this cache; contextual URLs and errors render the same React App inside Go using [Goja](https://github.com/dop251/goja). The response already contains current headings, traversal links, circular-reference limits, and recovery controls before browser JavaScript loads. React hydrates that markup for filtering, version selection, and theme controls. Unknown resources return HTTP 404; malformed queries return HTTP 400.
 
@@ -86,7 +103,18 @@ docker build --platform linux/amd64 --build-arg VERSION="$(git rev-parse --short
 docker run --rm -p 18080:8080 manifests:local
 ```
 
-With the container running, `node scripts/smoke.mjs http://localhost:18080` verifies its API, original field descriptions, nested HTML, legacy links, required fields, and error responses.
+With the container running, `node scripts/smoke.mjs http://localhost:18080` verifies its API, original field descriptions, nested HTML, legacy links, required fields, crawler endpoints, and error responses.
+
+Run the Chromium regression suite against that same container:
+
+```sh
+npm --prefix frontend exec -- playwright install chromium
+PLAYWRIGHT_BASE_URL=http://localhost:18080 npm --prefix frontend run test:browser
+```
+
+The browser suite covers quick search, keyboard navigation, local search privacy, nested CRD links, traversal context, circular-reference limits with and without JavaScript, failed-request retry, and mobile overflow. CI runs it against the exact container before publishing and retains screenshots, traces, reports, and container logs on failure. Browser tests use isolated contexts and fail on browser errors; they do not send production telemetry from local hosts.
+
+Dependabot checks the Go module, `frontend/` npm dependencies, GitHub Actions, Docker base images, and `infra/` OpenTofu dependencies weekly. Minor and patch updates are grouped for Go and frontend dependencies; major upgrades remain separate review items. Root Yarn dependencies belong to the retired implementation.
 
 The image includes the immutable corpus, prerendered HTML, and browser assets. It runs as a non-root user, listens on `0.0.0.0:$PORT`, and needs no database, persistent disk, cluster access, or Node runtime. Schema changes require a new build. SIGTERM drains requests and flushes telemetry within Cloud Run's shutdown window.
 
