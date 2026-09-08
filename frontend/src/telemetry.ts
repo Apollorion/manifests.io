@@ -134,7 +134,15 @@ function safeTraces(payload: TraceEvent, app: TransportItem['meta']['app']): Tra
 // Rebuild payloads so newly added SDK fields cannot bypass privacy filtering.
 export function sanitizeTelemetry(item: TransportItem): TransportItem | null {
   const meta = {
-    app: item.meta.app ? { name: item.meta.app.name, version: item.meta.app.version, environment: item.meta.app.environment } : undefined,
+    app: item.meta.app ? {
+      name: item.meta.app.name,
+      version: item.meta.app.version,
+      environment: item.meta.app.environment,
+      ...(/^[a-f0-9]{40}$/.test(item.meta.app.version ?? '') ? {
+        bundleId: item.meta.app.version,
+        gitHash: item.meta.app.version,
+      } : {}),
+    } : undefined,
     sdk: item.meta.sdk,
     session: item.meta.session ? {
       id: item.meta.session.id,

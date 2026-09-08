@@ -156,6 +156,8 @@ Structured stdout logs include trace/span IDs. Configure `OTEL_EXPORTER_OTLP_END
 
 Production browser telemetry uses the existing public Grafana Faro collector. The existing PostHog integration retains manual pageview events on the production domains, with automatic capture, recording, persistence, and person profiles disabled. Local previews do not send production telemetry. Search values, query strings, request bodies, cookies, authorization headers, raw URLs, and freeform exceptions are excluded from exported telemetry. General OTLP credentials never enter the browser build. See [deployment telemetry configuration](infra/README.md#telemetry-configuration) for details.
 
+Production browser source maps are uploaded privately to Grafana before CI publishes a deployable image. The full Git SHA identifies both the uploaded bundle and Faro metadata. The Docker `source-maps` target exports maps from the same frontend build; runtime images omit them, and HTTP handlers reject map requests. `FARO_SOURCEMAP_API_KEY` is a GitHub Actions secret scoped to source-map operations, available only to the main-branch upload step. An absent credential or failed upload blocks publication.
+
 ## License
 
 [MIT](LICENSE). Original authorship remains in the site footer.

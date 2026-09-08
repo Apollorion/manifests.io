@@ -16,6 +16,22 @@ class CaptureTransport extends BaseTransport {
 }
 
 describe('browser telemetry', () => {
+  it('retains trusted release identity through the actual Faro transport', async () => {
+    const version = '0123456789abcdef0123456789abcdef01234567'
+    const transport = new CaptureTransport()
+    const faro = initializeFaro({
+      ...telemetryConfig('https://collector.example.test', version),
+      transports: [transport],
+      instrumentations: [],
+      isolate: true,
+    })
+    try {
+      faro.api.pushError(new Error('private error text'))
+      await vi.waitFor(() => expect(transport.items).toHaveLength(1))
+      expect(transport.items[0].meta.app).toMatchObject({ version, bundleId: version, gitHash: version })
+      expect(JSON.stringify(transport.items)).not.toContain('private error text')
+    } finally { faro.pause() }
+  })
   it('retains the loaded public bundle identity without exporting arbitrary filenames or URL values', () => {
     const script = document.createElement('script')
     script.type = 'module'

@@ -128,6 +128,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.HasPrefix(r.URL.Path, "/assets/") {
 		r.Pattern = "/assets/{file}"
+		if strings.HasSuffix(r.URL.Path, ".map") {
+			http.NotFound(w, r)
+			return
+		}
 		s.serveFile(w, r, s.config.WebDir, true)
 		return
 	}
