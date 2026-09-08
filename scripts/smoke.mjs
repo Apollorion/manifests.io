@@ -16,6 +16,54 @@ const products = await (await fetch(`${base}/api/catalog`)).json();
 assert(products.some(product => product.name === 'kubernetes' && product.versions.includes('1.34')));
 assert(products.some(product => product.name === 'gateway api'));
 
+const robotsResponse = await fetch(`${base}/robots.txt`);
+assert.equal(robotsResponse.status, 200);
+const robots = await robotsResponse.text();
+assert(!robots.includes('apiextensions'), 'Robots policy still blocks recursive schema documentation');
+assert(!/^Disallow:[ \t]*\S+/m.test(robots), 'Robots policy unexpectedly blocks documentation');
+const sitemapURL = robots.match(/^Sitemap: (https?:\/\/\S+\/sitemap\.xml)$/m)?.[1];
+assert(sitemapURL, 'Robots policy does not advertise an absolute sitemap URL');
+const siteOrigin = new URL(sitemapURL).origin;
+const indexResponse = await fetch(`${base}/sitemap.xml`);
+assert.equal(indexResponse.status, 200);
+assert(indexResponse.headers.get('content-type').startsWith('application/xml'));
+const sitemapIndex = await indexResponse.text();
+assert(sitemapIndex.includes('<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'));
+const sitemapChunks = [...sitemapIndex.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => new URL(match[1]));
+assert(sitemapChunks.length > 0 && sitemapChunks.length <= 50_000);
+const crawlerLocations = new Set();
+for (const chunk of sitemapChunks) {
+  assert.equal(chunk.origin, siteOrigin);
+  assert(/^\/sitemap-[1-9]\d*\.xml$/.test(chunk.pathname));
+  const response = await fetch(new URL(chunk.pathname, base));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+  const body = await response.text();
+  assert(Buffer.byteLength(body) <= 50 * 1024 * 1024);
+  assert(body.includes('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'));
+  const locations = [...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1].replaceAll('&amp;', '&'));
+  assert(locations.length > 0 && locations.length <= 50_000);
+  for (const location of locations) {
+    const url = new URL(location);
+    assert.equal(url.origin, siteOrigin);
+    assert.equal(url.hash, '');
+    assert([...url.searchParams.keys()].every(key => key === 'pointer'), `Traversal URL leaked into sitemap: ${location}`);
+    assert(!crawlerLocations.has(location), `Duplicate sitemap URL: ${location}`);
+    crawlerLocations.add(location);
+  }
+}
+for (const route of [
+  '/kubernetes/1.34/io.k8s.api.core.v1.ContainerStatus',
+  '/kubernetes/1.34/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps',
+  '/certmanager/1.14/io.cert-manager.v1.Certificate?pointer=%2Fproperties%2Fspec',
+]) assert(crawlerLocations.has(siteOrigin + route), `Canonical documentation missing from sitemap: ${route}`);
+assert(!crawlerLocations.has(`${siteOrigin}/certmanager/1.14/io.cert-manager.v1.CertificateSpec`), 'Legacy alias leaked into sitemap');
+for (const route of ['/robots.txt', '/sitemap.xml', sitemapChunks[0].pathname]) {
+  const response = await fetch(new URL(route, base), { method: 'HEAD' });
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), '');
+}
+
 for (const [item, version, name, title] of [['kubernetes', '1.34', 'ContainerStatus', 'ContainerStatus'], ['certmanager', '1.14', 'CertificateSpec', 'Certificate.spec']]) {
   const response = await fetch(`${base}/api/definitions?${new URLSearchParams({ item, version })}`);
   assert.equal(response.status, 200);
@@ -57,6 +105,7 @@ for (const path of [pod, `${podSpec}?path=Deployment.spec.template.spec`, `${pod
   const response = await fetch(`${base}${path}`);
   assert.equal(response.status, 200, path);
   const body = await response.text();
+  assert(body.includes(`rel="canonical" href="${siteOrigin}/`), 'Crawler documents use a different origin from page canonical URLs');
   assert(body.includes('<main'), `No rendered documentation at ${path}`);
   assert(body.includes('<tbody>'), `No rendered fields at ${path}`);
   assert(body.includes('id="__PAGE_DATA__"'), `No browser data at ${path}`);
@@ -135,4 +184,4 @@ for (const property of ['og:site_name', 'og:image:alt', 'og:image:width', 'og:im
 }
 const missing = await (await fetch(`${base}/kubernetes/1.34/missing`)).text();
 assert(missing.includes('Specification &amp; version') && missing.includes('See an issue here?'), 'Server error lost recovery controls');
-console.log('Container smoke checks passed: API, quick search, descriptions, traversal URLs, circular limits, no resource redirects, nested SSR, required fields, errors, and headers.');
+console.log(`Container smoke checks passed: API, quick search, ${crawlerLocations.size} sitemap URLs, robots policy, descriptions, traversal URLs, circular limits, no resource redirects, nested SSR, required fields, errors, and headers.`);

@@ -33,6 +33,7 @@ type Catalog interface {
 	Page(schema.Query) (schema.Page, error)
 	Products() []schema.Product
 	Definitions(schema.Query) ([]schema.Definition, error)
+	Routes() []schema.Query
 }
 
 type Server struct {
@@ -40,6 +41,7 @@ type Server struct {
 	config   Config
 	shell    []byte
 	renderer *reactRenderer
+	crawlers map[string]crawlerFile
 }
 
 func New(catalog Catalog, config Config) (*Server, error) {
@@ -60,6 +62,10 @@ func New(catalog Catalog, config Config) (*Server, error) {
 		return nil, errors.New("SITE_URL must be an HTTP(S) origin")
 	}
 	config.SiteURL = strings.TrimRight(config.SiteURL, "/")
+	crawlers, err := buildCrawlerFiles(config.SiteURL, catalog.Routes())
+	if err != nil {
+		return nil, fmt.Errorf("build crawler documents: %w", err)
+	}
 	if config.RendererFile == "" {
 		config.RendererFile = filepath.Join(config.WebDir, "..", "dist-render", "renderer.js")
 	}
@@ -67,7 +73,7 @@ func New(catalog Catalog, config Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{catalog: catalog, config: config, shell: shell, renderer: renderer}, nil
+	return &Server{catalog: catalog, config: config, shell: shell, renderer: renderer, crawlers: crawlers}, nil
 }
 
 func RenderFilename(canonical string) string {
@@ -105,6 +111,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case "/api/definitions":
 		r.Pattern = "/api/definitions"
+	case "/robots.txt", "/sitemap.xml":
+		r.Pattern = r.URL.Path
+		s.serveCrawler(w, r)
+		return
+	}
+	if strings.HasPrefix(r.URL.Path, "/sitemap-") && strings.HasSuffix(r.URL.Path, ".xml") {
+		r.Pattern = "/sitemap-{chunk}.xml"
+		s.serveCrawler(w, r)
+		return
 	}
 	if strings.HasPrefix(r.URL.Path, "/assets/") {
 		r.Pattern = "/assets/{file}"

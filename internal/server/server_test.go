@@ -24,6 +24,10 @@ func (fakeCatalog) Definitions(schema.Query) ([]schema.Definition, error) {
 	return []schema.Definition{}, nil
 }
 
+func (fakeCatalog) Routes() []schema.Query {
+	return []schema.Query{{Item: "kubernetes", Version: "1.34"}}
+}
+
 func (fakeCatalog) Page(q schema.Query) (schema.Page, error) {
 	if q.Item != "kubernetes" || q.Version != "1.34" || q.Resource == "missing" {
 		return schema.Page{}, schema.ErrNotFound
