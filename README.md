@@ -10,7 +10,7 @@ Recursive schemas can be visited three times within a traversal. Links that woul
 
 ## Run locally
 
-Requirements: Go 1.27+, Node.js 24.15+, and npm.
+Requirements: Go 1.27+, Node.js 26+, and npm.
 
 ```sh
 make build
