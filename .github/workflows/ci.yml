@@ -25,11 +25,33 @@ jobs:
       - run: make build
       - run: make test
       - run: go vet ./...
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
       - run: docker build --platform linux/amd64 --build-arg VERSION="${GITHUB_SHA}" -t manifests:test .
-      - run: |
-          docker run -d --name manifests -p 8080:8080 manifests:test
-          node scripts/smoke.mjs
-          docker stop --timeout 10 manifests
+      - name: Start production container
+        id: container
+        run: docker run -d --name manifests -p 8080:8080 manifests:test
+      - run: node scripts/smoke.mjs
+      - name: Browser regression tests
+        run: npm --prefix frontend run test:browser
+      - name: Collect container logs
+        if: failure() && steps.container.outcome == 'success'
+        run: |
+          mkdir -p frontend/test-results
+          docker logs manifests > frontend/test-results/container.log 2>&1
+      - name: Upload browser failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: browser-failure
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7
+      - name: Stop production container
+        if: always() && steps.container.outcome == 'success'
+        run: docker stop --timeout 10 manifests
       - name: Export verified image
         if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: docker save manifests:test -o "${RUNNER_TEMP}/manifests-image.tar"

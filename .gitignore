@@ -6,6 +6,8 @@ frontend/prerender/
 frontend/prerender.tmp/
 build/
 coverage/
+frontend/playwright-report/
+frontend/test-results/
 .env
 .env.*
 !.env.example

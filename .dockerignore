@@ -5,6 +5,8 @@ frontend/node_modules
 frontend/dist
 frontend/dist-server
 frontend/prerender*
+frontend/playwright-report
+frontend/test-results
 build
 coverage
 .next
