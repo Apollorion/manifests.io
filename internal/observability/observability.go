@@ -3,6 +3,7 @@ package observability
 import (
 	"context"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -23,11 +24,15 @@ import (
 )
 
 func Setup(ctx context.Context, version string) (func(context.Context) error, error) {
-	stdout := slog.NewJSONHandler(os.Stdout, nil)
-	slog.SetDefault(slog.New(correlatedHandler{Handler: stdout}))
+	return SetupWithWriter(ctx, version, os.Stdout)
+}
+
+func SetupWithWriter(ctx context.Context, version string, output io.Writer) (func(context.Context) error, error) {
+	local := slog.NewJSONHandler(output, nil)
+	slog.SetDefault(slog.New(correlatedHandler{Handler: local}))
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 	// Exporter errors can contain credentials in their endpoint URLs.
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(error) { slog.New(stdout).Warn("telemetry export failed") }))
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(error) { slog.New(local).Warn("telemetry export failed") }))
 	res := resource.NewSchemaless(attribute.String("service.name", "manifests.io"), attribute.String("service.version", version))
 	var shutdowns []func(context.Context) error
 	shutdown := func(ctx context.Context) error {
@@ -57,7 +62,7 @@ func Setup(ctx context.Context, version string) (func(context.Context) error, er
 			return nil, errors.New("initialize log exporter")
 		}
 		provider := sdklog.NewLoggerProvider(sdklog.WithResource(res), sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter)))
-		slog.SetDefault(slog.New(correlatedHandler{Handler: slog.NewMultiHandler(stdout, otelslog.NewHandler("manifests.io", otelslog.WithLoggerProvider(provider)))}))
+		slog.SetDefault(slog.New(correlatedHandler{Handler: slog.NewMultiHandler(local, otelslog.NewHandler("manifests.io", otelslog.WithLoggerProvider(provider)))}))
 		shutdowns = append(shutdowns, provider.Shutdown)
 	}
 	return shutdown, nil
@@ -99,7 +104,7 @@ func (h correlatedHandler) WithGroup(name string) slog.Handler {
 
 func safeLogKey(key string) bool {
 	switch key {
-	case "http.request.method", "http.route", "http.response.status_code", "duration_ms", "version", "port", "documents", "definitions":
+	case "http.request.method", "http.route", "http.response.status_code", "duration_ms", "version", "port", "documents", "definitions", "schema.product", "schema.operation", "schema.updates":
 		return true
 	}
 	return false
@@ -182,8 +187,9 @@ func (e privateExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadO
 type privateSpan struct{ sdktrace.ReadOnlySpan }
 
 func (s privateSpan) Name() string {
-	if s.ReadOnlySpan.Name() == "catalog.load" {
-		return "catalog.load"
+	switch s.ReadOnlySpan.Name() {
+	case "catalog.load", "schema.update", "schema.discover", "schema.download", "schema.validate", "schema.install":
+		return s.ReadOnlySpan.Name()
 	}
 	for _, attr := range s.Attributes() {
 		if attr.Key == "http.route" {
@@ -197,7 +203,7 @@ func (s privateSpan) Attributes() []attribute.KeyValue {
 	var safe []attribute.KeyValue
 	for _, attr := range s.ReadOnlySpan.Attributes() {
 		switch attr.Key {
-		case "http.request.method", "http.route", "http.response.status_code":
+		case "http.request.method", "http.route", "http.response.status_code", "schema.product", "schema.operation", "schema.updates":
 			safe = append(safe, attr)
 		}
 	}

@@ -146,7 +146,8 @@ func TestOTLPHTTPExportsCorrelatedLogsAndTraces(t *testing.T) {
 		otel.SetTextMapPropagator(originalPropagator)
 		otel.SetErrorHandler(originalErrorHandler)
 	})
-	shutdown, err := Setup(t.Context(), "synthetic-test")
+	var local bytes.Buffer
+	shutdown, err := SetupWithWriter(t.Context(), "synthetic-test", &local)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,11 +155,18 @@ func TestOTLPHTTPExportsCorrelatedLogsAndTraces(t *testing.T) {
 	span.SetAttributes(attribute.String("http.route", "GET /api/page"), attribute.String("url.full", "https://private.example?secret=private"))
 	span.RecordError(errors.New("private@example.test"))
 	slog.InfoContext(ctx, "request completed", "http.route", "GET /api/page", "error", "private@example.test")
+	jobCtx, job := otel.Tracer("test").Start(ctx, "schema.download")
+	job.SetAttributes(attribute.String("schema.product", "kubernetes"), attribute.String("schema.operation", "download"), attribute.Int("schema.updates", 1), attribute.String("url.full", "https://private.example?secret=private"))
+	slog.InfoContext(jobCtx, "schema downloaded", "schema.product", "kubernetes", "schema.operation", "download", "schema.updates", 1, "url.full", "https://private.example?secret=private")
+	job.End()
 	span.End()
 	if err := shutdown(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	close(exports)
+	if strings.Contains(local.String(), "private") || !strings.Contains(local.String(), `"schema.product":"kubernetes"`) || !strings.Contains(local.String(), `"trace_id":`) {
+		t.Fatalf("custom log sink lost sanitized job telemetry: %s", local.String())
+	}
 	var traceID, logTraceID []byte
 	for item := range exports {
 		var message proto.Message
@@ -195,6 +203,11 @@ func TestOTLPHTTPExportsCorrelatedLogsAndTraces(t *testing.T) {
 		encoded := protojson.Format(message)
 		if strings.Contains(encoded, "private") || strings.Contains(encoded, "secret-url") || !strings.Contains(encoded, "GET /api/page") {
 			t.Fatalf("unsafe or incomplete export: %s", encoded)
+		}
+		for _, expected := range []string{"schema.product", "schema.operation", "schema.updates", "kubernetes"} {
+			if !strings.Contains(encoded, expected) {
+				t.Errorf("job telemetry lost %s in %s", expected, item.path)
+			}
 		}
 	}
 	if len(traceID) != 16 || !bytes.Equal(traceID, logTraceID) {
