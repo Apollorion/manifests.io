@@ -82,6 +82,8 @@ Prerendering calls the same React component used by the browser. Pages are store
 
 The build bundles the synchronous React renderer with a URLSearchParams polyfill into `frontend/dist-render/renderer.js`. Production runs two isolated Goja workers with exclusive access, a two-second rendering deadline, cancellation, and a call-stack limit. JavaScript receives page JSON and no filesystem or network bindings. See [ADR 0002](adr/0002-render-contextual-react-pages-inside-the-go-backend.md) for the runtime-rendering trade-offs and React upgrade checks.
 
+The embedded bundle collects React's HTML chunks and joins them once. React's original repeated string append copies the growing Unicode output in Goja, causing quadratic allocation and rendering time on large contextual pages. The build checks the upstream collector's shape and fails if it changes, requiring review during React upgrades. Browser and Node bundles use unmodified React. Integration tests compare complete large-page output with Node and enforce an allocation budget. Run `go test ./internal/server -run '^$' -bench '^BenchmarkLargeContextualBurst$' -benchtime=1x` without race instrumentation to check forty concurrent contextual requests at the production deadline.
+
 ### Quick type search
 
 Use **Search all types** in the header, or press **Ctrl/Cmd+K** (also **Ctrl/Cmd+P**), to jump directly to any named type in the selected specification and version. This includes nested types such as `ContainerStatus`, not just top-level resources. Search tolerates typos and shows full type identifiers to distinguish API versions. Use arrow keys and Enter to open a result, or Escape to close the dialog and return focus.
