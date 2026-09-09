@@ -169,12 +169,10 @@ func Middleware(next http.Handler) http.Handler {
 			if status == 0 {
 				status = http.StatusOK
 			}
-			if failure := recover(); failure != nil {
+			failure := recover()
+			if failure != nil {
 				status = http.StatusInternalServerError
 				slog.ErrorContext(ctx, "request panicked", "http.route", route)
-				if response.status == 0 {
-					http.Error(response, "Internal server error", status)
-				}
 			}
 			method := r.Method
 			if !strings.Contains("|GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|CONNECT|TRACE|", "|"+method+"|") {
@@ -188,6 +186,10 @@ func Middleware(next http.Handler) http.Handler {
 			slog.InfoContext(ctx, "request completed", "http.request.method", method, "http.route", route, "http.response.status_code", status, "duration_ms", time.Since(started).Milliseconds())
 			span.End()
 			flushRequest(ctx)
+			if failure != nil {
+				// Abort incomplete responses without exposing panic details in server logs.
+				panic(http.ErrAbortHandler)
+			}
 			response.finish()
 		}()
 		next.ServeHTTP(response, r)

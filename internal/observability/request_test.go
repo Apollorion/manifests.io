@@ -35,7 +35,6 @@ func TestRequestsExportBeforeResponseCompletion(t *testing.T) {
 	for _, tc := range []struct {
 		name, method, body string
 		status             int
-		panic              bool
 	}{
 		{name: "large body", method: http.MethodGet, status: 200, body: strings.Repeat("schema", 1<<16)},
 		{name: "single byte", method: http.MethodGet, status: 200, body: "x"},
@@ -43,7 +42,6 @@ func TestRequestsExportBeforeResponseCompletion(t *testing.T) {
 		{name: "head", method: http.MethodHead, status: 200},
 		{name: "not modified", method: http.MethodGet, status: 304},
 		{name: "no content", method: http.MethodGet, status: 204},
-		{name: "panic", method: http.MethodGet, status: 500, body: "Internal server error\n", panic: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			preserveTelemetry(t)
@@ -110,9 +108,6 @@ func TestRequestsExportBeforeResponseCompletion(t *testing.T) {
 				r.Pattern = "GET /page"
 				_, span := otel.Tracer("test").Start(r.Context(), "react.render")
 				defer span.End()
-				if tc.panic {
-					panic("synthetic failure")
-				}
 				w.Header().Set("Content-Length", strconv.Itoa(len(tc.body)))
 				w.WriteHeader(tc.status)
 				mid := len(tc.body) / 2
@@ -270,5 +265,55 @@ func TestCollectorOutageReleasesResponse(t *testing.T) {
 	}
 	if response.Code != http.StatusOK || response.Body.String() != "ok" {
 		t.Fatal("collector outage changed response")
+	}
+}
+
+func TestPanicsAbortHTTPResponses(t *testing.T) {
+	preserveTelemetry(t)
+	exporters.Store(nil)
+	slog.SetDefault(slog.New(slog.NewJSONHandler(io.Discard, nil)))
+	for _, tc := range []struct {
+		name, method, body string
+		headers, length    bool
+	}{
+		{name: "before headers", method: http.MethodGet},
+		{name: "empty response headers", method: http.MethodGet, headers: true, length: true},
+		{name: "head headers", method: http.MethodHead, headers: true, length: true},
+		{name: "buffered body", method: http.MethodGet, headers: true, length: true, body: "body"},
+		{name: "streamed known length", method: http.MethodGet, headers: true, length: true, body: strings.Repeat("body", 1<<15)},
+		{name: "streamed chunked", method: http.MethodGet, headers: true, body: strings.Repeat("body", 1<<15)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Cache-Control", "public, max-age=3600")
+				if tc.length {
+					w.Header().Set("Content-Length", strconv.Itoa(len(tc.body)))
+				}
+				if tc.headers {
+					w.WriteHeader(http.StatusOK)
+				}
+				if tc.body != "" {
+					_, _ = io.WriteString(w, tc.body)
+				}
+				panic("private panic details")
+			})))
+			t.Cleanup(server.Close)
+			request, err := http.NewRequestWithContext(t.Context(), tc.method, server.URL, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			response, err := server.Client().Do(request)
+			if err != nil {
+				return
+			}
+			defer func() { _ = response.Body.Close() }()
+			body, err := io.ReadAll(response.Body)
+			if err == nil {
+				t.Fatalf("panic produced a complete cacheable response: status=%d bytes=%d", response.StatusCode, len(body))
+			}
+			if strings.Contains(string(body), "private panic details") {
+				t.Fatal("panic details leaked in response")
+			}
+		})
 	}
 }
