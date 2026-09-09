@@ -39,16 +39,21 @@ func TestReactRendererBundle(t *testing.T) {
 	if strings.Contains(string(html), "<img src=x") {
 		t.Fatal("description was executable HTML")
 	}
-	command := exec.Command("node", "--input-type=module", "-e", `import {render} from './frontend/dist-server/entry-server.js'; let data=''; for await (const chunk of process.stdin) data+=chunk; process.stdout.write(render(JSON.parse(data)));`)
+	if !bytes.Equal(html, nodeRenderedPage(t, data)) {
+		t.Fatal("embedded React output differs from the build renderer")
+	}
+}
+
+func nodeRenderedPage(t testing.TB, data []byte) []byte {
+	t.Helper()
+	command := exec.CommandContext(t.Context(), "node", "--input-type=module", "-e", `import {render} from './frontend/dist-server/entry-server.js'; let data=''; for await (const chunk of process.stdin) data+=chunk; process.stdout.write(render(JSON.parse(data)));`)
 	command.Dir = "../.."
 	command.Stdin = bytes.NewReader(data)
 	expected, err := command.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Node reference renderer: %s %v", expected, err)
 	}
-	if !bytes.Equal(html, expected) {
-		t.Fatal("embedded React output differs from the build renderer")
-	}
+	return expected
 }
 
 func TestRendererCancellationAndConcurrentIsolation(t *testing.T) {
