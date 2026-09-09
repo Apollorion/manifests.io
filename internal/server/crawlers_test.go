@@ -185,7 +185,7 @@ func TestCrawlerHTTPContract(t *testing.T) {
 			if w.Code != 200 {
 				t.Fatalf("%s %s: status %d", method, path, w.Code)
 			}
-			if w.Header().Get("X-Content-Type-Options") != "nosniff" || w.Header().Get("Content-Length") == "" || w.Header().Get("Cache-Control") != "public, max-age=0, must-revalidate" {
+			if w.Header().Get("X-Content-Type-Options") != "nosniff" || w.Header().Get("Content-Length") == "" || w.Header().Get("Cache-Control") != "public, max-age=0, s-maxage=604800, must-revalidate" {
 				t.Fatalf("crawler headers missing: %v", w.Header())
 			}
 			if strings.Contains(w.Body.String(), "injection.invalid") {

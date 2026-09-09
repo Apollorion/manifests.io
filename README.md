@@ -135,6 +135,8 @@ Publishing uses [GitHub OIDC through Google Workload Identity Federation](https:
 
 The production Spacelift stack uses [`TheOutdoorProgrammer/configurations`, `manifests/production`](https://github.com/TheOutdoorProgrammer/configurations/tree/main/manifests/production). Its OpenTofu configuration resolves the `production` tag to an immutable digest and plans the Cloud Run update. GitHub Actions publishes images; Spacelift owns infrastructure and deployment.
 
+Successful public HTML, JSON, crawler documents, redirects, and ordinary assets advertise a seven-day shared cache lifetime. Browsers revalidate those URLs, so a Cloudflare purge exposes updated content without requiring users to clear their browser cache. Hashed assets retain a one-year immutable lifetime. Health checks and errors are not cached. The production Cloudflare proxy caches eligible reads, preserves query variants, and reports `X-Manifests-Cache: HIT`, `MISS`, or `BYPASS`. Its Spacelift deployment hook purges the zone after a successful apply. To bust the cache manually, run `python3 ../../cloudflare/workers/purge-manifests-cache.py` as a task on `manifests-production`, or use Cloudflare's zone-wide **Purge Everything** action. Publishing an image alone does not invalidate the cache.
+
 1. Merge the application change into `main` and wait for both Verify jobs to succeed. A manual run on `main` follows the same checks.
 2. Start a production run in Spacelift and review the planned container digest and infrastructure changes.
 3. Approve the plan to deploy the candidate. Publishing an image alone does not change the live service.

@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
@@ -23,11 +25,21 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const requestFlushTimeout = time.Second
+
+type requestExporters struct {
+	flush []func(context.Context) error
+}
+
+var exporters atomic.Pointer[requestExporters]
+
 func Setup(ctx context.Context, version string) (func(context.Context) error, error) {
 	return SetupWithWriter(ctx, version, os.Stdout)
 }
 
 func SetupWithWriter(ctx context.Context, version string, output io.Writer) (func(context.Context) error, error) {
+	exporters.Store(nil)
+	request := &requestExporters{}
 	local := slog.NewJSONHandler(output, nil)
 	slog.SetDefault(slog.New(correlatedHandler{Handler: local}))
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
@@ -47,8 +59,9 @@ func SetupWithWriter(ctx context.Context, version string, output io.Writer) (fun
 		if err != nil {
 			return nil, errors.New("initialize trace exporter")
 		}
-		provider := sdktrace.NewTracerProvider(sdktrace.WithResource(res), sdktrace.WithBatcher(privateExporter{SpanExporter: exporter}))
+		provider := sdktrace.NewTracerProvider(sdktrace.WithResource(res), sdktrace.WithBatcher(privateExporter{SpanExporter: exporter}, sdktrace.WithExportTimeout(requestFlushTimeout)))
 		otel.SetTracerProvider(provider)
+		request.flush = append(request.flush, provider.ForceFlush)
 		shutdowns = append(shutdowns, provider.Shutdown)
 	} else {
 		provider := sdktrace.NewTracerProvider(sdktrace.WithResource(res), sdktrace.WithSampler(sdktrace.NeverSample()))
@@ -61,11 +74,37 @@ func SetupWithWriter(ctx context.Context, version string, output io.Writer) (fun
 			_ = shutdown(ctx)
 			return nil, errors.New("initialize log exporter")
 		}
-		provider := sdklog.NewLoggerProvider(sdklog.WithResource(res), sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter)))
+		provider := sdklog.NewLoggerProvider(sdklog.WithResource(res), sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter, sdklog.WithExportTimeout(requestFlushTimeout))))
+		request.flush = append(request.flush, provider.ForceFlush)
 		slog.SetDefault(slog.New(correlatedHandler{Handler: slog.NewMultiHandler(local, otelslog.NewHandler("manifests.io", otelslog.WithLoggerProvider(provider)))}))
 		shutdowns = append(shutdowns, provider.Shutdown)
 	}
+	exporters.Store(request)
 	return shutdown, nil
+}
+
+func flushRequest(ctx context.Context) {
+	request := exporters.Load()
+	if request == nil || len(request.flush) == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), requestFlushTimeout)
+	defer cancel()
+	finished := make(chan error, len(request.flush))
+	for _, flush := range request.flush {
+		go func() { finished <- flush(ctx) }()
+	}
+	for range request.flush {
+		select {
+		case err := <-finished:
+			if err != nil {
+				otel.Handle(err)
+			}
+		case <-ctx.Done():
+			otel.Handle(ctx.Err())
+			return
+		}
+	}
 }
 
 func enabled(signal string) bool {
@@ -112,12 +151,15 @@ func safeLogKey(key string) bool {
 
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/healthz" || r.URL.Path == "/readyz" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		started := time.Now()
 		ctx := otel.GetTextMapPropagator().Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 		ctx, span := otel.Tracer("manifests.io/http").Start(ctx, "HTTP request", trace.WithSpanKind(trace.SpanKindServer))
-		defer span.End()
 		r = r.WithContext(ctx)
-		response := &responseCapture{ResponseWriter: w}
+		response := &responseCapture{ResponseWriter: w, head: r.Method == http.MethodHead}
 		defer func() {
 			route := r.Pattern
 			if route == "" {
@@ -127,12 +169,10 @@ func Middleware(next http.Handler) http.Handler {
 			if status == 0 {
 				status = http.StatusOK
 			}
-			if failure := recover(); failure != nil {
+			failure := recover()
+			if failure != nil {
 				status = http.StatusInternalServerError
 				slog.ErrorContext(ctx, "request panicked", "http.route", route)
-				if response.status == 0 {
-					http.Error(response, "Internal server error", status)
-				}
 			}
 			method := r.Method
 			if !strings.Contains("|GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|CONNECT|TRACE|", "|"+method+"|") {
@@ -144,6 +184,13 @@ func Middleware(next http.Handler) http.Handler {
 				span.SetStatus(codes.Error, "")
 			}
 			slog.InfoContext(ctx, "request completed", "http.request.method", method, "http.route", route, "http.response.status_code", status, "duration_ms", time.Since(started).Milliseconds())
+			span.End()
+			flushRequest(ctx)
+			if failure != nil {
+				// Abort incomplete responses without exposing panic details in server logs.
+				panic(http.ErrAbortHandler)
+			}
+			response.finish()
 		}()
 		next.ServeHTTP(response, r)
 	})
@@ -151,19 +198,30 @@ func Middleware(next http.Handler) http.Handler {
 
 type responseCapture struct {
 	http.ResponseWriter
-	status int
+	status    int
+	head      bool
+	committed bool
+	headers   http.Header
+	tail      []byte
+	length    int64
+	written   int64
 }
 
-func (w *responseCapture) Unwrap() http.ResponseWriter { return w.ResponseWriter }
-
 func (w *responseCapture) WriteHeader(status int) {
+	if status < 100 || status > 999 {
+		panic("invalid HTTP status code")
+	}
 	if status >= 100 && status < 200 {
 		w.ResponseWriter.WriteHeader(status)
 		return
 	}
 	if w.status == 0 {
 		w.status = status
-		w.ResponseWriter.WriteHeader(status)
+		w.headers = w.Header().Clone()
+		w.length = -1
+		if length, err := strconv.ParseInt(w.headers.Get("Content-Length"), 10, 64); err == nil && length >= 0 {
+			w.length = length
+		}
 	}
 }
 
@@ -171,7 +229,60 @@ func (w *responseCapture) Write(body []byte) (int, error) {
 	if w.status == 0 {
 		w.WriteHeader(http.StatusOK)
 	}
-	return w.ResponseWriter.Write(body)
+	if w.head || len(body) == 0 {
+		return len(body), nil
+	}
+	if w.status == http.StatusNoContent || w.status == http.StatusNotModified {
+		return 0, http.ErrBodyNotAllowed
+	}
+	if w.length >= 0 && w.written+int64(len(body)) > w.length {
+		return 0, http.ErrContentLength
+	}
+	if w.headers.Get("Content-Type") == "" && w.headers.Get("Content-Encoding") == "" {
+		w.headers.Set("Content-Type", http.DetectContentType(body))
+	}
+	// Withhold completion so Cloud Run supplies CPU during telemetry export.
+	if len(w.tail) > 0 {
+		w.commit()
+		if _, err := w.ResponseWriter.Write(w.tail); err != nil {
+			return 0, err
+		}
+	}
+	if len(body) > 1 {
+		w.commit()
+		n, err := w.ResponseWriter.Write(body[:len(body)-1])
+		if err != nil {
+			w.tail = nil
+			return n, err
+		}
+	}
+	w.tail = append(w.tail[:0], body[len(body)-1])
+	w.written += int64(len(body))
+	return len(body), nil
+}
+
+func (w *responseCapture) commit() {
+	if w.committed {
+		return
+	}
+	if w.status == 0 {
+		w.WriteHeader(http.StatusOK)
+	}
+	header := w.Header()
+	clear(header)
+	for key, values := range w.headers {
+		header[key] = values
+	}
+	w.ResponseWriter.WriteHeader(w.status)
+	w.committed = true
+}
+
+func (w *responseCapture) finish() {
+	w.commit()
+	if len(w.tail) > 0 {
+		_, _ = w.ResponseWriter.Write(w.tail)
+		w.tail = nil
+	}
 }
 
 type privateExporter struct{ sdktrace.SpanExporter }

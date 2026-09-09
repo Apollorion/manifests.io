@@ -60,7 +60,7 @@ resource "google_cloud_run_v2_service" "app" {
           cpu    = "1"
           memory = "1Gi"
         }
-        cpu_idle          = false
+        cpu_idle          = true
         startup_cpu_boost = true
       }
       startup_probe {
@@ -92,14 +92,6 @@ resource "google_cloud_run_v2_service" "app" {
       env {
         name  = "OTEL_EXPORTER_OTLP_PROTOCOL"
         value = "http/protobuf"
-      }
-      env {
-        name  = "OTEL_BSP_SCHEDULE_DELAY"
-        value = "1000"
-      }
-      env {
-        name  = "OTEL_BLRP_SCHEDULE_DELAY"
-        value = "1000"
       }
       env {
         name = "OTEL_EXPORTER_OTLP_HEADERS"

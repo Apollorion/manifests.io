@@ -82,6 +82,7 @@ func RenderFilename(canonical string) string {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 	w.Header().Set("X-Frame-Options", "DENY")
@@ -108,6 +109,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.failure(w, r, http.StatusServiceUnavailable, "No Kubernetes documentation is available.")
 			return
 		}
+		cachePublic(w)
 		http.Redirect(w, r, schema.Href(query), http.StatusTemporaryRedirect)
 		return
 	case "/api/catalog":
@@ -224,7 +226,7 @@ func (s *Server) serveFile(w http.ResponseWriter, r *http.Request, root string, 
 	if immutable {
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	} else {
-		w.Header().Set("Cache-Control", "public, max-age=3600")
+		cachePublic(w)
 	}
 	http.ServeFile(w, r, file)
 }
@@ -296,7 +298,9 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, p
 	}
 	body = bytes.ReplaceAll(body, []byte("<!--page-head-->"), []byte(head))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
+	if status == http.StatusOK {
+		cachePublic(w)
+	}
 	digest := sha256.Sum256(body)
 	etag := `"` + hex.EncodeToString(digest[:]) + `"`
 	w.Header().Set("ETag", etag)
@@ -331,9 +335,15 @@ func readRendered(filename string) ([]byte, error) {
 
 func writeJSON(w http.ResponseWriter, r *http.Request, status int, value any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
+	if status == http.StatusOK && strings.HasPrefix(r.URL.Path, "/api/") {
+		cachePublic(w)
+	}
 	w.WriteHeader(status)
 	if r.Method != http.MethodHead {
 		_ = json.NewEncoder(w).Encode(value)
 	}
+}
+
+func cachePublic(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "public, max-age=0, s-maxage=604800, must-revalidate")
 }

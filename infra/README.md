@@ -2,7 +2,7 @@
 
 This OpenTofu root runs the Go API, React frontend, and immutable schema corpus in one public Cloud Run service. It needs an existing billed project, a published linux/amd64 container image, and an existing Secret Manager secret. It creates no database, buckets, background workers, or secret payloads.
 
-The runtime has one CPU, 1 GiB memory for the parsed schema cache, at most five instances by default, and scales to zero. CPU remains allocated while an instance exists so batched telemetry can flush after requests finish. This uses instance-based billing. Startup probes allow up to two minutes for schema loading; measure peak memory with the production corpus before lowering the allocation.
+The runtime has one CPU, 1 GiB memory for the parsed schema cache, at most five instances by default, and scales to zero. It uses request-based billing with CPU throttled between requests (`cpu_idle = true`). Startup probes allow up to two minutes for schema loading; measure peak memory with the production corpus before lowering the allocation.
 
 ## Prepare a deployment
 
@@ -44,6 +44,8 @@ Use an item and version from `/api/catalog` for the page check. Confirm the depl
 ## Telemetry configuration
 
 Go uses OTLP HTTP/protobuf for traces and logs, plus structured stdout logs. Standard `OTEL_EXPORTER_OTLP_ENDPOINT`, signal-specific endpoint variables, and `OTEL_EXPORTER_OTLP_HEADERS` configure export. With no endpoint, export is disabled. `OTEL_SDK_DISABLED=true` disables both exporters; `OTEL_TRACES_EXPORTER=none` and `OTEL_LOGS_EXPORTER=none` disable individual signals. W3C TraceContext and Baggage propagation remain configured. Logs accept static messages and bounded attributes; never interpolate request data into log messages.
+
+The HTTP middleware ends the server span and emits the completion log before flushing both batch exporters concurrently. It retains the last response byte, or the headers for a bodyless response, until those flushes finish. This keeps the request active while Cloud Run supplies CPU without buffering whole schema documents. Export adds collector latency to origin requests, bounded by a shared one-second deadline; collector failures release the response and emit a sanitized local warning. Request cancellation does not cancel the bounded export attempt. Health and readiness probes bypass telemetry so collector outages cannot fail probes. Shutdown still drains requests and flushes remaining telemetry.
 
 The production container reuses the existing constrained public Faro collector; its CSP permits that collector. Docker's `VERSION` build argument also identifies the frontend build. Development builds and production previews on localhost export nothing. For Vite development with a local test collector, `VITE_FARO_URL` may point at that collector; `VITE_TELEMETRY_DISABLED=true` disables browser telemetry in a direct Vite build. These Vite development overrides are not Docker build arguments. No OTLP credential is ever a frontend build variable. Faro payloads are reconstructed through a shared privacy filter before SDK transport, with transient session IDs and no persistent session storage.
 
