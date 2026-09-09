@@ -108,7 +108,7 @@ func (s *Server) serveCrawler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", file.contentType)
-	w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
+	cachePublic(w)
 	w.Header().Set("ETag", file.etag)
 	if r.Header.Get("If-None-Match") == file.etag {
 		w.WriteHeader(http.StatusNotModified)
