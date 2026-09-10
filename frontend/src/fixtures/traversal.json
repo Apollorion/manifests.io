@@ -1,0 +1,2462 @@
+[
+  {
+    "name": "mutual-0",
+    "search": "path=Workload.schema",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "B",
+          "description": "",
+          "href": "/example/1/B?path=A.next\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "B",
+          "description": "",
+          "href": "/example/1/B?path=Workload.schema.next\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "mutual-1",
+    "search": "path=Workload.schema.next\u0026trail=%7B%22A%23%22%3A1%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "B",
+      "title": "B",
+      "description": "",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=B.next\u0026trail=%7B%22B%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "B",
+          "href": "/example/1/B"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/B"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "B",
+      "title": "Workload.schema.next",
+      "description": "",
+      "path": "Workload.schema.next",
+      "trail": "{\"A#\":1}",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=Workload.schema.next.next\u0026trail=%7B%22A%23%22%3A1%2C%22B%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "B",
+          "href": "/example/1/B"
+        },
+        {
+          "label": "Workload.schema.next",
+          "href": "/example/1/B?path=Workload.schema.next\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/B"
+    }
+  },
+  {
+    "name": "mutual-2",
+    "search": "path=Workload.schema.next.next\u0026trail=%7B%22A%23%22%3A1%2C%22B%23%22%3A1%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "B",
+          "description": "",
+          "href": "/example/1/B?path=A.next\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema.next.next",
+      "description": "",
+      "path": "Workload.schema.next.next",
+      "trail": "{\"A#\":1,\"B#\":1}",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "B",
+          "description": "",
+          "href": "/example/1/B?path=Workload.schema.next.next.next\u0026trail=%7B%22A%23%22%3A2%2C%22B%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema.next.next",
+          "href": "/example/1/A?path=Workload.schema.next.next\u0026trail=%7B%22A%23%22%3A1%2C%22B%23%22%3A1%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "mutual-3",
+    "search": "path=Workload.schema.next.next.next\u0026trail=%7B%22A%23%22%3A2%2C%22B%23%22%3A1%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "B",
+      "title": "B",
+      "description": "",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=B.next\u0026trail=%7B%22B%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "B",
+          "href": "/example/1/B"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/B"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "B",
+      "title": "Workload.schema.next.next.next",
+      "description": "",
+      "path": "Workload.schema.next.next.next",
+      "trail": "{\"A#\":2,\"B#\":1}",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=Workload.schema.next.next.next.next\u0026trail=%7B%22A%23%22%3A2%2C%22B%23%22%3A2%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "B",
+          "href": "/example/1/B"
+        },
+        {
+          "label": "Workload.schema.next.next.next",
+          "href": "/example/1/B?path=Workload.schema.next.next.next\u0026trail=%7B%22A%23%22%3A2%2C%22B%23%22%3A1%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/B"
+    }
+  },
+  {
+    "name": "mutual-4",
+    "search": "path=Workload.schema.next.next.next.next\u0026trail=%7B%22A%23%22%3A2%2C%22B%23%22%3A2%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "B",
+          "description": "",
+          "href": "/example/1/B?path=A.next\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema.next.next.next.next",
+      "description": "",
+      "path": "Workload.schema.next.next.next.next",
+      "trail": "{\"A#\":2,\"B#\":2}",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "B",
+          "description": "",
+          "href": "/example/1/B?path=Workload.schema.next.next.next.next.next\u0026trail=%7B%22A%23%22%3A3%2C%22B%23%22%3A2%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema.next.next.next.next",
+          "href": "/example/1/A?path=Workload.schema.next.next.next.next\u0026trail=%7B%22A%23%22%3A2%2C%22B%23%22%3A2%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "mutual-5",
+    "search": "path=Workload.schema.next.next.next.next.next\u0026trail=%7B%22A%23%22%3A3%2C%22B%23%22%3A2%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "B",
+      "title": "B",
+      "description": "",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=B.next\u0026trail=%7B%22B%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "B",
+          "href": "/example/1/B"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/B"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "B",
+      "title": "Workload.schema.next.next.next.next.next",
+      "description": "",
+      "path": "Workload.schema.next.next.next.next.next",
+      "trail": "{\"A#\":3,\"B#\":2}",
+      "cycles": [
+        "A#",
+        "B#"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "circular": true
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "B",
+          "href": "/example/1/B"
+        },
+        {
+          "label": "Workload.schema.next.next.next.next.next",
+          "href": "/example/1/B?path=Workload.schema.next.next.next.next.next\u0026trail=%7B%22A%23%22%3A3%2C%22B%23%22%3A2%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/B"
+    }
+  },
+  {
+    "name": "array-0",
+    "search": "path=Workload.schema",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A[]",
+          "description": "",
+          "href": "/example/1/A?path=A.next\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A[]",
+          "description": "",
+          "href": "/example/1/A?path=Workload.schema.next\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "array-1",
+    "search": "path=Workload.schema.next\u0026trail=%7B%22A%23%22%3A1%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A[]",
+          "description": "",
+          "href": "/example/1/A?path=A.next\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema.next",
+      "description": "",
+      "path": "Workload.schema.next",
+      "trail": "{\"A#\":1}",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A[]",
+          "description": "",
+          "href": "/example/1/A?path=Workload.schema.next.next\u0026trail=%7B%22A%23%22%3A2%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema.next",
+          "href": "/example/1/A?path=Workload.schema.next\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "array-2",
+    "search": "path=Workload.schema.next.next\u0026trail=%7B%22A%23%22%3A2%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A[]",
+          "description": "",
+          "href": "/example/1/A?path=A.next\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema.next.next",
+      "description": "",
+      "path": "Workload.schema.next.next",
+      "trail": "{\"A#\":2}",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A[]",
+          "description": "",
+          "circular": true
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema.next.next",
+          "href": "/example/1/A?path=Workload.schema.next.next\u0026trail=%7B%22A%23%22%3A2%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "map-0",
+    "search": "path=Workload.schema",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "resources": [
+        {
+          "name": "[key]",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=A.%5Bkey%5D\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "cycles": [
+        "A#"
+      ],
+      "resources": [
+        {
+          "name": "[key]",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=Workload.schema.%5Bkey%5D\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "map-1",
+    "search": "path=Workload.schema.%5Bkey%5D\u0026trail=%7B%22A%23%22%3A1%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "resources": [
+        {
+          "name": "[key]",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=A.%5Bkey%5D\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema.[key]",
+      "description": "",
+      "path": "Workload.schema.[key]",
+      "trail": "{\"A#\":1}",
+      "cycles": [
+        "A#"
+      ],
+      "resources": [
+        {
+          "name": "[key]",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=Workload.schema.%5Bkey%5D.%5Bkey%5D\u0026trail=%7B%22A%23%22%3A2%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema.[key]",
+          "href": "/example/1/A?path=Workload.schema.%5Bkey%5D\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "map-2",
+    "search": "path=Workload.schema.%5Bkey%5D.%5Bkey%5D\u0026trail=%7B%22A%23%22%3A2%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "resources": [
+        {
+          "name": "[key]",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=A.%5Bkey%5D\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema.[key].[key]",
+      "description": "",
+      "path": "Workload.schema.[key].[key]",
+      "trail": "{\"A#\":2}",
+      "cycles": [
+        "A#"
+      ],
+      "resources": [
+        {
+          "name": "[key]",
+          "type": "A",
+          "description": "",
+          "circular": true
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema.[key].[key]",
+          "href": "/example/1/A?path=Workload.schema.%5Bkey%5D.%5Bkey%5D\u0026trail=%7B%22A%23%22%3A2%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "inline-0",
+    "search": "path=Workload.schema",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "object",
+          "description": "",
+          "href": "/example/1/A?path=A.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "object",
+          "description": "",
+          "href": "/example/1/A?path=Workload.schema.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "inline-1",
+    "search": "path=Workload.schema.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A1%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A.next",
+      "description": "",
+      "pointer": "/properties/next",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=A.next.next\u0026trail=%7B%22A%23%2Fproperties%2Fnext%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "A.next",
+          "href": "/example/1/A?path=A.next\u0026pointer=%2Fproperties%2Fnext"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fnext"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema.next",
+      "description": "",
+      "path": "Workload.schema.next",
+      "pointer": "/properties/next",
+      "trail": "{\"A#\":1}",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=Workload.schema.next.next\u0026trail=%7B%22A%23%22%3A1%2C%22A%23%2Fproperties%2Fnext%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema.next",
+          "href": "/example/1/A?path=Workload.schema.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fnext"
+    }
+  },
+  {
+    "name": "inline-2",
+    "search": "path=Workload.schema.next.next\u0026trail=%7B%22A%23%22%3A1%2C%22A%23%2Fproperties%2Fnext%22%3A1%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "object",
+          "description": "",
+          "href": "/example/1/A?path=A.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema.next.next",
+      "description": "",
+      "path": "Workload.schema.next.next",
+      "trail": "{\"A#\":1,\"A#/properties/next\":1}",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "object",
+          "description": "",
+          "href": "/example/1/A?path=Workload.schema.next.next.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A2%2C%22A%23%2Fproperties%2Fnext%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema.next.next",
+          "href": "/example/1/A?path=Workload.schema.next.next\u0026trail=%7B%22A%23%22%3A1%2C%22A%23%2Fproperties%2Fnext%22%3A1%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "inline-3",
+    "search": "path=Workload.schema.next.next.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A2%2C%22A%23%2Fproperties%2Fnext%22%3A1%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A.next",
+      "description": "",
+      "pointer": "/properties/next",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=A.next.next\u0026trail=%7B%22A%23%2Fproperties%2Fnext%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "A.next",
+          "href": "/example/1/A?path=A.next\u0026pointer=%2Fproperties%2Fnext"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fnext"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema.next.next.next",
+      "description": "",
+      "path": "Workload.schema.next.next.next",
+      "pointer": "/properties/next",
+      "trail": "{\"A#\":2,\"A#/properties/next\":1}",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=Workload.schema.next.next.next.next\u0026trail=%7B%22A%23%22%3A2%2C%22A%23%2Fproperties%2Fnext%22%3A2%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema.next.next.next",
+          "href": "/example/1/A?path=Workload.schema.next.next.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A2%2C%22A%23%2Fproperties%2Fnext%22%3A1%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fnext"
+    }
+  },
+  {
+    "name": "inline-4",
+    "search": "path=Workload.schema.next.next.next.next\u0026trail=%7B%22A%23%22%3A2%2C%22A%23%2Fproperties%2Fnext%22%3A2%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "object",
+          "description": "",
+          "href": "/example/1/A?path=A.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema.next.next.next.next",
+      "description": "",
+      "path": "Workload.schema.next.next.next.next",
+      "trail": "{\"A#\":2,\"A#/properties/next\":2}",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "object",
+          "description": "",
+          "href": "/example/1/A?path=Workload.schema.next.next.next.next.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A3%2C%22A%23%2Fproperties%2Fnext%22%3A2%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema.next.next.next.next",
+          "href": "/example/1/A?path=Workload.schema.next.next.next.next\u0026trail=%7B%22A%23%22%3A2%2C%22A%23%2Fproperties%2Fnext%22%3A2%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "inline-5",
+    "search": "path=Workload.schema.next.next.next.next.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A3%2C%22A%23%2Fproperties%2Fnext%22%3A2%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A.next",
+      "description": "",
+      "pointer": "/properties/next",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "href": "/example/1/A?path=A.next.next\u0026trail=%7B%22A%23%2Fproperties%2Fnext%22%3A1%7D"
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "A.next",
+          "href": "/example/1/A?path=A.next\u0026pointer=%2Fproperties%2Fnext"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fnext"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema.next.next.next.next.next",
+      "description": "",
+      "path": "Workload.schema.next.next.next.next.next",
+      "pointer": "/properties/next",
+      "trail": "{\"A#\":3,\"A#/properties/next\":2}",
+      "cycles": [
+        "A#",
+        "A#/properties/next"
+      ],
+      "resources": [
+        {
+          "name": "next",
+          "type": "A",
+          "description": "",
+          "circular": true
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema.next.next.next.next.next",
+          "href": "/example/1/A?path=Workload.schema.next.next.next.next.next\u0026pointer=%2Fproperties%2Fnext\u0026trail=%7B%22A%23%22%3A3%2C%22A%23%2Fproperties%2Fnext%22%3A2%7D"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fnext"
+    }
+  },
+  {
+    "name": "oneOf-0",
+    "search": "path=Workload.schema",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "A",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "oneOf 1",
+              "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": [
+        {
+          "label": "oneOf 1",
+          "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "Workload.schema",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "oneOf 1",
+              "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema"
+        }
+      ],
+      "variants": [
+        {
+          "label": "oneOf 1",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "oneOf-1",
+    "search": "path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "A",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "oneOf 1",
+              "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": [
+        {
+          "label": "oneOf 1",
+          "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "trail": "{\"A#\":1}",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "Workload.schema",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "oneOf 1",
+              "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "variants": [
+        {
+          "label": "oneOf 1",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "oneOf-2",
+    "search": "path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "A",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "oneOf 1",
+              "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": [
+        {
+          "label": "oneOf 1",
+          "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "trail": "{\"A#\":2}",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "Workload.schema",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "oneOf 1",
+              "href": "",
+              "circular": true
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D"
+        }
+      ],
+      "variants": [
+        {
+          "label": "oneOf 1",
+          "href": "",
+          "circular": true
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "anyOf-0",
+    "search": "path=Workload.schema",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "A",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "anyOf 1",
+              "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": [
+        {
+          "label": "anyOf 1",
+          "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "Workload.schema",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "anyOf 1",
+              "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema"
+        }
+      ],
+      "variants": [
+        {
+          "label": "anyOf 1",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "anyOf-1",
+    "search": "path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "A",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "anyOf 1",
+              "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": [
+        {
+          "label": "anyOf 1",
+          "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "trail": "{\"A#\":1}",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "Workload.schema",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "anyOf 1",
+              "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "variants": [
+        {
+          "label": "anyOf 1",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "anyOf-2",
+    "search": "path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "A",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "anyOf 1",
+              "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": [
+        {
+          "label": "anyOf 1",
+          "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "trail": "{\"A#\":2}",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "Workload.schema",
+          "type": "A",
+          "description": "",
+          "variants": [
+            {
+              "label": "anyOf 1",
+              "href": "",
+              "circular": true
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D"
+        }
+      ],
+      "variants": [
+        {
+          "label": "anyOf 1",
+          "href": "",
+          "circular": true
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "allOf-0",
+    "search": "path=Workload.schema",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "A",
+          "type": "object",
+          "description": "",
+          "variants": [
+            {
+              "label": "allOf 1",
+              "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": [
+        {
+          "label": "allOf 1",
+          "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "Workload.schema",
+          "type": "object",
+          "description": "",
+          "variants": [
+            {
+              "label": "allOf 1",
+              "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema"
+        }
+      ],
+      "variants": [
+        {
+          "label": "allOf 1",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "allOf-1",
+    "search": "path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "A",
+          "type": "object",
+          "description": "",
+          "variants": [
+            {
+              "label": "allOf 1",
+              "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": [
+        {
+          "label": "allOf 1",
+          "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "trail": "{\"A#\":1}",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "Workload.schema",
+          "type": "object",
+          "description": "",
+          "variants": [
+            {
+              "label": "allOf 1",
+              "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "variants": [
+        {
+          "label": "allOf 1",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "allOf-2",
+    "search": "path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A",
+      "description": "",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "A",
+          "type": "object",
+          "description": "",
+          "variants": [
+            {
+              "label": "allOf 1",
+              "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        }
+      ],
+      "variants": [
+        {
+          "label": "allOf 1",
+          "href": "/example/1/A?path=A\u0026trail=%7B%22A%23%22%3A1%7D"
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.schema",
+      "description": "",
+      "path": "Workload.schema",
+      "trail": "{\"A#\":2}",
+      "cycles": [
+        "A#"
+      ],
+      "leaf": true,
+      "resources": [
+        {
+          "name": "Workload.schema",
+          "type": "object",
+          "description": "",
+          "variants": [
+            {
+              "label": "allOf 1",
+              "href": "",
+              "circular": true
+            }
+          ]
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.schema",
+          "href": "/example/1/A?path=Workload.schema\u0026trail=%7B%22A%23%22%3A2%7D"
+        }
+      ],
+      "variants": [
+        {
+          "label": "allOf 1",
+          "href": "",
+          "circular": true
+        }
+      ],
+      "catalog": [],
+      "canonical": "/example/1/A"
+    }
+  },
+  {
+    "name": "inline-scalar",
+    "search": "path=Workload.value\u0026pointer=%2Fproperties%2Fvalue",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A.value",
+      "description": "",
+      "pointer": "/properties/value",
+      "leaf": true,
+      "resources": [
+        {
+          "name": "A.value",
+          "type": "string",
+          "description": ""
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "A.value",
+          "href": "/example/1/A?path=A.value\u0026pointer=%2Fproperties%2Fvalue"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fvalue"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.value",
+      "description": "",
+      "path": "Workload.value",
+      "pointer": "/properties/value",
+      "leaf": true,
+      "resources": [
+        {
+          "name": "Workload.value",
+          "type": "string",
+          "description": ""
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.value",
+          "href": "/example/1/A?path=Workload.value\u0026pointer=%2Fproperties%2Fvalue"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fvalue"
+    }
+  },
+  {
+    "name": "legacy-oneof-object",
+    "search": "key=choice\u0026oneOf=First\u0026path=Workload",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A.choice (oneOf 1)",
+      "description": "",
+      "pointer": "/properties/choice/oneOf/0",
+      "resources": [
+        {
+          "name": "field",
+          "type": "string",
+          "description": ""
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "A.choice (oneOf 1)",
+          "href": "/example/1/A?path=A.choice+%28oneOf+1%29\u0026pointer=%2Fproperties%2Fchoice%2FoneOf%2F0"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fchoice%2FoneOf%2F0"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.choice",
+      "description": "",
+      "path": "Workload.choice",
+      "pointer": "/properties/choice/oneOf/0",
+      "resources": [
+        {
+          "name": "field",
+          "type": "string",
+          "description": ""
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.choice",
+          "href": "/example/1/A?path=Workload.choice\u0026pointer=%2Fproperties%2Fchoice%2FoneOf%2F0"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fchoice%2FoneOf%2F0"
+    }
+  },
+  {
+    "name": "legacy-oneof-leaf",
+    "search": "key=choice\u0026oneOf=Second\u0026path=Workload",
+    "canonical": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "A.choice (oneOf 2)",
+      "description": "",
+      "pointer": "/properties/choice/oneOf/1",
+      "leaf": true,
+      "resources": [
+        {
+          "name": "A.choice (oneOf 2)",
+          "type": "integer",
+          "description": ""
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "A.choice (oneOf 2)",
+          "href": "/example/1/A?path=A.choice+%28oneOf+2%29\u0026pointer=%2Fproperties%2Fchoice%2FoneOf%2F1"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fchoice%2FoneOf%2F1"
+    },
+    "expected": {
+      "item": "example",
+      "version": "1",
+      "resource": "A",
+      "title": "Workload.choice",
+      "description": "",
+      "path": "Workload.choice",
+      "pointer": "/properties/choice/oneOf/1",
+      "leaf": true,
+      "resources": [
+        {
+          "name": "Workload.choice",
+          "type": "integer",
+          "description": ""
+        }
+      ],
+      "otherVersions": [],
+      "breadcrumbs": [
+        {
+          "label": "example 1",
+          "href": "/example/1"
+        },
+        {
+          "label": "A",
+          "href": "/example/1/A"
+        },
+        {
+          "label": "Workload.choice",
+          "href": "/example/1/A?path=Workload.choice\u0026pointer=%2Fproperties%2Fchoice%2FoneOf%2F1"
+        }
+      ],
+      "variants": null,
+      "catalog": [],
+      "canonical": "/example/1/A?pointer=%2Fproperties%2Fchoice%2FoneOf%2F1"
+    }
+  }
+]

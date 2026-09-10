@@ -185,13 +185,13 @@ describe('schema browser', () => {
     expect(localStorage.getItem('theme')).toBe('dark');
   });
 
-  it('builds API requests from the route and retains schema navigation parameters', () => {
+  it('builds canonical API requests while retaining schema selectors', () => {
     const query = new URLSearchParams(pageQuery({ pathname: '/gatewayapi/1.2.0/Foo%2FBar', search: '?path=Foo.spec&pointer=%2Fproperties%2Fspec&trail=encoded-history&oneOf=0&item=ignored' }));
     expect(query.get('item')).toBe('gatewayapi');
     expect(query.get('resource')).toBe('Foo/Bar');
-    expect(query.get('path')).toBe('Foo.spec');
+    expect(query.has('path')).toBe(false);
     expect(query.get('pointer')).toBe('/properties/spec');
-    expect(query.get('trail')).toBe('encoded-history');
+    expect(query.has('trail')).toBe(false);
     expect(query.get('oneOf')).toBe('0');
   });
 });

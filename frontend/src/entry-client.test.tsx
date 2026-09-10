@@ -11,14 +11,14 @@ vi.mock('react-dom/client', async importOriginal => {
 });
 vi.mock('./telemetry', () => ({ captureError: vi.fn(), captureSearchEvent: vi.fn(), initializeObservability: vi.fn() }));
 
-it('hydrates contextual server markup with the circular limit already rendered', async () => {
-  window.history.replaceState({}, '', '/example/1/Node?path=Node.children.children&trail=%7B%22Node%23%22%3A2%7D');
+it('hydrates canonical server markup without fetching page data', async () => {
+  window.history.replaceState({}, '', '/example/1/Node');
   const page: Page = {
-    item: 'example', version: '1', resource: 'Node', title: 'Node.children.children',
-    path: 'Node.children.children', trail: '{"Node#":2}',
+    item: 'example', version: '1', resource: 'Node', title: 'Node',
     description: '', canonical: '/example/1/Node', catalog: [], breadcrumbs: [],
     otherVersions: [], variants: [],
-    resources: [{ name: 'children', type: 'Node', description: 'Child nodes.', circular: true }],
+    cycles: ['Node#'],
+    resources: [{ name: 'children', type: 'Node', description: 'Child nodes.', href: '/example/1/Node?path=Node.children&trail=%7B%22Node%23%22%3A1%7D' }],
   };
   const container = document.createElement('div');
   container.id = 'root';
@@ -31,17 +31,19 @@ it('hydrates contextual server markup with the circular limit already rendered',
   document.body.append(container, data);
 
   expect(container).not.toHaveAttribute('inert');
-  expect(screen.getByText('Circular reference')).toBeVisible();
-  expect(screen.queryByRole('link', { name: 'children' })).not.toBeInTheDocument();
+  const fetchPage = vi.fn(() => Promise.reject(new Error('Unexpected origin request')));
+  vi.stubGlobal('fetch', fetchPage);
+  expect(screen.getByRole('link', { name: 'children' })).toBeVisible();
   await act(async () => { await import('./entry-client'); });
 
   expect(hydrateRoot).toHaveBeenCalledOnce();
   expect(createRoot).not.toHaveBeenCalled();
   expect(container.querySelector('h1')).toBe(originalHeading);
-  expect(screen.getByText('Circular reference')).toBeVisible();
-  expect(screen.queryByRole('link', { name: 'children' })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'children' })).toBeVisible();
+  expect(fetchPage).not.toHaveBeenCalled();
   await act(async () => { vi.mocked(hydrateRoot).mock.results[0].value.unmount(); });
   container.remove();
   data.remove();
   window.history.replaceState({}, '', '/');
+  vi.unstubAllGlobals();
 });

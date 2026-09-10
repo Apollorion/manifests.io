@@ -19,6 +19,10 @@ async function ready(page: Page, url: string) {
   await expect(page.getByRole('button', { name: 'Search all types' })).toBeEnabled();
 }
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/page?*', () => { throw new Error('Embedded pages must restore traversal without a page API request.'); });
+});
+
 test('home follows the latest Kubernetes catalog default', async ({ page, catalog }) => {
   const current = routes(catalog);
   expect(catalog.find(product => product.name === 'kubernetes')?.defaultVersion).toBe(current.version);
@@ -193,25 +197,20 @@ test('shared document restores legacy traversal and inline selectors in the brow
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Second.spec');
 });
 
-test('failed traversal load shows recovery instead of another visitor’s context', async ({ page, catalog, expectedConsoleErrors }) => {
+test('invalid local traversal shows recovery without an origin request', async ({ page, catalog }) => {
   const current = routes(catalog);
-  expectedConsoleErrors.push(/^Failed to load resource: net::ERR_FAILED$/);
-  await page.route('**/api/page?*', route => route.abort('failed'));
-  await page.goto(current.pod + '?path=Workload.template');
+  await page.goto(current.pod + '?path=Workload.template&trail=null');
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Browse available resources' })).toBeVisible();
   await expect(page.locator('#root')).not.toHaveAttribute('inert');
   await expect(page.locator('html')).not.toHaveAttribute('inert');
 });
 
-test('contextual links stay inert while the application module and page data load', async ({ page, catalog }) => {
+test('contextual links stay inert until the application restores embedded data', async ({ page, catalog }) => {
   const current = routes(catalog);
   let releaseModule!: () => void;
   const moduleReady = new Promise<void>(resolve => { releaseModule = resolve; });
-  let releasePage!: () => void;
-  const pageReady = new Promise<void>(resolve => { releasePage = resolve; });
   await page.route('**/assets/*.js', async route => { await moduleReady; await route.continue(); });
-  await page.route('**/api/page?*', async route => { await pageReady; await route.continue(); });
   const target = current.recursive + '?path=Workload.schema';
   const loaded = page.goto(target, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('html')).toHaveAttribute('inert', '');
@@ -224,9 +223,6 @@ test('contextual links stay inert while the application module and page data loa
   await expect(page).toHaveURL(target);
   releaseModule();
   await loaded;
-  await expect(page.locator('#root')).toHaveAttribute('inert', '');
-  await expect(page.locator('html')).toHaveAttribute('inert', '');
-  releasePage();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Workload.schema');
   await expect(page.locator('html')).not.toHaveAttribute('inert');
   await page.getByRole('link', { name: 'allOf', exact: true }).click();

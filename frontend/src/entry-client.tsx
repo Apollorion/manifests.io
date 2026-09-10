@@ -1,7 +1,7 @@
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { App, AppBoundary, RecoveryPage } from './App';
-import { pageQuery } from './navigation';
+import { pageQuery, restoreTraversal } from './navigation';
 import type { Page } from './types';
 import { captureError, captureSearchEvent, initializeObservability } from './telemetry';
 import './styles.css';
@@ -20,17 +20,17 @@ async function start() {
     if (data?.trim()) {
       page = JSON.parse(data) as Page;
     }
-    const query = new URLSearchParams(pageQuery(window.location));
-    const contextual = !page?.error && ((query.get('path') || query.get('linked') || '') !== (page?.path || '')
-      || (query.get('trail') || '') !== (page?.trail || ''));
-    if (!page || contextual) {
+    if (!page) {
       container.inert = true;
       container.setAttribute('aria-busy', 'true');
-      const response = await fetch(`/api/page?${query}`, { signal: AbortSignal.timeout(10_000) });
+      const response = await fetch(`/api/page?${pageQuery(window.location)}`, { signal: AbortSignal.timeout(10_000) });
       if (!response.ok) throw new Error('The documentation could not be loaded. Please try again.');
       page = await response.json() as Page;
     }
     if (!page) throw new Error('The documentation response was empty.');
+    const canonical = page;
+    page = restoreTraversal(page, new URLSearchParams(window.location.search));
+    const contextual = page !== canonical;
     const app = <AppBoundary page={page} onError={captureError}><App initialPage={page} onSearchEvent={captureSearchEvent}/></AppBoundary>;
     const options = { onUncaughtError: captureError, onRecoverableError: captureError };
     document.title = `${page.title} | Manifests.io`;
