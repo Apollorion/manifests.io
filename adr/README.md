@@ -8,3 +8,4 @@
 | [0004](0004-retain-five-schema-versions-per-release-track-and-default-to.md) | Retain five schema versions per release track and default to newest Kubernetes | Retain the five newest snapshots per product and track; derive the Kubernetes default from the catalog. |
 | [0005](0005-share-canonical-html-and-restore-traversal-in-the-browser.md) | Share canonical HTML and restore traversal in the browser | Cache documentation by schema identity; load visitor traversal through the existing page API. |
 | [0006](0006-restore-traversal-from-embedded-canonical-page-data.md) | Restore traversal from embedded canonical page data | Share HTML and API responses by schema identity and restore traversal locally without an API request. |
+| [0007](0007-share-concurrent-renders-of-identical-page-data.md) | Share concurrent renders of identical page data | Coalesce identical in-flight renders within each process while preserving caller deadlines and cancellation. |
