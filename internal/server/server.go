@@ -167,6 +167,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		r.Pattern = "/{item}/{version}"
 	}
+	if r.URL.Path != "/api/page" {
+		query.Path, query.Trail = "", ""
+	}
 	page, err := s.catalog.Page(query)
 	if err != nil {
 		s.schemaFailure(w, r, err)
@@ -261,7 +264,7 @@ func (s *Server) failure(w http.ResponseWriter, r *http.Request, status int, mes
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, page schema.Page) {
 	body := s.shell
 	prerendered := false
-	if status == http.StatusOK && r.URL.RequestURI() == page.Canonical && page.Path == "" && page.Trail == "" {
+	if status == http.StatusOK && page.Path == "" && page.Trail == "" {
 		if rendered, err := readRendered(filepath.Join(s.config.RenderDir, RenderFilename(page.Canonical))); err == nil {
 			body = rendered
 			prerendered = true

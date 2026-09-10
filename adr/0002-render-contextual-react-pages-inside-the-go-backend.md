@@ -4,7 +4,9 @@ Date: 2026-09-06
 
 ## Status
 
-Accepted. Supersedes [ADR-0001](0001-read-source-schemas-with-one-go-model-and-render-documentati.md).
+Accepted. Supersedes [ADR-0001](0001-read-source-schemas-with-one-go-model-and-render-documentati.md). Server rendering of visitor traversal context is superseded by [ADR-0005](0005-share-canonical-html-and-restore-traversal-in-the-browser.md).
+
+Canonical schema HTML and error pages continue to use the shared React renderer and Goja fallback.
 
 ## Context and Problem Statement
 

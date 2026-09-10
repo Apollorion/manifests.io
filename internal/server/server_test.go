@@ -114,7 +114,7 @@ func TestPageDataCannotEscapeScript(t *testing.T) {
 	}
 }
 
-func TestPrerenderCachingAndDynamicQueries(t *testing.T) {
+func TestPrerenderSharedAcrossTraversalQueries(t *testing.T) {
 	s := testServer(t)
 	file := filepath.Join(s.config.RenderDir, RenderFilename("/kubernetes/1.34"))
 	var compressed bytes.Buffer
@@ -145,8 +145,8 @@ func TestPrerenderCachingAndDynamicQueries(t *testing.T) {
 	}
 	dynamic := httptest.NewRecorder()
 	s.ServeHTTP(dynamic, httptest.NewRequest("GET", "/kubernetes/1.34?path=Deployment.spec.template.spec", nil))
-	if !strings.Contains(dynamic.Body.String(), "Fresh rendered fields") || strings.Contains(dynamic.Body.String(), "Server rendered fields") || strings.Contains(dynamic.Body.String(), " inert") {
-		t.Fatal("contextual query did not render fresh interactive HTML")
+	if dynamic.Body.String() != w.Body.String() || dynamic.Header().Get("ETag") != w.Header().Get("ETag") {
+		t.Fatal("traversal query changed the shared HTML or ETag")
 	}
 }
 
@@ -156,6 +156,46 @@ func TestErrorsRemainMachineReadable(t *testing.T) {
 	var page schema.Page
 	if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil || page.Error == "" || len(page.Catalog) == 0 {
 		t.Fatalf("error lacks recovery context: %s", w.Body)
+	}
+}
+
+func TestTraversalSharesHTMLButKeepsAPIContext(t *testing.T) {
+	catalog, err := schema.Load("../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := testServer(t)
+	s.catalog = catalog
+	version := schema.DefaultQuery(catalog.Products()).Version
+	resource := "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps"
+	base := "/kubernetes/" + version + "/" + resource
+	canonical := httptest.NewRecorder()
+	s.ServeHTTP(canonical, httptest.NewRequest(http.MethodGet, base, nil))
+	for _, query := range []string{
+		"?path=First.allOf&trail=%7B%22" + resource + "%23%22%3A2%7D",
+		"?linked=Second.anyOf",
+	} {
+		response := httptest.NewRecorder()
+		s.ServeHTTP(response, httptest.NewRequest(http.MethodGet, base+query, nil))
+		if response.Code != http.StatusOK || !bytes.Equal(response.Body.Bytes(), canonical.Body.Bytes()) || response.Header().Get("ETag") != canonical.Header().Get("ETag") {
+			t.Fatal("visitor traversal changed shared HTML")
+		}
+		api := httptest.NewRecorder()
+		s.ServeHTTP(api, httptest.NewRequest(http.MethodGet, "/api/page"+query+"&item=kubernetes&version="+version+"&resource="+resource, nil))
+		var page schema.Page
+		if api.Code != http.StatusOK || json.Unmarshal(api.Body.Bytes(), &page) != nil || page.Path == "" {
+			t.Fatal("page API lost visitor traversal")
+		}
+		for _, row := range page.Resources {
+			if row.Name == "allOf" && row.Circular != (page.Path == "First.allOf") {
+				t.Fatal("API circular limit does not match visitor history")
+			}
+		}
+	}
+	spec := httptest.NewRecorder()
+	s.ServeHTTP(spec, httptest.NewRequest(http.MethodGet, base+"?pointer=%2Fproperties%2Fdescription&path=First.description", nil))
+	if spec.Code != http.StatusOK || bytes.Equal(spec.Body.Bytes(), canonical.Body.Bytes()) {
+		t.Fatal("inline schema selector was ignored")
 	}
 }
 
