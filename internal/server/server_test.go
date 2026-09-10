@@ -9,10 +9,24 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/TheOutdoorProgrammer/manifests.io/internal/schema"
 )
+
+var loadCorpus = sync.OnceValues(func() (*schema.Catalog, error) {
+	return schema.Load("../..")
+})
+
+func corpusCatalog(t testing.TB) *schema.Catalog {
+	t.Helper()
+	catalog, err := loadCorpus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return catalog
+}
 
 type fakeCatalog struct{}
 
@@ -160,10 +174,7 @@ func TestErrorsRemainMachineReadable(t *testing.T) {
 }
 
 func TestTraversalSharesHTMLButKeepsAPIContext(t *testing.T) {
-	catalog, err := schema.Load("../..")
-	if err != nil {
-		t.Fatal(err)
-	}
+	catalog := corpusCatalog(t)
 	s := testServer(t)
 	s.catalog = catalog
 	version := schema.DefaultQuery(catalog.Products()).Version
@@ -200,10 +211,7 @@ func TestTraversalSharesHTMLButKeepsAPIContext(t *testing.T) {
 }
 
 func TestDefinitionsHTTPContract(t *testing.T) {
-	catalog, err := schema.Load("../..")
-	if err != nil {
-		t.Fatal(err)
-	}
+	catalog := corpusCatalog(t)
 	s := testServer(t)
 	s.catalog = catalog
 	version := schema.DefaultQuery(catalog.Products()).Version

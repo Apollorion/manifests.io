@@ -19,10 +19,7 @@ func prometheusRenderFixture(t testing.TB) (*schema.Catalog, *Server) {
 	if _, err := os.Stat(bundle); os.IsNotExist(err) {
 		t.Skip("run npm --prefix frontend run build for React integration")
 	}
-	catalog, err := schema.Load("../..")
-	if err != nil {
-		t.Fatal(err)
-	}
+	catalog := corpusCatalog(t)
 	s, err := New(catalog, Config{WebDir: "../../frontend/dist", RenderDir: t.TempDir(), PublicDir: "../../public", RendererFile: bundle})
 	if err != nil {
 		t.Fatal(err)
