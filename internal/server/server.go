@@ -106,7 +106,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Pattern = "/"
 		query := schema.DefaultQuery(s.catalog.Products())
 		if query.Version == "" {
-			s.failure(w, r, http.StatusServiceUnavailable, "No Kubernetes documentation is available.")
+			s.failure(w, r, http.StatusServiceUnavailable, "No Kubernetes documentation is available.", false)
 			return
 		}
 		cachePublic(w)
@@ -148,9 +148,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, schema.ErrNotFound) {
 			status = http.StatusNotFound
 		}
-		s.failure(w, r, status, "This documentation URL is invalid.")
+		s.failure(w, r, status, "This documentation URL is invalid.", false)
 		return
 	}
+	query.Path, query.Trail = "", ""
 	if r.URL.Path == "/api/definitions" {
 		definitions, err := s.catalog.Definitions(query)
 		if err != nil {
@@ -167,9 +168,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		r.Pattern = "/{item}/{version}"
 	}
-	if r.URL.Path != "/api/page" {
-		query.Path, query.Trail = "", ""
-	}
 	page, err := s.catalog.Page(query)
 	if err != nil {
 		s.schemaFailure(w, r, err)
@@ -179,7 +177,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, r, http.StatusOK, page)
 		return
 	}
-	s.servePage(w, r, http.StatusOK, page)
+	s.servePage(w, r, http.StatusOK, page, true)
 }
 
 func parseQuery(r *http.Request) (schema.Query, error) {
@@ -241,10 +239,10 @@ func (s *Server) schemaFailure(w http.ResponseWriter, r *http.Request, err error
 	} else if errors.Is(err, schema.ErrBadQuery) {
 		status, message = http.StatusBadRequest, "This documentation URL is invalid."
 	}
-	s.failure(w, r, status, message)
+	s.failure(w, r, status, message, errors.Is(err, schema.ErrNotFound))
 }
 
-func (s *Server) failure(w http.ResponseWriter, r *http.Request, status int, message string) {
+func (s *Server) failure(w http.ResponseWriter, r *http.Request, status int, message string, cacheable bool) {
 	products := s.catalog.Products()
 	defaultQuery := schema.DefaultQuery(products)
 	page := schema.Page{Item: defaultQuery.Item, Version: defaultQuery.Version, Title: "Documentation unavailable", Error: message, Catalog: products, Canonical: "/"}
@@ -255,13 +253,16 @@ func (s *Server) failure(w http.ResponseWriter, r *http.Request, status int, mes
 		}
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/") {
+		if cacheable {
+			cachePublic(w)
+		}
 		writeJSON(w, r, status, page)
 		return
 	}
-	s.servePage(w, r, status, page)
+	s.servePage(w, r, status, page, cacheable)
 }
 
-func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, page schema.Page) {
+func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, page schema.Page, cacheable bool) {
 	body := s.shell
 	prerendered := false
 	if status == http.StatusOK && page.Path == "" && page.Trail == "" {
@@ -301,7 +302,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, p
 	}
 	body = bytes.ReplaceAll(body, []byte("<!--page-head-->"), []byte(head))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if status == http.StatusOK {
+	if cacheable {
 		cachePublic(w)
 	}
 	digest := sha256.Sum256(body)

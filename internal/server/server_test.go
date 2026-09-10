@@ -34,7 +34,10 @@ func (fakeCatalog) Products() []schema.Product {
 	return []schema.Product{{Name: "kubernetes", Versions: []string{"1.34"}}}
 }
 
-func (fakeCatalog) Definitions(schema.Query) ([]schema.Definition, error) {
+func (fakeCatalog) Definitions(q schema.Query) ([]schema.Definition, error) {
+	if q.Item != "kubernetes" || q.Version != "1.34" {
+		return nil, schema.ErrNotFound
+	}
 	return []schema.Definition{}, nil
 }
 
@@ -173,7 +176,7 @@ func TestErrorsRemainMachineReadable(t *testing.T) {
 	}
 }
 
-func TestTraversalSharesHTMLButKeepsAPIContext(t *testing.T) {
+func TestTraversalSharesHTMLAndAPIData(t *testing.T) {
 	catalog := corpusCatalog(t)
 	s := testServer(t)
 	s.catalog = catalog
@@ -182,9 +185,13 @@ func TestTraversalSharesHTMLButKeepsAPIContext(t *testing.T) {
 	base := "/kubernetes/" + version + "/" + resource
 	canonical := httptest.NewRecorder()
 	s.ServeHTTP(canonical, httptest.NewRequest(http.MethodGet, base, nil))
+	apiURL := "/api/page?item=kubernetes&version=" + version + "&resource=" + resource
+	canonicalAPI := httptest.NewRecorder()
+	s.ServeHTTP(canonicalAPI, httptest.NewRequest(http.MethodGet, apiURL, nil))
 	for _, query := range []string{
 		"?path=First.allOf&trail=%7B%22" + resource + "%23%22%3A2%7D",
 		"?linked=Second.anyOf",
+		"?path=First.allOf&trail=invalid",
 	} {
 		response := httptest.NewRecorder()
 		s.ServeHTTP(response, httptest.NewRequest(http.MethodGet, base+query, nil))
@@ -192,21 +199,39 @@ func TestTraversalSharesHTMLButKeepsAPIContext(t *testing.T) {
 			t.Fatal("visitor traversal changed shared HTML")
 		}
 		api := httptest.NewRecorder()
-		s.ServeHTTP(api, httptest.NewRequest(http.MethodGet, "/api/page"+query+"&item=kubernetes&version="+version+"&resource="+resource, nil))
+		s.ServeHTTP(api, httptest.NewRequest(http.MethodGet, apiURL+"&"+strings.TrimPrefix(query, "?"), nil))
 		var page schema.Page
-		if api.Code != http.StatusOK || json.Unmarshal(api.Body.Bytes(), &page) != nil || page.Path == "" {
-			t.Fatal("page API lost visitor traversal")
+		if api.Code != http.StatusOK || !bytes.Equal(api.Body.Bytes(), canonicalAPI.Body.Bytes()) || json.Unmarshal(api.Body.Bytes(), &page) != nil || page.Path != "" || page.Trail != "" {
+			t.Fatal("visitor traversal changed shared API data")
 		}
-		for _, row := range page.Resources {
-			if row.Name == "allOf" && row.Circular != (page.Path == "First.allOf") {
-				t.Fatal("API circular limit does not match visitor history")
-			}
+		if len(page.Cycles) == 0 {
+			t.Fatal("shared API lacks browser cycle metadata")
 		}
 	}
 	spec := httptest.NewRecorder()
 	s.ServeHTTP(spec, httptest.NewRequest(http.MethodGet, base+"?pointer=%2Fproperties%2Fdescription&path=First.description", nil))
 	if spec.Code != http.StatusOK || bytes.Equal(spec.Body.Bytes(), canonical.Body.Bytes()) {
 		t.Fatal("inline schema selector was ignored")
+	}
+	specAPI := httptest.NewRecorder()
+	s.ServeHTTP(specAPI, httptest.NewRequest(http.MethodGet, apiURL+"&pointer=%2Fproperties%2Fdescription&path=First.description", nil))
+	if specAPI.Code != http.StatusOK || bytes.Equal(specAPI.Body.Bytes(), canonicalAPI.Body.Bytes()) {
+		t.Fatal("API inline schema selector was ignored")
+	}
+}
+
+func TestDefinitionsIgnoreTraversalContext(t *testing.T) {
+	s := testServer(t)
+	s.catalog = corpusCatalog(t)
+	base := "/api/definitions?item=kubernetes&version=" + schema.DefaultQuery(s.catalog.Products()).Version
+	canonical := httptest.NewRecorder()
+	s.ServeHTTP(canonical, httptest.NewRequest(http.MethodGet, base, nil))
+	for _, query := range []string{"&path=Deployment.spec", "&linked=Pod.spec&trail=invalid"} {
+		response := httptest.NewRecorder()
+		s.ServeHTTP(response, httptest.NewRequest(http.MethodGet, base+query, nil))
+		if response.Code != http.StatusOK || !bytes.Equal(response.Body.Bytes(), canonical.Body.Bytes()) {
+			t.Fatal("visitor traversal changed definitions API data")
+		}
 	}
 }
 

@@ -85,6 +85,7 @@ func (c *Catalog) Page(q Query) (Page, error) {
 		q.OneOf, q.Key = "", ""
 	}
 	q = d.canonicalQuery(selected, q)
+	p.Cycles = sortedKeys(d.cyclic)
 	p.Resource, p.Pointer, p.Path = q.Resource, q.Pointer, q.Path
 	p.Trail = q.Trail
 	if err := d.trackVisits(&q, selected); err != nil {
@@ -149,6 +150,7 @@ func (c *Catalog) Page(q Query) (Page, error) {
 		p.Resources = append(p.Resources, Row{Name: "[key]", Type: "any"})
 	}
 	if len(p.Resources) == 0 {
+		p.Leaf = true
 		row := d.buildRow(p.Title, &openapi3.SchemaRef{Value: rowSchema}, rowQuery)
 		row.Href = ""
 		row.Circular = false

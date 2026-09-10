@@ -3,6 +3,7 @@ package schema
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -19,20 +20,22 @@ func cycleCatalog(t *testing.T, schemas string) *Catalog {
 	return &Catalog{documents: map[string]*document{"example/1": d, "example/2": d}}
 }
 
+var circularSchemaCases = []struct {
+	name, schemas string
+	clicks        int
+	variant       bool
+}{
+	{"mutual", `{"A":{"properties":{"next":{"$ref":"#/components/schemas/B"}}},"B":{"properties":{"next":{"$ref":"#/components/schemas/A"}}}}`, 5, false},
+	{"array", `{"A":{"properties":{"next":{"type":"array","items":{"$ref":"#/components/schemas/A"}}}}}`, 2, false},
+	{"map", `{"A":{"additionalProperties":{"$ref":"#/components/schemas/A"}}}`, 2, false},
+	{"inline", `{"A":{"properties":{"next":{"properties":{"next":{"$ref":"#/components/schemas/A"}}}}}}`, 5, false},
+	{"oneOf", `{"A":{"oneOf":[{"$ref":"#/components/schemas/A"}]}}`, 2, true},
+	{"anyOf", `{"A":{"anyOf":[{"$ref":"#/components/schemas/A"}]}}`, 2, true},
+	{"allOf", `{"A":{"allOf":[{"$ref":"#/components/schemas/A"}]}}`, 2, true},
+}
+
 func TestCircularLinksAcrossSchemaShapes(t *testing.T) {
-	for _, tc := range []struct {
-		name, schemas string
-		clicks        int
-		variant       bool
-	}{
-		{"mutual", `{"A":{"properties":{"next":{"$ref":"#/components/schemas/B"}}},"B":{"properties":{"next":{"$ref":"#/components/schemas/A"}}}}`, 5, false},
-		{"array", `{"A":{"properties":{"next":{"type":"array","items":{"$ref":"#/components/schemas/A"}}}}}`, 2, false},
-		{"map", `{"A":{"additionalProperties":{"$ref":"#/components/schemas/A"}}}`, 2, false},
-		{"inline", `{"A":{"properties":{"next":{"properties":{"next":{"$ref":"#/components/schemas/A"}}}}}}`, 5, false},
-		{"oneOf", `{"A":{"oneOf":[{"$ref":"#/components/schemas/A"}]}}`, 2, true},
-		{"anyOf", `{"A":{"anyOf":[{"$ref":"#/components/schemas/A"}]}}`, 2, true},
-		{"allOf", `{"A":{"allOf":[{"$ref":"#/components/schemas/A"}]}}`, 2, true},
-	} {
+	for _, tc := range circularSchemaCases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := cycleCatalog(t, tc.schemas)
 			q := Query{Item: "example", Version: "1", Resource: "A"}
@@ -115,6 +118,38 @@ func TestInvalidCircularHistory(t *testing.T) {
 	for _, trail := range []string{`null`, `[]`, `{`, `{"A#":0}`, `{"A#":-1}`, `{"A#":4}`, `{"A#":3}`, `{"A#":1.5}`, strings.Repeat("x", 4097)} {
 		if _, err := c.Page(Query{Item: "example", Version: "1", Resource: "A", Trail: trail}); !errors.Is(err, ErrBadQuery) {
 			t.Errorf("accepted invalid trail %q: %v", trail, err)
+		}
+	}
+}
+
+func TestPageExposesCanonicalCycleIdentities(t *testing.T) {
+	c := cycleCatalog(t, `{"A":{"properties":{"next":{"$ref":"#/components/schemas/B"},"plain":{"type":"string"}}},"B":{"properties":{"next":{"$ref":"#/components/schemas/A"}}}}`)
+	page, err := c.Page(Query{Item: "example", Version: "1", Resource: "A"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(page.Cycles, []string{"A#", "B#"}) {
+		t.Fatalf("unexpected cycle identities: %v", page.Cycles)
+	}
+	for _, id := range page.Cycles {
+		resource, pointer, ok := strings.Cut(id, "#")
+		selected, err := c.Page(Query{Item: "example", Version: "1", Resource: resource, Pointer: pointer})
+		if !ok || err != nil || selected.Resource+"#"+selected.Pointer != id {
+			t.Fatalf("cycle identity does not select its canonical schema: %q", id)
+		}
+	}
+	listing, err := c.Page(Query{Item: "example", Version: "1"})
+	if err != nil || len(listing.Cycles) != 0 {
+		t.Fatal("resource listing included unnecessary cycle metadata")
+	}
+}
+
+func TestLeafMetadataDistinguishesFallbackRows(t *testing.T) {
+	c := cycleCatalog(t, `{"A":{"properties":{"A":{"type":"string"}}}}`)
+	for _, pointer := range []string{"", "/properties/A"} {
+		page, err := c.Page(Query{Item: "example", Version: "1", Resource: "A", Pointer: pointer})
+		if err != nil || page.Leaf != (pointer != "") {
+			t.Fatalf("leaf metadata confused a named property with a fallback row: %+v, %v", page, err)
 		}
 	}
 }

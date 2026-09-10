@@ -85,7 +85,7 @@ func TestRenderFailureReporting(t *testing.T) {
 			}
 			request := httptest.NewRequest(http.MethodGet, "/kubernetes/1.34/Pod?path=private-render-marker", nil).WithContext(ctx)
 			response := httptest.NewRecorder()
-			s.servePage(response, request, http.StatusOK, schema.Page{Error: "private-render-marker"})
+			s.servePage(response, request, http.StatusOK, schema.Page{Error: "private-render-marker"}, true)
 			spans := exporter.GetSpans()
 			if len(spans) != 1 {
 				t.Fatalf("got %d render spans", len(spans))

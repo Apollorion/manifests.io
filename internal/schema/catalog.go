@@ -73,6 +73,8 @@ type Page struct {
 	Path          string    `json:"path,omitempty"`
 	Pointer       string    `json:"pointer,omitempty"`
 	Trail         string    `json:"trail,omitempty"`
+	Cycles        []string  `json:"cycles,omitempty"`
+	Leaf          bool      `json:"leaf,omitempty"`
 	Resources     []Row     `json:"resources"`
 	OtherVersions []Link    `json:"otherVersions"`
 	Breadcrumbs   []Link    `json:"breadcrumbs"`
