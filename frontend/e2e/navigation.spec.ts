@@ -129,46 +129,79 @@ test('search follows the selected catalog and preserves inline CRD targets', asy
   await expect(page.getByRole('heading', { level: 1 })).toContainText('additionalOutputFormats');
 });
 
-for (const javaScriptEnabled of [true, false]) {
-  test.describe(javaScriptEnabled ? 'hydrated navigation' : 'without JavaScript', () => {
-    test.use({ javaScriptEnabled });
-
-    test('Deployment traversal keeps readable context at the actual referenced type', async ({ page, catalog }) => {
-      const current = routes(catalog);
-      await page.goto(current.deployment);
-      if (javaScriptEnabled) await expect(page.getByRole('button', { name: 'Search all types' })).toBeEnabled();
-      for (const field of ['spec', 'template', 'spec']) await page.getByRole('link', { name: field, exact: true }).click();
-      await expect(page).toHaveURL(`${current.base}/io.k8s.api.core.v1.PodSpec?path=Deployment.spec.template.spec`);
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Deployment.spec.template.spec');
-      await expect(page.getByRole('link', { name: 'containers', exact: true })).toBeVisible();
-    });
-
-    test('circular references stop at three visits across refresh and history', async ({ page, catalog }) => {
-      const current = routes(catalog);
-      await page.goto(current.recursive);
-      if (javaScriptEnabled) await expect(page.getByRole('button', { name: 'Search all types' })).toBeEnabled();
-      await page.getByRole('link', { name: 'allOf', exact: true }).click();
-      const secondVisit = page.url();
-      await page.getByRole('link', { name: 'allOf', exact: true }).click();
-      const thirdVisit = page.url();
-      const blocked = page.getByRole('row').filter({ has: page.locator('th .field-name', { hasText: /^allOf/ }) });
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText('JSONSchemaProps.allOf.allOf');
-      await expect(blocked).toContainText('Circular reference');
-      await expect(blocked.getByRole('link')).toHaveCount(0);
-      await page.reload();
-      await expect(blocked).toContainText('This schema has already been visited 3 times in this path.');
-      await expect(blocked.getByRole('link')).toHaveCount(0);
-      await page.goBack();
-      await expect(page).toHaveURL(secondVisit);
-      await expect(page.getByRole('link', { name: 'allOf', exact: true })).toHaveCount(1);
-      await page.goForward();
-      await expect(page).toHaveURL(thirdVisit);
-      await expect(blocked.getByRole('link')).toHaveCount(0);
-      await page.getByRole('link', { name: 'externalDocs', exact: true }).click();
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText('JSONSchemaProps.allOf.allOf.externalDocs');
-    });
+test.describe('hydrated navigation', () => {
+  test('Deployment traversal keeps readable context at the actual referenced type', async ({ page, catalog }) => {
+    const current = routes(catalog);
+    await ready(page, current.deployment);
+    for (const field of ['spec', 'template', 'spec']) await page.getByRole('link', { name: field, exact: true }).click();
+    await expect(page).toHaveURL(`${current.base}/io.k8s.api.core.v1.PodSpec?path=Deployment.spec.template.spec`);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Deployment.spec.template.spec');
+    await expect(page.getByRole('link', { name: 'containers', exact: true })).toBeVisible();
   });
-}
+
+  test('circular references stop at three visits across refresh and history', async ({ page, catalog }) => {
+    const current = routes(catalog);
+    await ready(page, current.recursive);
+    await page.getByRole('link', { name: 'allOf', exact: true }).click();
+    const secondVisit = page.url();
+    await page.getByRole('link', { name: 'allOf', exact: true }).click();
+    const thirdVisit = page.url();
+    const blocked = page.getByRole('row').filter({ has: page.locator('th .field-name', { hasText: /^allOf/ }) });
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('JSONSchemaProps.allOf.allOf');
+    await expect(blocked).toContainText('Circular reference');
+    await expect(blocked.getByRole('link')).toHaveCount(0);
+    await page.reload();
+    await expect(blocked).toContainText('This schema has already been visited 3 times in this path.');
+    await expect(blocked.getByRole('link')).toHaveCount(0);
+    await page.goBack();
+    await expect(page).toHaveURL(secondVisit);
+    await expect(page.getByRole('link', { name: 'allOf', exact: true })).toHaveCount(1);
+    await page.goForward();
+    await expect(page).toHaveURL(thirdVisit);
+    await expect(blocked.getByRole('link')).toHaveCount(0);
+    await page.getByRole('link', { name: 'externalDocs', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('JSONSchemaProps.allOf.allOf.externalDocs');
+  });
+});
+
+test.describe('shared HTML without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('recursive traversal returns the same canonical links instead of expanding context', async ({ page, catalog }) => {
+    const current = routes(catalog);
+    await page.goto(current.recursive + '?path=Deep.context&trail=%7B%22invalid%22%3A2%7D');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('JSONSchemaProps');
+    const next = await page.getByRole('link', { name: 'allOf', exact: true }).getAttribute('href');
+    await page.getByRole('link', { name: 'allOf', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('JSONSchemaProps');
+    await expect(page.getByRole('link', { name: 'allOf', exact: true })).toHaveAttribute('href', next!);
+    await expect(page.getByRole('link', { name: 'externalDocs', exact: true })).toBeVisible();
+  });
+});
+
+test('shared document restores legacy traversal and inline selectors in the browser', async ({ page, catalog, request }) => {
+  const current = routes(catalog);
+  const base = `${current.certBase}/io.cert-manager.v1.Certificate?pointer=%2Fproperties%2Fspec`;
+  const first = await request.get(base + '&path=First.spec');
+  const second = await request.get(base + '&linked=Second.spec');
+  expect(await first.text()).toBe(await second.text());
+  expect(first.headers().etag).toBe(second.headers().etag);
+  await ready(page, base + '&linked=Second.spec');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Second.spec');
+  await expect(page.getByRole('link', { name: 'issuerRef', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Second.spec');
+});
+
+test('failed traversal load shows recovery instead of another visitor’s context', async ({ page, catalog, expectedConsoleErrors }) => {
+  const current = routes(catalog);
+  expectedConsoleErrors.push(/^Failed to load resource: net::ERR_FAILED$/);
+  await page.route('**/api/page?*', route => route.abort('failed'));
+  await page.goto(current.pod + '?path=Workload.template');
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Browse available resources' })).toBeVisible();
+  await expect(page.locator('#root')).not.toHaveAttribute('inert');
+});
 
 test('320px search remains usable without horizontal overflow', async ({ page, catalog }) => {
   const current = routes(catalog);

@@ -19,10 +19,7 @@ func prometheusRenderFixture(t testing.TB) (*schema.Catalog, *Server) {
 	if _, err := os.Stat(bundle); os.IsNotExist(err) {
 		t.Skip("run npm --prefix frontend run build for React integration")
 	}
-	catalog, err := schema.Load("../..")
-	if err != nil {
-		t.Fatal(err)
-	}
+	catalog := corpusCatalog(t)
 	s, err := New(catalog, Config{WebDir: "../../frontend/dist", RenderDir: t.TempDir(), PublicDir: "../../public", RendererFile: bundle})
 	if err != nil {
 		t.Fatal(err)
@@ -79,8 +76,18 @@ func TestLargeContextualRenderer(t *testing.T) {
 			}
 			response := httptest.NewRecorder()
 			s.ServeHTTP(response, httptest.NewRequest(http.MethodGet, schema.Href(q), nil))
+			q.Path, q.Trail = "", ""
+			canonical, err := catalog.Page(q)
+			if err != nil {
+				t.Fatal(err)
+			}
+			canonicalData, err := json.Marshal(canonical)
+			if err != nil {
+				t.Fatal(err)
+			}
+			expected = nodeRenderedPage(t, canonicalData)
 			if response.Code != http.StatusOK || !bytes.Contains(response.Body.Bytes(), expected) {
-				t.Fatalf("contextual HTTP response is incomplete: status=%d", response.Code)
+				t.Fatalf("shared schema HTTP response is incomplete: status=%d", response.Code)
 			}
 		})
 	}
@@ -93,7 +100,9 @@ func BenchmarkLargeContextualBurst(b *testing.B) {
 	catalog, s := prometheusRenderFixture(b)
 	versions := prometheusVersions(b, catalog)
 	q := prometheusSpecQuery(versions[len(versions)-1])
-	page, err := catalog.Page(q)
+	canonical := q
+	canonical.Path, canonical.Trail = "", ""
+	page, err := catalog.Page(canonical)
 	if err != nil {
 		b.Fatal(err)
 	}

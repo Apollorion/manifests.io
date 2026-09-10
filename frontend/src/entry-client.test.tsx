@@ -12,6 +12,7 @@ vi.mock('react-dom/client', async importOriginal => {
 vi.mock('./telemetry', () => ({ captureError: vi.fn(), captureSearchEvent: vi.fn(), initializeObservability: vi.fn() }));
 
 it('hydrates contextual server markup with the circular limit already rendered', async () => {
+  window.history.replaceState({}, '', '/example/1/Node?path=Node.children.children&trail=%7B%22Node%23%22%3A2%7D');
   const page: Page = {
     item: 'example', version: '1', resource: 'Node', title: 'Node.children.children',
     path: 'Node.children.children', trail: '{"Node#":2}',
@@ -42,4 +43,5 @@ it('hydrates contextual server markup with the circular limit already rendered',
   await act(async () => { vi.mocked(hydrateRoot).mock.results[0].value.unmount(); });
   container.remove();
   data.remove();
+  window.history.replaceState({}, '', '/');
 });

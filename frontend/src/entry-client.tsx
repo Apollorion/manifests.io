@@ -17,15 +17,22 @@ async function start() {
     const data = document.getElementById('__PAGE_DATA__')?.textContent;
     if (data?.trim()) {
       page = JSON.parse(data) as Page;
-    } else {
-      const response = await fetch(`/api/page?${pageQuery(window.location)}`);
+    }
+    const query = new URLSearchParams(pageQuery(window.location));
+    const contextual = !page?.error && ((query.get('path') || query.get('linked') || '') !== (page?.path || '')
+      || (query.get('trail') || '') !== (page?.trail || ''));
+    if (!page || contextual) {
+      container.inert = true;
+      container.setAttribute('aria-busy', 'true');
+      const response = await fetch(`/api/page?${query}`, { signal: AbortSignal.timeout(10_000) });
       if (!response.ok) throw new Error('The documentation could not be loaded. Please try again.');
       page = await response.json() as Page;
     }
     if (!page) throw new Error('The documentation response was empty.');
     const app = <AppBoundary page={page} onError={captureError}><App initialPage={page} onSearchEvent={captureSearchEvent}/></AppBoundary>;
     const options = { onUncaughtError: captureError, onRecoverableError: captureError };
-    if (data?.trim() && container.hasChildNodes()) hydrateRoot(container, app, options);
+    document.title = `${page.title} | Manifests.io`;
+    if (data?.trim() && !contextual && container.hasChildNodes()) hydrateRoot(container, app, options);
     else createRoot(container, options).render(app);
   } catch (error) {
     captureError(error);
@@ -43,6 +50,9 @@ async function start() {
       } catch { /* Recovery remains available if the catalog is unreachable. */ }
     }
     createRoot(container).render(<RecoveryPage page={recovery}/>);
+  } finally {
+    container.inert = false;
+    container.removeAttribute('aria-busy');
   }
 }
 

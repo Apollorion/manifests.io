@@ -123,7 +123,7 @@ for (const path of [pod, `${podSpec}?path=Deployment.spec.template.spec`, `${pod
   assert(!body.includes('baadaa'), 'Old design credit is still rendered');
   assert(body.includes('Search all types'), 'Quick search entry point is missing');
   if (path === pod) assert(body.includes(`href="${podSpec}?path=Pod.spec"`), 'Rendered spec link lost target or traversal');
-  if (path.includes('path=Deployment.spec.template.spec')) assert(body.includes('<title>Deployment.spec.template.spec | Manifests.io</title>'));
+  if (path.includes('path=Deployment.spec.template.spec')) assert(body.includes('<title>PodSpec | Manifests.io</title>'));
   assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
 }
 
@@ -180,11 +180,11 @@ for (let visit = 1; visit <= 3; visit++) {
     assert.deepEqual(reloaded, current, 'Refresh changed the recursion limit');
     const html = await (await fetch(cyclicURL)).text();
     assert(!html.includes(' inert'), 'Server-rendered navigation is disabled');
-    assert(html.includes('Circular reference'), 'Circular state was not server-rendered');
-    assert(!/<a[^>]*>allOf<span/.test(html), 'Server-rendered recursive link bypasses the limit');
-    assert(html.includes('<h1>JSONSchemaProps.allOf.allOf</h1>'), 'Server-rendered title lost traversal');
+    assert(html.includes('<h1>JSONSchemaProps</h1>'), 'HTML is not shared across traversal contexts');
     const embedded = JSON.parse(html.match(/<script id="__PAGE_DATA__" type="application\/json">(.*?)<\/script>/s)[1]);
-    assert(embedded.resources.find(row => row.name === 'allOf').circular, 'HTML page data lost circular state');
+    assert(!embedded.path && !embedded.trail, 'Visitor traversal leaked into shared page data');
+    const canonical = await fetch(new URL(current.canonical, base));
+    assert.equal(html, await canonical.text(), 'Contextual and canonical HTML differ');
   }
 }
 const hpa = await (await fetch(`${base}${kubeBase}/io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler`)).text();

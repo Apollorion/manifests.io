@@ -44,10 +44,7 @@ func sitemapLocations(t *testing.T, body []byte, root, entry string) []string {
 }
 
 func TestCrawlerDocumentsCoverOnlyFiniteCanonicalRoutes(t *testing.T) {
-	catalog, err := schema.Load("../..")
-	if err != nil {
-		t.Fatal(err)
-	}
+	catalog := corpusCatalog(t)
 	const site = "https://docs.example.test"
 	routes := catalog.Routes()
 	files, err := buildCrawlerFiles(site, routes)

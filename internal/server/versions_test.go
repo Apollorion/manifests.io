@@ -16,12 +16,10 @@ func TestDeleteOptionsContextualRendering(t *testing.T) {
 	if _, err := os.Stat(bundle); os.IsNotExist(err) {
 		t.Skip("run npm --prefix frontend run build for React integration")
 	}
-	catalog, err := schema.Load("../..")
-	if err != nil {
-		t.Fatal(err)
-	}
+	catalog := corpusCatalog(t)
 	s := testServer(t)
 	s.catalog = catalog
+	var err error
 	s.renderer, err = newReactRenderer(bundle)
 	if err != nil {
 		t.Fatal(err)
