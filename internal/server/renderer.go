@@ -1,10 +1,13 @@
 package server
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/dop251/goja"
@@ -21,7 +24,19 @@ type reactWorker struct {
 type reactRenderer struct {
 	program *goja.Program
 	workers chan *reactWorker
+	mu      sync.Mutex
+	flights map[[sha256.Size]byte]*renderFlight
 }
+
+type renderFlight struct {
+	done    chan struct{}
+	cancel  context.CancelFunc
+	waiters int
+	html    []byte
+	err     error
+}
+
+const maxRenderFlights = 128
 
 func newReactRenderer(filename string) (*reactRenderer, error) {
 	source, err := os.ReadFile(filename)
@@ -51,11 +66,11 @@ func (r *reactRenderer) newWorker() (*reactWorker, error) {
 	}
 	exports := vm.Get("ManifestsRenderer")
 	if exports == nil || goja.IsUndefined(exports) || goja.IsNull(exports) {
-		return nil, errors.New("React renderer exports missing")
+		return nil, errors.New("react renderer exports missing")
 	}
 	render, ok := goja.AssertFunction(exports.ToObject(vm).Get("renderPage"))
 	if !ok {
-		return nil, errors.New("React renderPage export missing")
+		return nil, errors.New("react renderPage export missing")
 	}
 	return &reactWorker{vm: vm, render: render}, nil
 }
@@ -71,6 +86,66 @@ func (r *reactRenderer) render(ctx context.Context, data []byte) (html []byte, e
 		}
 		span.End()
 	}()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return r.renderShared(ctx, data)
+}
+
+func (r *reactRenderer) renderShared(ctx context.Context, data []byte) ([]byte, error) {
+	key := sha256.Sum256(data)
+	r.mu.Lock()
+	flight := r.flights[key]
+	if flight == nil {
+		if len(r.flights) >= maxRenderFlights {
+			r.mu.Unlock()
+			return r.renderWorker(ctx, data)
+		}
+		// Shared work outlives one caller but stops when its last waiter leaves.
+		workCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+		flight = &renderFlight{done: make(chan struct{}), cancel: cancel}
+		if r.flights == nil {
+			r.flights = make(map[[sha256.Size]byte]*renderFlight)
+		}
+		r.flights[key] = flight
+		data = bytes.Clone(data)
+		go func() {
+			html, err := r.renderWorker(workCtx, data)
+			cancel()
+			r.mu.Lock()
+			flight.html, flight.err = html, err
+			if r.flights[key] == flight {
+				delete(r.flights, key)
+			}
+			close(flight.done)
+			r.mu.Unlock()
+		}()
+	}
+	flight.waiters++
+	r.mu.Unlock()
+	defer func() {
+		r.mu.Lock()
+		flight.waiters--
+		if flight.waiters == 0 {
+			if r.flights[key] == flight {
+				delete(r.flights, key)
+			}
+			flight.cancel()
+		}
+		r.mu.Unlock()
+	}()
+	select {
+	case <-flight.done:
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		return bytes.Clone(flight.html), flight.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+func (r *reactRenderer) renderWorker(ctx context.Context, data []byte) (html []byte, err error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
