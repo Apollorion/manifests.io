@@ -30,6 +30,8 @@ export interface Page {
   path?: string;
   pointer?: string;
   trail?: string;
+  cycles?: string[];
+  leaf?: boolean;
   resources: Row[];
   otherVersions: Link[];
   breadcrumbs: Link[];

@@ -4,7 +4,9 @@ Date: 2026-09-10
 
 ## Status
 
-Accepted. Supersedes [ADR-0002](0002-render-contextual-react-pages-inside-the-go-backend.md).
+Accepted. Fetching contextual page data from the API is superseded by [ADR-0006](0006-restore-traversal-from-embedded-canonical-page-data.md).
+
+Canonical HTML, semantic selectors, and the synchronous startup guard remain in force. Supersedes [ADR-0002](0002-render-contextual-react-pages-inside-the-go-backend.md).
 
 ## Context and Problem Statement
 
