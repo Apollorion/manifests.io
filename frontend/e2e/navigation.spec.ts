@@ -201,6 +201,36 @@ test('failed traversal load shows recovery instead of another visitor’s contex
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Browse available resources' })).toBeVisible();
   await expect(page.locator('#root')).not.toHaveAttribute('inert');
+  await expect(page.locator('html')).not.toHaveAttribute('inert');
+});
+
+test('contextual links stay inert while the application module and page data load', async ({ page, catalog }) => {
+  const current = routes(catalog);
+  let releaseModule!: () => void;
+  const moduleReady = new Promise<void>(resolve => { releaseModule = resolve; });
+  let releasePage!: () => void;
+  const pageReady = new Promise<void>(resolve => { releasePage = resolve; });
+  await page.route('**/assets/*.js', async route => { await moduleReady; await route.continue(); });
+  await page.route('**/api/page?*', async route => { await pageReady; await route.continue(); });
+  const target = current.recursive + '?path=Workload.schema';
+  const loaded = page.goto(target, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('html')).toHaveAttribute('inert', '');
+  const next = page.locator('a').filter({ hasText: /^allOf/ }).first();
+  await expect(next).toBeVisible();
+  await next.scrollIntoViewIfNeeded();
+  const bounds = await next.boundingBox();
+  expect(bounds).not.toBeNull();
+  await page.mouse.click(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
+  await expect(page).toHaveURL(target);
+  releaseModule();
+  await loaded;
+  await expect(page.locator('#root')).toHaveAttribute('inert', '');
+  await expect(page.locator('html')).toHaveAttribute('inert', '');
+  releasePage();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Workload.schema');
+  await expect(page.locator('html')).not.toHaveAttribute('inert');
+  await page.getByRole('link', { name: 'allOf', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Workload.schema.allOf');
 });
 
 test('320px search remains usable without horizontal overflow', async ({ page, catalog }) => {
