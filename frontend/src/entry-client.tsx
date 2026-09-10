@@ -1,4 +1,5 @@
 import { createRoot, hydrateRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { App, AppBoundary, RecoveryPage } from './App';
 import { pageQuery } from './navigation';
 import type { Page } from './types';
@@ -9,6 +10,7 @@ async function start() {
   initializeObservability();
   const container = document.getElementById('root');
   if (!container) {
+    document.documentElement.inert = false;
     captureError(new Error('Missing application root'));
     return;
   }
@@ -33,7 +35,7 @@ async function start() {
     const options = { onUncaughtError: captureError, onRecoverableError: captureError };
     document.title = `${page.title} | Manifests.io`;
     if (data?.trim() && !contextual && container.hasChildNodes()) hydrateRoot(container, app, options);
-    else createRoot(container, options).render(app);
+    else flushSync(() => createRoot(container, options).render(app));
   } catch (error) {
     captureError(error);
     const recovery: Partial<Page> = page ?? {};
@@ -49,10 +51,11 @@ async function start() {
         if (response.ok) recovery.catalog = await response.json();
       } catch { /* Recovery remains available if the catalog is unreachable. */ }
     }
-    createRoot(container).render(<RecoveryPage page={recovery}/>);
+    flushSync(() => createRoot(container).render(<RecoveryPage page={recovery}/>));
   } finally {
     container.inert = false;
     container.removeAttribute('aria-busy');
+    document.documentElement.inert = false;
   }
 }
 
