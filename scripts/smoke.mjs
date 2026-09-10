@@ -78,6 +78,9 @@ for (const [item, version, name, title] of [['kubernetes', kubeVersion, 'Contain
   const response = await fetch(`${base}/api/definitions?${new URLSearchParams({ item, version })}`);
   assert.equal(response.status, 200);
   const definitions = await response.json();
+  const contextualDefinitions = await fetch(`${base}/api/definitions?${new URLSearchParams({ item, version, path: 'Workload.spec', trail: 'invalid' })}`);
+  assert.equal(contextualDefinitions.status, 200);
+  assert.deepEqual(await contextualDefinitions.json(), definitions, 'Traversal context fragmented the definition index');
   const match = definitions.find(definition => definition.name === name);
   assert(match, `Quick search cannot find nested type ${name}`);
   const document = await fetch(new URL(match.href, base));
@@ -127,24 +130,28 @@ for (const path of [pod, `${podSpec}?path=Deployment.spec.template.spec`, `${pod
   assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
 }
 
-let resource = 'io.k8s.api.apps.v1.Deployment';
-let context = 'Deployment';
-for (const [field, target] of [
-  ['spec', 'io.k8s.api.apps.v1.DeploymentSpec'],
-  ['template', 'io.k8s.api.core.v1.PodTemplateSpec'],
-  ['spec', 'io.k8s.api.core.v1.PodSpec'],
-  ['containers', 'io.k8s.api.core.v1.Container'],
+for (const [resource, field, target] of [
+  ['io.k8s.api.apps.v1.Deployment', 'spec', 'io.k8s.api.apps.v1.DeploymentSpec'],
+  ['io.k8s.api.apps.v1.DeploymentSpec', 'template', 'io.k8s.api.core.v1.PodTemplateSpec'],
+  ['io.k8s.api.core.v1.PodTemplateSpec', 'spec', 'io.k8s.api.core.v1.PodSpec'],
+  ['io.k8s.api.core.v1.PodSpec', 'containers', 'io.k8s.api.core.v1.Container'],
 ]) {
-  const selected = await (await fetch(`${base}/api/page?${new URLSearchParams({item:'kubernetes', version:kubeVersion, resource, path:context})}`)).json();
-  context += `.${field}`;
-  assert.equal(selected.resources.find(row => row.name === field).href, `${kubeBase}/${target}?path=${context}`);
-  resource = target;
+  const query = new URLSearchParams({ item: 'kubernetes', version: kubeVersion, resource });
+  const canonical = await (await fetch(`${base}/api/page?${query}`)).json();
+  assert.equal(canonical.resource, resource);
+  assert.equal(canonical.title, resource.split('.').at(-1));
+  assert(!canonical.path && !canonical.trail, 'Visitor traversal leaked into canonical API data');
+  const href = new URL(canonical.resources.find(row => row.name === field).href, base);
+  assert.equal(href.pathname, `${kubeBase}/${target}`);
+  for (const context of [
+    { path: 'Deployment.spec.template.spec', trail: '{"unrelated#":2}' },
+    { linked: 'Workload.spec', trail: 'invalid' },
+  ]) {
+    const contextual = await fetch(`${base}/api/page?${query}&${new URLSearchParams(context)}`);
+    assert.equal(contextual.status, 200);
+    assert.deepEqual(await contextual.json(), canonical, 'Traversal context fragmented API data');
+  }
 }
-const selected = await (await fetch(`${base}/api/page?${new URLSearchParams({item:'kubernetes', version:kubeVersion, resource, path:context})}`)).json();
-assert.equal(selected.title, context);
-assert.equal(selected.resource, resource);
-assert.equal(selected.path, context);
-assert.equal(selected.pointer || '', '');
 
 const container = await (await fetch(`${base}/api/page?item=kubernetes&version=${encodeURIComponent(kubeVersion)}&resource=io.k8s.api.core.v1.Pod&pointer=/properties/spec/properties/containers/items`)).json();
 assert(container.resources.some(row => row.name === 'name' && row.required));
@@ -152,40 +159,39 @@ assert.equal(container.canonical, `${kubeBase}/io.k8s.api.core.v1.Container`);
 assert.equal(container.resource, 'io.k8s.api.core.v1.Container');
 assert.equal(container.path || '', '');
 assert.equal(container.title, 'Container');
-assert.equal((await fetch(`${base}${kubeBase}/missing`)).status, 404);
+for (const route of [
+  `${kubeBase}/missing`,
+  '/kubernetes/missing',
+  `/api/page?item=kubernetes&version=${encodeURIComponent(kubeVersion)}&resource=missing`,
+  '/api/definitions?item=kubernetes&version=missing',
+]) {
+  const response = await fetch(base + route);
+  assert.equal(response.status, 404, route);
+  assert.equal(response.headers.get('cache-control'), 'public, max-age=0, s-maxage=604800, must-revalidate', `Missing schema is not cacheable: ${route}`);
+}
 assert.equal((await fetch(`${base}/api/page?item=kubernetes&item=flux&version=${encodeURIComponent(kubeVersion)}`)).status, 400);
 assert.equal((await fetch(`${base}/api/catalog`, { method: 'POST' })).status, 405);
 assert.equal(await (await fetch(`${base}${pod}`, { method: 'HEAD' })).text(), '');
 
-let cyclicURL = new URL(`${kubeBase}/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps`, base);
-for (let visit = 1; visit <= 3; visit++) {
-  const [, item, version, resource] = cyclicURL.pathname.split('/');
-  const query = new URLSearchParams(cyclicURL.search);
-  query.set('item', item);
-  query.set('version', version);
-  query.set('resource', resource);
-  const response = await fetch(`${base}/api/page?${query}`);
+const cyclicResource = 'io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps';
+const cyclicURL = new URL(`${kubeBase}/${cyclicResource}`, base);
+const cyclicQuery = new URLSearchParams({ item: 'kubernetes', version: kubeVersion, resource: cyclicResource });
+const cyclic = await (await fetch(`${base}/api/page?${cyclicQuery}`)).json();
+assert(cyclic.cycles.includes(`${cyclicResource}#`), 'Canonical data lacks the recursive node identity');
+assert.deepEqual(cyclic.cycles, [...new Set(cyclic.cycles)].sort(), 'Cycle identities are not sorted and unique');
+assert(cyclic.resources.find(row => row.name === 'allOf').href, 'Canonical recursive navigation is unavailable');
+assert(!cyclic.path && !cyclic.trail && !cyclic.canonical.includes('trail='));
+const canonicalHTML = await (await fetch(cyclicURL)).text();
+for (const visits of [1, 2, 3]) {
+  const context = new URLSearchParams({ path: `Workload${'.allOf'.repeat(visits)}`, trail: JSON.stringify({ [`${cyclicResource}#`]: visits }) });
+  const response = await fetch(`${base}/api/page?${cyclicQuery}&${context}`);
   assert.equal(response.status, 200);
-  const current = await response.json();
-  const recursive = current.resources.find(row => row.name === 'allOf');
-  assert.equal(!!recursive.circular, visit === 3);
-  assert(!current.canonical.includes('trail='));
-  if (visit < 3) {
-    assert(recursive.href);
-    cyclicURL = new URL(recursive.href, base);
-  } else {
-    assert(!recursive.href);
-    assert(current.resources.find(row => row.name === 'externalDocs').href, 'Unrelated field was blocked');
-    const reloaded = await (await fetch(`${base}/api/page?${query}`)).json();
-    assert.deepEqual(reloaded, current, 'Refresh changed the recursion limit');
-    const html = await (await fetch(cyclicURL)).text();
-    assert(!html.includes(' inert'), 'Server-rendered navigation is disabled');
-    assert(html.includes('<h1>JSONSchemaProps</h1>'), 'HTML is not shared across traversal contexts');
-    const embedded = JSON.parse(html.match(/<script id="__PAGE_DATA__" type="application\/json">(.*?)<\/script>/s)[1]);
-    assert(!embedded.path && !embedded.trail, 'Visitor traversal leaked into shared page data');
-    const canonical = await fetch(new URL(current.canonical, base));
-    assert.equal(html, await canonical.text(), 'Contextual and canonical HTML differ');
-  }
+  assert.deepEqual(await response.json(), cyclic, 'Recursive traversal changed canonical API data');
+  const html = await (await fetch(`${cyclicURL}?${context}`)).text();
+  assert.equal(html, canonicalHTML, 'Recursive traversal changed canonical HTML');
+  assert(html.includes('<h1>JSONSchemaProps</h1>'));
+  const embedded = JSON.parse(html.match(/<script id="__PAGE_DATA__" type="application\/json">(.*?)<\/script>/s)[1]);
+  assert.deepEqual(embedded, cyclic, 'Embedded schema data differs from canonical API data');
 }
 const hpa = await (await fetch(`${base}${kubeBase}/io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler`)).text();
 assert(hpa.includes(`href="${kubeBase}/io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler" aria-current="page"`), 'Current API version is not marked');
@@ -194,4 +200,4 @@ for (const property of ['og:site_name', 'og:image:alt', 'og:image:width', 'og:im
 }
 const missing = await (await fetch(`${base}${kubeBase}/missing`)).text();
 assert(missing.includes('Specification &amp; version') && missing.includes('See an issue here?'), 'Server error lost recovery controls');
-console.log(`Container smoke checks passed: API, quick search, ${crawlerLocations.size} sitemap URLs, robots policy, descriptions, traversal URLs, circular limits, no resource redirects, nested SSR, required fields, errors, and headers.`);
+console.log(`Container smoke checks passed: canonical API data, quick search, ${crawlerLocations.size} sitemap URLs, robots policy, descriptions, traversal sharing, cycle metadata, no resource redirects, nested SSR, required fields, cacheable schema 404s, and headers.`);
