@@ -193,3 +193,20 @@ func TestRenderFlightTrackingIsBounded(t *testing.T) {
 	}
 	awaitRenderState(t, r, func() bool { return len(r.flights) == 0 && len(r.workers) == cap(r.workers) })
 }
+
+func TestRenderNativePanicIsContainedAndWorkerDiscarded(t *testing.T) {
+	r := coalescingRenderer(t, `return data;`, func(string) { panic("private-panic-marker") })
+	for range cap(r.workers) {
+		html, err := r.render(t.Context(), []byte("panic"))
+		if err == nil || err.Error() != "react renderer panicked" || len(html) != 0 || renderFailureKind(err) != "internal" {
+			t.Fatalf("native panic escaped the sanitized failure boundary: %s, %v", html, err)
+		}
+	}
+	awaitRenderState(t, r, func() bool { return len(r.flights) == 0 && len(r.workers) == cap(r.workers) })
+	for range cap(r.workers) {
+		html, err := r.render(t.Context(), []byte("recovered"))
+		if err != nil || string(html) != "recovered" {
+			t.Fatalf("panicking worker was reused: %s, %v", html, err)
+		}
+	}
+}

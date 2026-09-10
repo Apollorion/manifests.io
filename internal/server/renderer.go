@@ -156,6 +156,9 @@ func (r *reactRenderer) renderWorker(ctx context.Context, data []byte) (html []b
 		return nil, ctx.Err()
 	}
 	defer func() {
+		if recover() != nil {
+			html, err = nil, errors.New("react renderer panicked")
+		}
 		if err != nil {
 			worker = nil
 		}
@@ -172,11 +175,16 @@ func (r *reactRenderer) renderWorker(ctx context.Context, data []byte) (html []b
 		worker.vm.Interrupt(ctx.Err())
 		close(interrupted)
 	})
+	defer func() {
+		if !stop() {
+			<-interrupted
+		}
+		worker.vm.ClearInterrupt()
+		if err == nil && ctx.Err() != nil {
+			html, err = nil, ctx.Err()
+		}
+	}()
 	result, err := worker.render(goja.Undefined(), worker.vm.ToValue(string(data)))
-	if !stop() {
-		<-interrupted
-	}
-	worker.vm.ClearInterrupt()
 	if err != nil {
 		return nil, err
 	}
