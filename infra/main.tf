@@ -72,15 +72,6 @@ resource "google_cloud_run_v2_service" "app" {
           port = 8080
         }
       }
-      liveness_probe {
-        period_seconds    = 30
-        timeout_seconds   = 1
-        failure_threshold = 3
-        http_get {
-          path = "/healthz"
-          port = 8080
-        }
-      }
       env {
         name  = "SITE_URL"
         value = var.site_url

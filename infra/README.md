@@ -2,7 +2,9 @@
 
 This OpenTofu root runs the Go API, React frontend, and immutable schema corpus in one public Cloud Run service. It needs an existing billed project, a published linux/amd64 container image, and an existing Secret Manager secret. It creates no database, buckets, background workers, or secret payloads.
 
-The runtime has one CPU, 1 GiB memory for the parsed schema cache, at most five instances by default, and scales to zero. It uses request-based billing with CPU throttled between requests (`cpu_idle = true`). Startup probes allow up to two minutes for schema loading; measure peak memory with the production corpus before lowering the allocation.
+The runtime has one CPU, 1 GiB memory for the parsed schema cache, at most five instances by default, and zero minimum instances. It uses request-based billing with CPU throttled between requests (`cpu_idle = true`). Startup probes allow up to two minutes for schema loading; measure peak memory with the production corpus before lowering the allocation.
+
+There is no recurring liveness probe: [Cloud Run bills CPU and memory while probes run](https://docs.cloud.google.com/run/docs/configuring/healthchecks#cpu-allocation), even without visitor traffic. The startup check remains, and process exits are still handled by Cloud Run. A process-wide deadlock loses the periodic restart mechanism. Existing request and renderer deadlines still bound individual operations. Under [request-based pricing](https://cloud.google.com/run/pricing), idle instances above the zero minimum are free even if Cloud Run keeps them resident; startup, shutdown and actual origin requests remain billable. Steady cache misses can prevent scaling to zero without creating continuous idle charges.
 
 ## Prepare a deployment
 
