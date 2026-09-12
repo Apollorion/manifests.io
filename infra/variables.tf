@@ -4,9 +4,31 @@ variable "project_id" {
 }
 
 variable "region" {
-  description = "Cloud Run deployment region."
+  description = "Google Cloud deployment region."
   type        = string
   default     = "us-east1"
+}
+
+variable "cloud_run_enabled" {
+  description = "Retain the Cloud Run origin while provisioning and validating static delivery."
+  type        = bool
+  default     = true
+}
+
+variable "cloud_run_deletion_protection" {
+  description = "Disable in a separate successful apply before removing the Cloud Run origin."
+  type        = bool
+  default     = true
+}
+
+variable "static_bucket_name" {
+  description = "Optional globally unique bucket for immutable public static objects."
+  type        = string
+  default     = ""
+  validation {
+    condition     = var.static_bucket_name == "" || can(regex("^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$", var.static_bucket_name))
+    error_message = "Use a lowercase bucket name of 3 to 63 characters without dots."
+  }
 }
 
 variable "manage_project_apis" {
@@ -38,8 +60,9 @@ variable "site_url" {
 variable "image" {
   description = "Existing linux/amd64 container image pinned to its immutable SHA256 digest."
   type        = string
+  default     = ""
   validation {
-    condition     = can(regex("^[^[:space:]]+@sha256:[a-f0-9]{64}$", var.image))
+    condition     = (!var.cloud_run_enabled && var.image == "") || can(regex("^[^[:space:]]+@sha256:[a-f0-9]{64}$", var.image))
     error_message = "Pin the image with @sha256:<64 lowercase hex characters>."
   }
 }
