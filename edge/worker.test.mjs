@@ -28,6 +28,7 @@ function fixture() {
     calls.push({ object, options });
     assert.equal(new URL(address).origin, 'https://storage.googleapis.com');
     if (object === fail) return new Response('Unavailable', { status: 503 });
+    if (object.startsWith('releases/') && !manifests.has(object)) return new Response('Not found', { status: 404 });
     const body = object === 'current.json' ? current : manifests.has(object) ? manifests.get(object) : object === ref(9).object ? document : { object };
     return Response.json(body, { headers: { 'CF-Cache-Status': 'HIT' } });
   }, () => clock);
@@ -151,4 +152,19 @@ test('old HTML can fetch its release assets after the current release changes', 
   assert.equal(f.calls.filter(call => call.object === 'current.json').length, 0);
   assert.equal((await f.request(`/releases/${release}/assets/site.js.map`)).status, 404);
   assert.equal((await f.request(`/releases/${release}/context-guard.js`)).status, 200);
+});
+
+test('unknown releases are cached briefly as 404 and become available after publication', async () => {
+  const f = fixture();
+  const next = 'b'.repeat(40);
+  const route = `/releases/${next}/assets/site.js`;
+  assert.equal((await f.request(route)).status, 404);
+  assert.equal((await f.request(route)).status, 404);
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.calls[0].options.cf.cacheTtlByStatus['404'], 60);
+  f.release(next);
+  f.advance(61000);
+  assert.equal((await f.request(route)).status, 200);
+  f.fail(`releases/${'c'.repeat(40)}.json`);
+  assert.equal((await f.request(`/releases/${'c'.repeat(40)}/assets/site.js`)).status, 503);
 });

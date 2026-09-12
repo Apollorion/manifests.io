@@ -119,7 +119,7 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
     return originFetch(objectURL(bucket, object), {
       redirect: 'error',
       signal: AbortSignal.timeout(15000),
-      cf: { cacheEverything: true, cacheTtlByStatus: { '200-299': ttl, '300-599': -1 } },
+      cf: { cacheEverything: true, cacheTtlByStatus: { '200-299': ttl, '404': 60, '300-403': -1, '405-599': -1 } },
     });
   }
 
@@ -141,8 +141,10 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
       }
       try {
         const response = await fetchObject(bucket, object, ttl);
-        if (!response.ok) throw new Error('Static metadata unavailable');
-        const { value, size } = await readJSON(response);
+        const missingRelease = response.status === 404 && object.startsWith('releases/');
+        if (!response.ok && !missingRelease) throw new Error('Static metadata unavailable');
+        const { value, size } = missingRelease ? { value: null, size: 4 } : await readJSON(response);
+        if (missingRelease) await response.body?.cancel();
         const previous = metadata.get(key);
         if (previous) { metadata.delete(key); metadataBytes -= previous.size; }
         // Bound parsed graph retention within the Worker memory limit.
@@ -151,7 +153,7 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
           metadataBytes -= metadata.get(oldest).size;
           metadata.delete(oldest);
         }
-        metadata.set(key, { value, size, expires: now() + ttl * 1000 });
+        metadata.set(key, { value, size, expires: now() + (missingRelease ? 60 : ttl) * 1000 });
         metadataBytes += size;
         return value;
       } finally {
@@ -218,6 +220,7 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
         if (releaseAsset) {
           const [, release, asset] = releaseAsset;
           const manifest = await json(bucket, `releases/${release}.json`);
+          if (!manifest) return reply(request, 'Not found', 404, { 'Cache-Control': 'public, max-age=0, s-maxage=60, must-revalidate' });
           if (manifest.format !== 1 || manifest.release !== release) throw new Error('Static release manifest mismatch');
           const ref = own(manifest.files, asset);
           if (!ref || asset.endsWith('.map')) return reply(request, 'Not found', 404, { 'Cache-Control': publicCache });
