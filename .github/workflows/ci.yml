@@ -25,7 +25,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: make static VERSION="$GITHUB_SHA" VITE_APP_VERSION="$GITHUB_SHA"
       - run: make test
-      - run: node --test edge/worker.test.mjs
+      - run: npm --prefix frontend run test:edge
       - run: go vet ./...
       - name: Install Chromium
         working-directory: frontend

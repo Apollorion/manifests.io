@@ -61,6 +61,8 @@ jobs:
       - if: steps.update.outputs.changed == 'true'
         run: make test
       - if: steps.update.outputs.changed == 'true'
+        run: npm --prefix frontend run test:edge
+      - if: steps.update.outputs.changed == 'true'
         run: go vet ./...
       - if: steps.update.outputs.changed == 'true'
         working-directory: frontend
