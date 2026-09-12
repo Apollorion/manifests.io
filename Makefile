@@ -1,12 +1,20 @@
 BIN := $(HOME)/bin/manifests
 VERSION ?= $(shell git describe --always --dirty)
+STATIC_RELEASE ?= $(shell git rev-parse HEAD)
 
-.PHONY: build install update-schemas frontend test check dev dev-api dev-web clean
+.PHONY: build binary static install update-schemas frontend test check dev dev-api dev-web clean
 
-build: frontend
+build: frontend binary
+	node frontend/scripts/prerender.mjs
+
+binary:
 	mkdir -p build
 	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$(VERSION)" -o build/manifests ./cmd/manifests
-	node frontend/scripts/prerender.mjs
+
+static: export VITE_STATIC_BUILD := 1
+static: export VITE_APP_VERSION := $(STATIC_RELEASE)
+static: frontend binary
+	node frontend/scripts/export-static.mjs
 
 install: build
 	install -d $(dir $(BIN))
