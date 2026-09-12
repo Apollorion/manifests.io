@@ -140,7 +140,8 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
     }
     if (pending.has(key)) return pending.get(key);
     const read = (async () => {
-      if (activeReads >= 2) {
+      // Keep one decoded shard in flight alongside the retained graph cache.
+      if (activeReads >= 1) {
         if (readers.length >= 64) throw new Error('Static metadata queue full');
         await new Promise(resolve => readers.push(resolve));
       } else {
