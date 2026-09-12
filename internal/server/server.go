@@ -243,15 +243,11 @@ func (s *Server) schemaFailure(w http.ResponseWriter, r *http.Request, err error
 }
 
 func (s *Server) failure(w http.ResponseWriter, r *http.Request, status int, message string, cacheable bool) {
-	products := s.catalog.Products()
-	defaultQuery := schema.DefaultQuery(products)
-	page := schema.Page{Item: defaultQuery.Item, Version: defaultQuery.Version, Title: "Documentation unavailable", Error: message, Catalog: products, Canonical: "/"}
-	if query, err := parseQuery(r); err == nil {
-		if _, err := s.catalog.Page(schema.Query{Item: query.Item, Version: query.Version}); err == nil {
-			page.Item, page.Version = query.Item, query.Version
-			page.Resource = query.Resource
-		}
+	query, err := parseQuery(r)
+	if err != nil {
+		query = schema.Query{}
 	}
+	page := failurePage(s.catalog, query, message)
 	if strings.HasPrefix(r.URL.Path, "/api/") {
 		if cacheable {
 			cachePublic(w)
@@ -260,6 +256,19 @@ func (s *Server) failure(w http.ResponseWriter, r *http.Request, status int, mes
 		return
 	}
 	s.servePage(w, r, status, page, cacheable)
+}
+
+func failurePage(catalog Catalog, query schema.Query, message string) schema.Page {
+	products := catalog.Products()
+	defaultQuery := schema.DefaultQuery(products)
+	page := schema.Page{Item: defaultQuery.Item, Version: defaultQuery.Version, Title: "Documentation unavailable", Error: message, Catalog: products, Canonical: "/"}
+	if query.Item != "" && query.Version != "" {
+		if _, err := catalog.Page(schema.Query{Item: query.Item, Version: query.Version}); err == nil {
+			page.Item, page.Version = query.Item, query.Version
+			page.Resource = query.Resource
+		}
+	}
+	return page
 }
 
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, page schema.Page, cacheable bool) {
@@ -286,21 +295,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, p
 		body = bytes.ReplaceAll(body, []byte("<!--app-html-->"), rendered)
 	}
 	body = bytes.ReplaceAll(body, []byte("<!--page-data-->"), append(append([]byte(`<script id="__PAGE_DATA__" type="application/json">`), data...), []byte("</script>")...))
-	canonical := s.config.SiteURL + page.Canonical
-	title := html.EscapeString(page.Title + " | Manifests.io")
-	description := page.Description
-	if description == "" {
-		description = "Browse Kubernetes and custom resource fields, types, and versions."
-	}
-	if len(description) > 320 {
-		description = string([]rune(description)[:min(160, len([]rune(description)))])
-	}
-	head := `<title>` + title + `</title><meta name="description" content="` + html.EscapeString(description) + `"><link rel="canonical" href="` + html.EscapeString(canonical) + `"><meta property="og:title" content="` + title + `"><meta property="og:description" content="` + html.EscapeString(description) + `"><meta property="og:url" content="` + html.EscapeString(canonical) + `"><meta property="og:image" content="` + s.config.SiteURL + `/ogimage.png">`
-	head += `<meta property="og:site_name" content="Manifests.io"><meta property="og:image:alt" content="Manifests.io"><meta property="og:image:width" content="887"><meta property="og:image:height" content="465"><meta property="og:image:type" content="image/png">`
-	if status != http.StatusOK {
-		head += `<meta name="robots" content="noindex">`
-	}
-	body = bytes.ReplaceAll(body, []byte("<!--page-head-->"), []byte(head))
+	body = bytes.ReplaceAll(body, []byte("<!--page-head-->"), []byte(pageHead(page, s.config.SiteURL, status)))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if cacheable {
 		cachePublic(w)
@@ -316,6 +311,24 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request, status int, p
 	if r.Method != http.MethodHead {
 		_, _ = w.Write(body)
 	}
+}
+
+func pageHead(page schema.Page, site string, status int) string {
+	canonical := site + page.Canonical
+	title := html.EscapeString(page.Title + " | Manifests.io")
+	description := page.Description
+	if description == "" {
+		description = "Browse Kubernetes and custom resource fields, types, and versions."
+	}
+	if len(description) > 320 {
+		description = string([]rune(description)[:min(160, len([]rune(description)))])
+	}
+	head := `<title>` + title + `</title><meta name="description" content="` + html.EscapeString(description) + `"><link rel="canonical" href="` + html.EscapeString(canonical) + `"><meta property="og:title" content="` + title + `"><meta property="og:description" content="` + html.EscapeString(description) + `"><meta property="og:url" content="` + html.EscapeString(canonical) + `"><meta property="og:image" content="` + site + `/ogimage.png">`
+	head += `<meta property="og:site_name" content="Manifests.io"><meta property="og:image:alt" content="Manifests.io"><meta property="og:image:width" content="887"><meta property="og:image:height" content="465"><meta property="og:image:type" content="image/png">`
+	if status != http.StatusOK {
+		head += `<meta name="robots" content="noindex">`
+	}
+	return head
 }
 
 func readRendered(filename string) ([]byte, error) {

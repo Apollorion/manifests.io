@@ -1,6 +1,12 @@
-# Cloud Run deployment
+# Static storage and Cloud Run migration
 
-This OpenTofu root runs the Go API, React frontend, and immutable schema corpus in one public Cloud Run service. It needs an existing billed project, a published linux/amd64 container image, and an existing Secret Manager secret. It creates no database, buckets, background workers, or secret payloads.
+This OpenTofu module provisions immutable static storage and optionally retains the Cloud Run origin during migration. Set `static_bucket_name` to create a regional bucket with uniform bucket access. Public access uses `roles/storage.legacyObjectReader`, which permits fetching a known object without listing the bucket. The module creates no credentials or secret payloads. Objects are retained for release rollback, with seven days of soft-delete recovery and no automatic garbage collection.
+
+Production publishes a verified static OCI artifact through the configurations repository's OpenTofu stack. Its upload provisioner validates content hashes and metadata, reuses matching immutable objects, and finishes before the provider atomically updates `current.json`. The bucket does not serve directory indexes or route requests itself: the Cloudflare Worker reads the release manifest and resolves public paths to content-addressed objects.
+
+Keep `cloud_run_enabled = true` while provisioning the bucket and validating static delivery. In a separate successful apply, set `cloud_run_deletion_protection = false`. Only after static production checks pass, set `cloud_run_enabled = false` to remove the Cloud Run service, runtime identity, public invoker binding and telemetry-secret binding. Moved blocks preserve the existing resource identities when adopting these toggles. Shared-project deployments set `manage_project_apis = false`; API ownership remains in the shared infrastructure stack.
+
+The remaining instructions describe the optional Cloud Run origin. It requires an existing billed project, a published linux/amd64 container image, and an existing Secret Manager secret.
 
 The runtime has one CPU, 1 GiB memory for the parsed schema cache, at most five instances by default, and zero minimum instances. It uses request-based billing with CPU throttled between requests (`cpu_idle = true`). Startup probes allow up to two minutes for schema loading; measure peak memory with the production corpus before lowering the allocation.
 

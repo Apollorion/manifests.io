@@ -11,6 +11,7 @@
     "build": "tsc --noEmit && vite build && vite build --ssr src/entry-server.tsx --outDir dist-server && node scripts/build-renderer.mjs",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:edge": "node --test scripts/worker-runtime.test.mjs ../edge/worker.test.mjs",
     "test:browser": "playwright test",
     "typecheck": "tsc --noEmit"
   },
@@ -39,6 +40,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "esbuild": "0.28.2",
     "jsdom": "^30.0.1",
+    "miniflare": "5.20260911.0-alpha",
     "typescript": "^7.0.2",
     "url-search-params-polyfill": "8.2.5",
     "vite": "^8.2.2",

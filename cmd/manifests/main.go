@@ -37,10 +37,11 @@ func run() error {
 	renderDir := flag.String("rendered", env("RENDER_DIR", "frontend/prerender"), "prerendered documentation directory")
 	publicDir := flag.String("public", env("PUBLIC_DIR", "public"), "public assets directory")
 	export := flag.Bool("export", false, "write pages as newline-delimited JSON and exit")
+	static := flag.Bool("export-static", false, "write complete static release records as newline-delimited JSON and exit")
 	flag.Parse()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if !*export {
+	if !*export && !*static {
 		shutdown, err := observability.Setup(ctx, version)
 		if err != nil {
 			return err
@@ -60,10 +61,13 @@ func run() error {
 		span.End()
 		return fmt.Errorf("load schemas: %w", err)
 	}
-	if !*export {
+	if !*export && !*static {
 		slog.InfoContext(loadCtx, "schema catalog loaded", "documents", len(catalog.Routes()))
 	}
 	span.End()
+	if *static {
+		return server.ExportStatic(ctx, catalog, os.Getenv("SITE_URL"), os.Stdout)
+	}
 	if *export {
 		encoder := json.NewEncoder(os.Stdout)
 		for _, query := range catalog.Routes() {

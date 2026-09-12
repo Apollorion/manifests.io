@@ -14,34 +14,37 @@ provider "google" {
 }
 
 resource "google_project_service" "required" {
-  for_each           = var.manage_project_apis ? toset(["run.googleapis.com", "secretmanager.googleapis.com"]) : toset([])
+  for_each           = var.manage_project_apis ? toset(concat(var.cloud_run_enabled ? ["run.googleapis.com", "secretmanager.googleapis.com"] : [], var.static_bucket_name != "" ? ["storage.googleapis.com"] : [])) : toset([])
   project            = var.project_id
   service            = each.value
   disable_on_destroy = false
 }
 
 resource "google_service_account" "runtime" {
+  count        = var.cloud_run_enabled ? 1 : 0
   project      = var.project_id
   account_id   = var.service_name
   display_name = "Manifests.io Cloud Run runtime"
 }
 
 resource "google_secret_manager_secret_iam_member" "telemetry" {
+  count     = var.cloud_run_enabled ? 1 : 0
   project   = var.project_id
   secret_id = var.otlp_headers_secret
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.runtime.email}"
+  member    = "serviceAccount:${google_service_account.runtime[0].email}"
 }
 
 resource "google_cloud_run_v2_service" "app" {
+  count               = var.cloud_run_enabled ? 1 : 0
   project             = var.project_id
   name                = var.service_name
   location            = var.region
-  deletion_protection = true
+  deletion_protection = var.cloud_run_deletion_protection
   ingress             = "INGRESS_TRAFFIC_ALL"
 
   template {
-    service_account                  = google_service_account.runtime.email
+    service_account                  = google_service_account.runtime[0].email
     timeout                          = "30s"
     max_instance_request_concurrency = 40
 
@@ -100,9 +103,30 @@ resource "google_cloud_run_v2_service" "app" {
 }
 
 resource "google_cloud_run_v2_service_iam_member" "public" {
+  count    = var.cloud_run_enabled ? 1 : 0
   project  = var.project_id
-  location = google_cloud_run_v2_service.app.location
-  name     = google_cloud_run_v2_service.app.name
+  location = google_cloud_run_v2_service.app[0].location
+  name     = google_cloud_run_v2_service.app[0].name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+moved {
+  from = google_service_account.runtime
+  to   = google_service_account.runtime[0]
+}
+
+moved {
+  from = google_secret_manager_secret_iam_member.telemetry
+  to   = google_secret_manager_secret_iam_member.telemetry[0]
+}
+
+moved {
+  from = google_cloud_run_v2_service.app
+  to   = google_cloud_run_v2_service.app[0]
+}
+
+moved {
+  from = google_cloud_run_v2_service_iam_member.public
+  to   = google_cloud_run_v2_service_iam_member.public[0]
 }

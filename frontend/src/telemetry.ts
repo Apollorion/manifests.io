@@ -39,6 +39,7 @@ const metricNames = new Set([
   'connection_duration', 'request_duration', 'waiting_duration', 'cache_duration',
 ])
 const errorTypes = new Set(['Error', 'TypeError', 'RangeError', 'ReferenceError', 'SyntaxError', 'URIError', 'EvalError', 'UnhandledRejection'])
+const releaseAsset = /^\/releases\/[a-f0-9]{40}\/assets\//
 
 export function telemetryURL(value: string): string {
   try {
@@ -53,6 +54,7 @@ export function telemetryURL(value: string): string {
       else if (parts[1] === 'definitions') path = '/api/definitions'
       else path = '/api/:path'
     } else if (parts[0] === 'assets') path = '/assets/:asset'
+    else if (releaseAsset.test(url.pathname)) path = '/releases/:release/assets/:asset'
     else if (parts.length === 1 && ['healthz', 'readyz'].includes(parts[0])) path = `/${parts[0]}`
     else if (parts.length === 2) path = '/:item/:version'
     else if (parts.length === 3) path = '/:item/:version/:resource'
@@ -73,7 +75,7 @@ export function telemetryScript(value: string): string {
   try {
     const url = new URL(value, window.location.origin)
     const scripts = Array.from(document.querySelectorAll('script[type="module"][src], link[rel="modulepreload"][href]'))
-    if (url.origin === window.location.origin && url.pathname.startsWith('/assets/') &&
+    if (url.origin === window.location.origin && (url.pathname.startsWith('/assets/') || releaseAsset.test(url.pathname)) &&
       scripts.some(script => {
         const source = new URL(script.getAttribute('src') ?? script.getAttribute('href') ?? '', window.location.origin)
         return source.origin === url.origin && source.pathname === url.pathname

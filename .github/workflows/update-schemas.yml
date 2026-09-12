@@ -57,18 +57,20 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - if: steps.update.outputs.changed == 'true'
-        run: make build
+        run: make static
       - if: steps.update.outputs.changed == 'true'
         run: make test
+      - if: steps.update.outputs.changed == 'true'
+        run: npm --prefix frontend run test:edge
       - if: steps.update.outputs.changed == 'true'
         run: go vet ./...
       - if: steps.update.outputs.changed == 'true'
         working-directory: frontend
         run: npx playwright install --with-deps chromium
       - if: steps.update.outputs.changed == 'true'
-        run: docker build --platform linux/amd64 -t manifests:schema-update .
-      - if: steps.update.outputs.changed == 'true'
-        run: docker run -d --name manifests -p 8080:8080 manifests:schema-update
+        run: |
+          node edge/serve-local.mjs > "$RUNNER_TEMP/static-worker.log" 2>&1 &
+          echo "STATIC_PID=$!" >> "$GITHUB_ENV"
       - if: steps.update.outputs.changed == 'true'
         run: node scripts/smoke.mjs
       - if: steps.update.outputs.changed == 'true'
@@ -82,9 +84,9 @@ jobs:
             frontend/playwright-report/
             frontend/test-results/
           retention-days: 7
-      - name: Stop validation container
-        if: always() && steps.update.outputs.changed == 'true'
-        run: docker stop --timeout 10 manifests || true
+      - name: Stop static Worker
+        if: always() && env.STATIC_PID != ''
+        run: kill "$STATIC_PID"
 
   pull-request:
     needs: validate

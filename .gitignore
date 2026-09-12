@@ -25,5 +25,6 @@ bakes/
 fast.yaml
 .next/
 .open-next/
+.wrangler/
 .yarn/
 .idea/

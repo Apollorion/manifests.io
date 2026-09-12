@@ -41,33 +41,8 @@ func (d *document) indexNodes() error {
 			}
 			return visit(ref, location{loc.resource, loc.path + path}, depth+1)
 		}
-		for _, container := range []struct {
-			name    string
-			schemas openapi3.Schemas
-		}{
-			{"properties", s.Properties}, {"patternProperties", s.PatternProperties}, {"$defs", s.Defs}, {"dependentSchemas", s.DependentSchemas},
-		} {
-			for _, name := range sortedKeys(container.schemas) {
-				if err := child(container.schemas[name], "/"+container.name+"/"+escapePointer(name)); err != nil {
-					return err
-				}
-			}
-		}
-		for _, set := range []struct {
-			name string
-			refs openapi3.SchemaRefs
-		}{{"oneOf", s.OneOf}, {"anyOf", s.AnyOf}, {"allOf", s.AllOf}} {
-			for i, ref := range set.refs {
-				if err := child(ref, "/"+set.name+"/"+strconv.Itoa(i)); err != nil {
-					return err
-				}
-			}
-		}
-		for _, single := range []struct {
-			name string
-			ref  *openapi3.SchemaRef
-		}{{"items", s.Items}, {"additionalProperties", s.AdditionalProperties.Schema}, {"not", s.Not}} {
-			if err := child(single.ref, "/"+single.name); err != nil {
+		for _, edge := range schemaChildren(s) {
+			if err := child(edge.ref, edge.pointer); err != nil {
 				return err
 			}
 		}
@@ -90,4 +65,38 @@ func (d *document) indexNodes() error {
 		return strings.Compare(a.path, b.path)
 	})
 	return nil
+}
+
+type schemaChild struct {
+	pointer string
+	ref     *openapi3.SchemaRef
+}
+
+func schemaChildren(s *openapi3.Schema) []schemaChild {
+	var children []schemaChild
+	for _, container := range []struct {
+		name    string
+		schemas openapi3.Schemas
+	}{
+		{"properties", s.Properties}, {"patternProperties", s.PatternProperties}, {"$defs", s.Defs}, {"dependentSchemas", s.DependentSchemas},
+	} {
+		for _, name := range sortedKeys(container.schemas) {
+			children = append(children, schemaChild{"/" + container.name + "/" + escapePointer(name), container.schemas[name]})
+		}
+	}
+	for _, set := range []struct {
+		name string
+		refs openapi3.SchemaRefs
+	}{{"oneOf", s.OneOf}, {"anyOf", s.AnyOf}, {"allOf", s.AllOf}} {
+		for i, ref := range set.refs {
+			children = append(children, schemaChild{"/" + set.name + "/" + strconv.Itoa(i), ref})
+		}
+	}
+	for _, single := range []struct {
+		name string
+		ref  *openapi3.SchemaRef
+	}{{"items", s.Items}, {"additionalProperties", s.AdditionalProperties.Schema}, {"not", s.Not}} {
+		children = append(children, schemaChild{"/" + single.name, single.ref})
+	}
+	return children
 }
