@@ -156,7 +156,7 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
         const previous = metadata.get(key);
         if (previous) { metadata.delete(key); metadataBytes -= previous.size; }
         // Bound parsed graph retention within the Worker memory limit.
-        while (metadataBytes + size > 16 * 1024 * 1024 && metadata.size) {
+        while ((metadataBytes + size > 16 * 1024 * 1024 || metadata.size >= 1024) && metadata.size) {
           const oldest = metadata.keys().next().value;
           metadataBytes -= metadata.get(oldest).size;
           metadata.delete(oldest);

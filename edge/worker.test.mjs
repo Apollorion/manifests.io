@@ -169,3 +169,12 @@ test('unknown releases are cached briefly as 404 and become available after publ
   f.fail(`releases/${'c'.repeat(40)}.json`);
   assert.equal((await f.request(`/releases/${'c'.repeat(40)}/assets/site.js`)).status, 503);
 });
+
+test('many tiny missing-release entries cannot bypass the metadata cache bound', async () => {
+  const f = fixture();
+  const route = index => `/releases/${index.toString(16).padStart(40, '0')}/assets/missing.js`;
+  for (let i = 0; i < 1025; i++) assert.equal((await f.request(route(i))).status, 404);
+  assert.equal(f.calls.length, 1025);
+  assert.equal((await f.request(route(0))).status, 404);
+  assert.equal(f.calls.length, 1026);
+});
