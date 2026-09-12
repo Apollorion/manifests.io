@@ -14,6 +14,10 @@ class RouteError extends Error {
   constructor(status) { super(`Route ${status}`); this.status = status; }
 }
 
+class OriginError extends Error {
+  constructor(stage, status = 0) { super('Static origin failure'); this.stage = stage; this.status = status; }
+}
+
 export function parseRoute(url) {
   if (bytes(url.pathname + url.search) > 8192) throw new RouteError(414);
   let pathname;
@@ -120,6 +124,9 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
       redirect: 'error',
       signal: AbortSignal.timeout(15000),
       cf: { cacheEverything: true, cacheTtlByStatus: { '200-299': ttl, '404': 60, '300-403': -1, '405-599': -1 } },
+    }).catch(error => {
+      const kind = ['TypeError', 'RangeError', 'TimeoutError', 'AbortError'].includes(error?.name) ? error.name : 'Error';
+      throw new OriginError(`fetch_${kind}`);
     });
   }
 
@@ -142,7 +149,7 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
       try {
         const response = await fetchObject(bucket, object, ttl);
         const missingRelease = response.status === 404 && object.startsWith('releases/');
-        if (!response.ok && !missingRelease) throw new Error('Static metadata unavailable');
+        if (!response.ok && !missingRelease) throw new OriginError('metadata', response.status);
         const { value, size } = missingRelease ? { value: null, size: 4 } : await readJSON(response);
         if (missingRelease) await response.body?.cancel();
         const previous = metadata.get(key);
@@ -187,7 +194,7 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
       return new Response(null, { status: 304, headers });
     }
     const response = await fetchObject(bucket, ref.object);
-    if (response.status !== 200) throw new Error('Static response unavailable');
+    if (response.status !== 200) throw new OriginError('content', response.status);
     for (const key of ['Content-Encoding', 'Content-Length', 'Last-Modified']) {
       if (response.headers.has(key)) headers.set(key, response.headers.get(key));
     }
@@ -253,8 +260,8 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
           const page = errors[String(error.status)];
           return await send(apiResponse ? page.json : page.html, error.status);
         }
-      } catch {
-        console.error(JSON.stringify({ event: 'static_origin_failure', route: '/{static-resource}' }));
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'static_origin_failure', route: '/{static-resource}', stage: error instanceof OriginError ? error.stage : 'metadata_validation', status: error instanceof OriginError ? error.status : 0 }));
         return reply(request, 'Documentation temporarily unavailable', 503, { 'Retry-After': '60' });
       }
     },
