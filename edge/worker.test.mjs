@@ -27,6 +27,7 @@ function fixture() {
     const object = new URL(address).pathname.split('/').slice(2).join('/');
     calls.push({ object, options });
     assert.equal(new URL(address).origin, 'https://storage.googleapis.com');
+    assert.equal(options.redirect, 'manual');
     if (object === fail) return new Response('Unavailable', { status: 503 });
     if (object.startsWith('releases/') && !manifests.has(object)) return new Response('Not found', { status: 404 });
     const body = object === 'current.json' ? current : manifests.has(object) ? manifests.get(object) : object === ref(9).object ? document : { object };

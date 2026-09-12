@@ -121,7 +121,7 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
 
   async function fetchObject(bucket, object, ttl = 31536000) {
     return originFetch(objectURL(bucket, object), {
-      redirect: 'error',
+      redirect: 'manual',
       signal: AbortSignal.timeout(15000),
       cf: { cacheEverything: true, cacheTtlByStatus: { '200-299': ttl, '404': 60, '300-403': -1, '405-599': -1 } },
     }).catch(error => {
