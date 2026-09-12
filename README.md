@@ -1,6 +1,6 @@
 # Manifests.io
 
-Browse Kubernetes and custom resource schemas with a Go backend, one React renderer, and automated upstream schema updates.
+Browse Kubernetes and custom resource schemas with a fully static Go/React build, Cloudflare delivery, and automated upstream schema updates.
 
 Choose a product and version, filter resources, then follow fields into their types. Descriptions, required fields, arrays, maps, unions, validation constraints, and alternate API versions come from the original schemas. Existing resource URLs and the legacy `linked`, `oneOf`, and `key` parameters remain supported.
 
@@ -13,11 +13,11 @@ Recursive schemas can be visited three times within a traversal. Links that woul
 Requirements: Go 1.27+, Node.js 26+, and npm.
 
 ```sh
-make build
-PORT=18080 ./build/manifests
+make static
+PORT=18080 node edge/serve-local.mjs
 ```
 
-Open [localhost:18080](http://localhost:18080). `make build` installs locked frontend dependencies, builds the browser and server rendering bundles, compiles Go, and prerenders documentation. Node runs during the build only. Production uses one Go process.
+Open [localhost:18080](http://localhost:18080). `make static` installs locked frontend dependencies, compiles the Go schema reader and React renderer, and exports complete HTML, embedded page data, JSON APIs, search indexes, crawler documents, and public assets to `build/static`. The local adapter executes the same Worker router used in production against those files. Production requires no Go or Node origin process.
 
 For live frontend development after the first build:
 
@@ -25,7 +25,7 @@ For live frontend development after the first build:
 make dev
 ```
 
-Vite listens on port 5173 and proxies `/api` to the Go service on port 8080. Use the built Go server to verify prerendering, status codes, and security headers. Vite's development fallback serves the application shell for every URL.
+Vite listens on port 5173 and proxies `/api` to the development Go service on port 8080. Use the static adapter for production routing and browser verification. Vite's development fallback serves the application shell for every URL.
 
 ## Source schemas
 
@@ -103,51 +103,52 @@ tofu -chdir=infra validate
 
 Go tests cover the entire original corpus, including the 7,174 legacy definition names captured before removing generated files. Additional tests cover references and cycles, CRD envelopes, unions, required fields, invalid input, HTTP errors, script-safe serialization, and OTLP correlation/privacy. Frontend tests exercise filters, selectors, navigation, error states, and the real Faro transport.
 
-## Container and Cloud Run
+## Static delivery
 
 ```sh
-docker build --platform linux/amd64 --build-arg VERSION="$(git rev-parse --short HEAD)" -t manifests:local .
-docker run --rm -p 18080:8080 manifests:local
+make static
+PORT=18080 node edge/serve-local.mjs
+node scripts/smoke.mjs http://localhost:18080
 ```
 
-With the container running, `node scripts/smoke.mjs http://localhost:18080` verifies its API, original field descriptions, nested HTML, legacy links, required fields, crawler endpoints, and error responses.
+The smoke suite verifies static APIs, original field descriptions, nested HTML, legacy links, required fields, crawler endpoints, and error responses.
 
-Run the Chromium regression suite against that same container:
+Run the Chromium regression suite against that same adapter:
 
 ```sh
 npm --prefix frontend exec -- playwright install chromium
 PLAYWRIGHT_BASE_URL=http://localhost:18080 npm --prefix frontend run test:browser
 ```
 
-The browser suite covers quick search, keyboard navigation, local search privacy, nested CRD links, restored traversal context and circular-reference limits, canonical navigation without JavaScript, failed-request recovery, and mobile overflow. CI runs it against the exact container before publishing and retains screenshots, traces, reports, and container logs on failure. Browser tests use isolated contexts and fail on browser errors; they do not send production telemetry from local hosts.
+The browser suite covers quick search, keyboard navigation, local search privacy, nested CRD links, restored traversal context and circular-reference limits, canonical navigation without JavaScript, failed-request recovery, and mobile overflow. CI runs it against the exported objects before publishing and retains screenshots, traces, reports, and adapter logs on failure. Browser tests use isolated contexts and fail on browser errors; they do not send production telemetry from local hosts.
 
 Dependabot checks the Go module, `frontend/` npm dependencies, GitHub Actions, Docker base images, and `infra/` OpenTofu dependencies weekly. Minor and patch updates are grouped for Go and frontend dependencies; major upgrades remain separate review items. Root Yarn dependencies belong to the retired implementation.
 
-The image includes the immutable corpus, prerendered HTML, and browser assets. It runs as a non-root user, listens on `0.0.0.0:$PORT`, and needs no database, persistent disk, cluster access, or Node runtime. Schema changes require a new build. SIGTERM drains requests and flushes telemetry within Cloud Run's shutdown window.
+Each release has a root manifest and one finite routing graph per product/version. The Worker resolves named resources, legacy aliases, JSON pointers, and union selectors against these graphs, then fetches the corresponding complete HTML or JSON object. It never renders documentation or loads the source corpus. Traversal context remains client-side.
 
-The [OpenTofu service module](infra/README.md) defines one Cloud Run service with an immutable image digest, a dedicated service account, telemetry secret access, and scale-to-zero behavior. It uses an existing GCP project and Secret Manager secret.
+Objects are named by their stored-byte SHA-256 and compressed at build time. Unchanged objects can be reused across releases. Unknown URLs use shared static error objects, preventing random scanner paths from creating distinct origin resources. The [OpenTofu module](infra/README.md) owns the GCS bucket and public object-read permission without bucket listing. The existing Go server and Dockerfile remain available for development and independent previews.
 
 ### Production releases through Spacelift
 
-The [Verify workflow](.github/workflows/ci.yml) runs the application checks and smoke-tests a Linux AMD64 container. After a successful push to `main`, or a manual workflow run against `main`, its publish job sends that exact tested image to `us-east1-docker.pkg.dev/nwf-shared/apps/manifests-io`. The full Git commit SHA is the immutable revision tag. The `production` tag identifies the latest verified candidate from the current `main` commit. Older runs cannot replace a newer candidate, and an existing SHA tag cannot be overwritten with a different image.
+The [Verify workflow](.github/workflows/ci.yml) builds the complete static release, runs application and Worker tests, and verifies the exported files with HTTP and Chromium tests. Main-branch publication packages those exact verified files using `Dockerfile.static`, a scratch artifact image containing only `static-release.tar`. It publishes to `us-east1-docker.pkg.dev/nwf-shared/apps/manifests-io-static`; the full Git SHA identifies the immutable revision and `production` identifies the latest verified candidate. Labels bind the source revision and root manifest checksum to the artifact. The artifact is never run as a container.
 
 Publishing uses [GitHub OIDC through Google Workload Identity Federation](https://github.com/google-github-actions/auth) with `manifests-builder@nwf-shared.iam.gserviceaccount.com`; no service-account key is stored in GitHub. Only the publish job requests an identity token. Pull requests and other branches run verification without publishing.
 
-The production Spacelift stack uses [`TheOutdoorProgrammer/configurations`, `manifests/production`](https://github.com/TheOutdoorProgrammer/configurations/tree/main/manifests/production). Its OpenTofu configuration resolves the `production` tag to an immutable digest and plans the Cloud Run update. GitHub Actions publishes images; Spacelift owns infrastructure and deployment.
+The production Spacelift stack uses [`TheOutdoorProgrammer/configurations`, `manifests/production`](https://github.com/TheOutdoorProgrammer/configurations/tree/main/manifests/production). OpenTofu resolves the artifact to an immutable digest. During apply, the deployment uploader validates the archive, inventory, and object checksums, uploads missing objects, and checks reused objects. Only a successful upload permits OpenTofu to update `current.json` to the complete release. GitHub can publish artifacts but cannot deploy the bucket. Cloudflare's Worker code and bucket binding are also deployed through OpenTofu and Spacelift.
 
-Successful public HTML, JSON, crawler documents, redirects, ordinary assets, and stable missing-schema HTTP 404 responses advertise a seven-day shared cache lifetime. Browsers revalidate those URLs, so a Cloudflare purge exposes updated content without requiring users to clear their browser cache. Hashed assets retain a one-year immutable lifetime. Health checks, malformed requests, missing assets, and transient failures remain uncached. Missing-schema HTML becomes cacheable only after successful rendering.
+The Worker caches immutable GCS objects through Cloudflare's tiered CDN for one year. Its release pointer expires after 60 seconds; a request resolves all metadata and content through one release. Public HTML, JSON, crawler documents, redirects, and static 404s advertise seven-day shared caching while browsers revalidate. Hashed browser assets advertise a one-year immutable lifetime. Malformed requests and transient failures remain uncached. Missing published objects fail with HTTP 503; there is no Cloud Run fallback.
 
-The Cloudflare proxy keeps only each route's semantic query parameters in both the cache key and origin request. Documentation preserves `pointer`, `oneOf`, and `key`; `/api/page` also preserves `item`, `version`, and `resource`; `/api/definitions` preserves `item` and `version`. Traversal and tracking parameters do not fragment these entries. Ordinary reloads and cookies share public cached responses, and cookies are stripped before a cache fill reaches origin. Requests containing `Authorization`, `Range`, `If-Match`, or `If-Unmodified-Since` bypass shared caching. Use `X-Manifests-Cache-Bypass: 1` for an explicit origin diagnostic; it does not refill the cache. `X-Manifests-Cache` reports `HIT`, `MISS`, or `BYPASS`.
+Documentation preserves the semantic `pointer`, `oneOf`, and `key` selectors; `/api/page` also selects `item`, `version`, and `resource`, while `/api/definitions` selects `item` and `version`. Traversal, tracking, cookies, authorization, and reload headers are never sent to GCS. Responses are public static content. Range requests receive the complete representation. `X-Manifests-Cache` reports the object fetch cache status, or `LOCAL` for redirects and locally evaluated conditional responses. `X-Manifests-Release` identifies the selected source revision.
 
-Deploy browser restoration from embedded data and canonical API responses before enabling API query normalization, then purge existing entries. Roll back API normalization before reverting to contextual API responses. The Spacelift deployment hook purges the zone after a successful apply. To bust the cache manually, run `python3 ../../cloudflare/workers/purge-manifests-cache.py` as a task on `manifests-production`, or use Cloudflare's zone-wide **Purge Everything** action. Publishing an image alone does not invalidate the cache. Edge eviction, regional cache placement, expiration, and deliberate invalidation can still require legitimate origin fills.
+A release changes the pointer and uses new object URLs for changed content, so deployments do not need to purge immutable objects. Old objects remain available for rollback. Storage retention must preserve every referenced object in every retained release; an age-only deletion rule is unsafe because unchanged files are reused.
 
 1. Merge the application change into `main` and wait for both Verify jobs to succeed. A manual run on `main` follows the same checks.
-2. Start a production run in Spacelift and review the planned container digest and infrastructure changes.
-3. Approve the plan to deploy the candidate. Publishing an image alone does not change the live service.
+2. Start a production run in Spacelift with the exact static source revision and review its artifact digest, manifest checksum, and infrastructure changes.
+3. Approve the plan to upload and activate the candidate, then verify the public release header and smoke suite. Publishing an artifact alone does not change the live site.
 
 To rebuild an already published commit with updated dependencies or base images, create a new commit so the revision tag remains immutable.
 
-Runtime configuration:
+Development Go server configuration:
 
 | Variable | Default |
 | --- | --- |
@@ -162,11 +163,11 @@ Directory options also have corresponding command flags; run `./build/manifests 
 
 ## Observability
 
-Structured stdout logs include trace/span IDs. Configure `OTEL_EXPORTER_OTLP_ENDPOINT` and runtime-only `OTEL_EXPORTER_OTLP_HEADERS` for OTLP HTTP/protobuf traces and logs. Without an endpoint, export is disabled. `OTEL_SDK_DISABLED=true` disables export explicitly. W3C TraceContext and Baggage propagation are configured in both cases.
+The retained Go development/preview server emits structured logs with trace/span IDs and supports OTLP HTTP/protobuf through `OTEL_EXPORTER_OTLP_ENDPOINT` and runtime-only `OTEL_EXPORTER_OTLP_HEADERS`. Static production has no origin process or origin exporter. The Worker reports sanitized origin failures without URLs, queries, or visitor headers.
 
 Production browser telemetry uses the existing public Grafana Faro collector. The existing PostHog integration retains manual pageview events on the production domains, with automatic capture, recording, persistence, and person profiles disabled. Local previews do not send production telemetry. Search values, query strings, request bodies, cookies, authorization headers, raw URLs, and freeform exceptions are excluded from exported telemetry. General OTLP credentials never enter the browser build. See [deployment telemetry configuration](infra/README.md#telemetry-configuration) for details.
 
-Production browser source maps are uploaded privately to Grafana before CI publishes a deployable image. The full Git SHA identifies both the uploaded bundle and Faro metadata. The Docker `source-maps` target exports maps from the same frontend build; runtime images omit them, and HTTP handlers reject map requests. `FARO_SOURCEMAP_API_KEY` is a GitHub Actions secret scoped to source-map operations, available only to the main-branch upload step. An absent credential or failed upload blocks publication.
+Production browser source maps are uploaded privately to Grafana from the verified frontend build before CI publishes a deployable artifact. The full Git SHA identifies both the uploaded bundle and Faro metadata. The static exporter excludes source maps, and the Worker rejects map requests. `FARO_SOURCEMAP_API_KEY` is a GitHub Actions secret scoped to source-map operations, available only to the main-branch upload step. An absent credential or failed upload blocks publication.
 
 ## License
 

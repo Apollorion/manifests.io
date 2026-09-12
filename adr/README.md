@@ -10,3 +10,4 @@
 | [0006](0006-restore-traversal-from-embedded-canonical-page-data.md) | Restore traversal from embedded canonical page data | Share HTML and API responses by schema identity and restore traversal locally without an API request. |
 | [0007](0007-share-concurrent-renders-of-identical-page-data.md) | Share concurrent renders of identical page data | Coalesce identical in-flight renders within each process while preserving caller deadlines and cancellation. |
 | [0008](0008-use-startup-checks-without-recurring-idle-probes.md) | Use startup checks without recurring idle probes | Retain startup readiness and request-based billing without periodic liveness charges. |
+| [0009](0009-serve-complete-static-releases-from-cloud-storage-through-cl.md) | Serve complete static releases from Cloud Storage through Cloudflare | Build complete responses and finite routing graphs; Spacelift verifies content-addressed objects before atomically selecting a release. |

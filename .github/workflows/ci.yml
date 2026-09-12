@@ -22,24 +22,26 @@ jobs:
           node-version-file: .node-version
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: make build
+      - run: make static VERSION="$GITHUB_SHA" VITE_APP_VERSION="$GITHUB_SHA"
       - run: make test
+      - run: node --test edge/worker.test.mjs
       - run: go vet ./...
       - name: Install Chromium
         working-directory: frontend
         run: npx playwright install --with-deps chromium
-      - run: docker build --platform linux/amd64 --build-arg VERSION="${GITHUB_SHA}" -t manifests:test .
-      - name: Start production container
-        id: container
-        run: docker run -d --name manifests -p 8080:8080 manifests:test
+      - name: Start static Worker against the exported objects
+        id: static
+        run: |
+          node edge/serve-local.mjs > "$RUNNER_TEMP/static-worker.log" 2>&1 &
+          echo "STATIC_PID=$!" >> "$GITHUB_ENV"
       - run: node scripts/smoke.mjs
       - name: Browser regression tests
         run: npm --prefix frontend run test:browser
-      - name: Collect container logs
-        if: failure() && steps.container.outcome == 'success'
+      - name: Collect static Worker logs
+        if: failure() && steps.static.outcome == 'success'
         run: |
           mkdir -p frontend/test-results
-          docker logs manifests > frontend/test-results/container.log 2>&1
+          cp "$RUNNER_TEMP/static-worker.log" frontend/test-results/static-worker.log
       - name: Upload browser failure artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -49,23 +51,25 @@ jobs:
             frontend/playwright-report/
             frontend/test-results/
           retention-days: 7
-      - name: Stop production container
-        if: always() && steps.container.outcome == 'success'
-        run: docker stop --timeout 10 manifests
-      - name: Extract private browser source maps
-        if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        run: docker build --platform linux/amd64 --target source-maps --build-arg VERSION="${GITHUB_SHA}" --output "type=local,dest=${RUNNER_TEMP}/source-maps" .
+      - name: Stop static Worker
+        if: always() && steps.static.outcome == 'success'
+        run: kill "$STATIC_PID"
       - name: Upload private browser source maps
         if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
           FARO_SOURCEMAP_API_KEY: ${{ secrets.FARO_SOURCEMAP_API_KEY }}
-        run: node frontend/scripts/upload-source-maps.mjs "${RUNNER_TEMP}/source-maps"
+        run: node frontend/scripts/upload-source-maps.mjs frontend/dist/assets
       - name: Remove private browser source maps
         if: always()
-        run: rm -rf "${RUNNER_TEMP}/source-maps"
-      - name: Export verified image
+        run: rm -f frontend/dist/assets/*.js.map
+      - name: Package verified static release
         if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        run: docker save manifests:test -o "${RUNNER_TEMP}/manifests-image.tar"
+        run: |
+          mkdir -p "$RUNNER_TEMP/static-package"
+          tar -cf "$RUNNER_TEMP/static-package/static-release.tar" -C build/static .
+          manifest_sha=$(sha256sum build/static/manifest.json | cut -d' ' -f1)
+          docker build --platform linux/amd64 --provenance=false --sbom=false -f Dockerfile.static --build-arg VERSION="$GITHUB_SHA" --build-arg STATIC_MANIFEST_SHA256="$manifest_sha" -t manifests:test "$RUNNER_TEMP/static-package"
+          docker save manifests:test -o "$RUNNER_TEMP/manifests-image.tar"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
@@ -84,10 +88,10 @@ jobs:
       contents: read
       id-token: write
     concurrency:
-      group: manifests-production-image
+      group: manifests-production-static
       cancel-in-progress: false
     env:
-      IMAGE: us-east1-docker.pkg.dev/nwf-shared/apps/manifests-io
+      IMAGE: us-east1-docker.pkg.dev/nwf-shared/apps/manifests-io-static
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -118,7 +122,7 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import { appendFileSync } from 'node:fs';
-          const endpoint = `https://artifactregistry.googleapis.com/v1/projects/nwf-shared/locations/us-east1/repositories/apps/packages/manifests-io/tags/${process.env.GITHUB_SHA}`;
+          const endpoint = `https://artifactregistry.googleapis.com/v1/projects/nwf-shared/locations/us-east1/repositories/apps/packages/manifests-io-static/tags/${process.env.GITHUB_SHA}`;
           const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${process.env.ACCESS_TOKEN}` } });
           if (response.status !== 404 && !response.ok) throw new Error(`Revision lookup failed: HTTP ${response.status}`);
           appendFileSync(process.env.GITHUB_OUTPUT, `exists=${response.ok}\n`);
@@ -127,10 +131,10 @@ jobs:
         if: steps.revision.outputs.exists == 'true'
         run: |
           docker pull "$IMAGE:$GITHUB_SHA"
-          expected=$(docker image inspect manifests:test --format '{{.Id}}')
-          published=$(docker image inspect "$IMAGE:$GITHUB_SHA" --format '{{.Id}}')
+          expected=$(docker image inspect manifests:test --format '{{index .Config.Labels "org.manifests.static.manifest-sha256"}}')
+          published=$(docker image inspect "$IMAGE:$GITHUB_SHA" --format '{{index .Config.Labels "org.manifests.static.manifest-sha256"}}')
           if [ "$expected" != "$published" ]; then
-            echo '::error::This commit already has a different immutable image. Publish a new commit instead of replacing it.'
+            echo '::error::This commit already has a different static manifest. Publish a new commit instead of replacing it.'
             exit 1
           fi
       - name: Publish immutable revision
@@ -145,7 +149,11 @@ jobs:
             echo 'A newer commit is on main; keeping its production candidate.'
             exit 0
           fi
-          docker tag manifests:test "$IMAGE:production"
+          if [ '${{ steps.revision.outputs.exists }}' = 'true' ]; then
+            docker tag "$IMAGE:$GITHUB_SHA" "$IMAGE:production"
+          else
+            docker tag manifests:test "$IMAGE:production"
+          fi
           docker push "$IMAGE:production"
           printf 'Published production candidate %s:%s. Start and approve the manifests production run in Spacelift to deploy it.\n' "$IMAGE" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
       - name: Remove registry credentials

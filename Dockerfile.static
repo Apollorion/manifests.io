@@ -1,0 +1,6 @@
+FROM scratch
+ARG VERSION
+ARG STATIC_MANIFEST_SHA256
+LABEL org.opencontainers.image.revision=$VERSION
+LABEL org.manifests.static.manifest-sha256=$STATIC_MANIFEST_SHA256
+COPY static-release.tar /static-release.tar
