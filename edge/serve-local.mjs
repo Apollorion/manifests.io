@@ -14,7 +14,7 @@ const worker = createWorker(async address => {
   if (url.origin !== 'https://storage.googleapis.com' || !url.pathname.startsWith('/local-static/')) throw new Error('Unexpected origin');
   const object = url.pathname.slice('/local-static/'.length);
   if (object === 'current.json') return Response.json(pointer);
-  if (object === pointer.manifest) return new Response(manifestBytes);
+  if (object === pointer.manifest || object === `releases/${pointer.release}.json`) return new Response(manifestBytes);
   if (!/^objects\/[a-f0-9]{64}\.[a-z0-9.]+$/.test(object)) return new Response(null, { status: 404 });
   try {
     let body = await readFile(resolve(directory, object));

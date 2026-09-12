@@ -12,28 +12,34 @@ const document = {
   },
 };
 const manifest = {
-  format: 1, default: '/kubernetes/1', catalog: ref(8), documents: { 'kubernetes/1': ref(9) }, files: { '/assets/site.js': { ...ref(10), contentType: 'text/javascript' } },
+  format: 1, release, default: '/kubernetes/1', catalog: ref(8), documents: { 'kubernetes/1': ref(9) }, files: { '/assets/site.js': { ...ref(10), contentType: 'text/javascript' } },
   errors: { '400': { html: ref(11), json: ref(12) }, '404': { html: ref(13), json: ref(14) } },
 };
+manifest.files['/context-guard.js'] = { ...ref(17), contentType: 'text/javascript' };
 
 function fixture() {
   const calls = [];
   let clock = 0;
   let current = { format: 1, release, manifest: ref(15).object };
+  const manifests = new Map([[ref(15).object, manifest], [`releases/${release}.json`, manifest]]);
   let fail = '';
   const worker = createWorker(async (address, options) => {
     const object = new URL(address).pathname.split('/').slice(2).join('/');
     calls.push({ object, options });
     assert.equal(new URL(address).origin, 'https://storage.googleapis.com');
     if (object === fail) return new Response('Unavailable', { status: 503 });
-    const body = object === 'current.json' ? current : object === ref(15).object ? manifest : object === ref(9).object ? document : { object };
+    const body = object === 'current.json' ? current : manifests.has(object) ? manifests.get(object) : object === ref(9).object ? document : { object };
     return Response.json(body, { headers: { 'CF-Cache-Status': 'HIT' } });
   }, () => clock);
   return {
     calls,
     request: (route, init) => worker.fetch(new Request(`https://www.manifests.io${route}`, init), { STORAGE_BUCKET: 'test-bucket' }),
     advance: ms => { clock += ms; },
-    release: value => { current = { ...current, release: value }; },
+    release: (value, mismatch = false) => {
+      current = { ...current, release: value, manifest: ref(16).object };
+      manifests.set(ref(16).object, { ...manifest, release: mismatch ? release : value });
+      manifests.set(`releases/${value}.json`, { ...manifest, release: value });
+    },
     fail: value => { fail = value; },
   };
 }
@@ -115,4 +121,34 @@ test('missing published objects fail closed with no Cloud Run fallback', async (
   const response = await f.request('/kubernetes/1/Root');
   assert.equal(response.status, 503);
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
+});
+
+test('a mislabeled release pointer cannot serve content from another release', async () => {
+  const f = fixture();
+  f.release('b'.repeat(40), true);
+  assert.equal((await f.request('/kubernetes/1/Root')).status, 503);
+});
+
+test('encoded API routes preserve JSON errors', async () => {
+  const f = fixture();
+  for (const route of ['/%61pi/page?item=kubernetes&version=1&resource=missing', '/api%2Fpage?item=kubernetes&version=1&resource=missing']) {
+    const response = await f.request(route);
+    assert.equal(response.status, 404);
+    assert.equal((await response.json()).object, manifest.errors['404'].json.object);
+  }
+  const invalid = await f.request('/%61pi/page?item=kubernetes');
+  assert.equal(invalid.status, 400);
+  assert.equal((await invalid.json()).object, manifest.errors['400'].json.object);
+});
+
+test('old HTML can fetch its release assets after the current release changes', async () => {
+  const f = fixture();
+  f.release('b'.repeat(40));
+  const old = await f.request(`/releases/${release}/assets/site.js`);
+  assert.equal(old.status, 200);
+  assert.equal(old.headers.get('X-Manifests-Release'), release);
+  assert.equal((await old.json()).object, ref(10).object);
+  assert.equal(f.calls.filter(call => call.object === 'current.json').length, 0);
+  assert.equal((await f.request(`/releases/${release}/assets/site.js.map`)).status, 404);
+  assert.equal((await f.request(`/releases/${release}/context-guard.js`)).status, 200);
 });

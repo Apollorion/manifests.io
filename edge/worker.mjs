@@ -84,10 +84,34 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
   const metadata = new Map();
   let metadataBytes = 0;
   const pending = new Map();
+  let activeReads = 0;
+  const readers = [];
+
+  async function readJSON(response) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8', { fatal: true });
+    const chunks = [];
+    let size = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > 16 * 1024 * 1024) throw new Error('Static metadata too large');
+        chunks.push(decoder.decode(value, { stream: true }));
+      }
+      chunks.push(decoder.decode());
+      return { value: JSON.parse(chunks.join('')), size };
+    } finally {
+      await reader.cancel();
+      reader.releaseLock();
+    }
+  }
 
   function objectURL(bucket, object) {
     if (!/^[a-z0-9][a-z0-9.-]{1,220}[a-z0-9]$/.test(bucket || '')) throw new Error('Invalid bucket binding');
-    if (object !== 'current.json' && !/^objects\/[a-f0-9]{64}\.[a-z0-9.]+$/.test(object)) throw new Error('Invalid static object');
+    if (object !== 'current.json' && !/^objects\/[a-f0-9]{64}\.[a-z0-9.]+$/.test(object)
+      && !/^releases\/[a-f0-9]{40}\.json$/.test(object)) throw new Error('Invalid static object');
     return `https://storage.googleapis.com/${bucket}/${object}`;
   }
 
@@ -109,22 +133,32 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
     }
     if (pending.has(key)) return pending.get(key);
     const read = (async () => {
-      const response = await fetchObject(bucket, object, ttl);
-      if (!response.ok) throw new Error('Static metadata unavailable');
-      const body = await response.text();
-      if (bytes(body) > 16 * 1024 * 1024) throw new Error('Static metadata too large');
-      const value = JSON.parse(body);
-      const size = bytes(body);
-      if (cached) { metadata.delete(key); metadataBytes -= cached.size; }
-      // Bound parsed graph retention within the Worker memory limit.
-      while (metadataBytes + size > 16 * 1024 * 1024 && metadata.size) {
-        const oldest = metadata.keys().next().value;
-        metadataBytes -= metadata.get(oldest).size;
-        metadata.delete(oldest);
+      if (activeReads >= 2) {
+        if (readers.length >= 64) throw new Error('Static metadata queue full');
+        await new Promise(resolve => readers.push(resolve));
+      } else {
+        activeReads++;
       }
-      metadata.set(key, { value, size, expires: now() + ttl * 1000 });
-      metadataBytes += size;
-      return value;
+      try {
+        const response = await fetchObject(bucket, object, ttl);
+        if (!response.ok) throw new Error('Static metadata unavailable');
+        const { value, size } = await readJSON(response);
+        const previous = metadata.get(key);
+        if (previous) { metadata.delete(key); metadataBytes -= previous.size; }
+        // Bound parsed graph retention within the Worker memory limit.
+        while (metadataBytes + size > 16 * 1024 * 1024 && metadata.size) {
+          const oldest = metadata.keys().next().value;
+          metadataBytes -= metadata.get(oldest).size;
+          metadata.delete(oldest);
+        }
+        metadata.set(key, { value, size, expires: now() + ttl * 1000 });
+        metadataBytes += size;
+        return value;
+      } finally {
+        const next = readers.shift();
+        if (next) next();
+        else activeReads--;
+      }
     })();
     pending.set(key, read);
     try { return await read; } finally { pending.delete(key); }
@@ -165,6 +199,13 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
         return reply(request, 'Method not allowed', 405, { Allow: 'GET, HEAD' });
       }
       const url = new URL(request.url);
+      let apiResponse = url.pathname.startsWith('/api/');
+      let releaseAsset;
+      try {
+        const decoded = decodeURIComponent(url.pathname);
+        apiResponse = decoded.startsWith('/api/');
+        releaseAsset = decoded.match(/^\/releases\/([a-f0-9]{40})(\/[^\\\0]+)$/);
+      } catch {}
       let route;
       let routeStatus;
       try { route = parseRoute(url); } catch (error) {
@@ -174,10 +215,18 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
       }
       try {
         const bucket = env.STORAGE_BUCKET;
+        if (releaseAsset) {
+          const [, release, asset] = releaseAsset;
+          const manifest = await json(bucket, `releases/${release}.json`);
+          if (manifest.format !== 1 || manifest.release !== release) throw new Error('Static release manifest mismatch');
+          const ref = own(manifest.files, asset);
+          if (!ref || asset.endsWith('.map')) return reply(request, 'Not found', 404, { 'Cache-Control': publicCache });
+          return await serve(request, bucket, ref, release, 200, true);
+        }
         const pointer = await json(bucket, 'current.json', 60);
         if (pointer.format !== 1 || !/^[a-f0-9]{40}$/.test(pointer.release)) throw new Error('Invalid release pointer');
         const manifest = await json(bucket, pointer.manifest);
-        if (manifest.format !== 1) throw new Error('Unsupported static format');
+        if (manifest.format !== 1 || manifest.release !== pointer.release) throw new Error('Static release manifest mismatch');
         const send = (ref, status = 200, immutable = false) => serve(request, bucket, ref, pointer.release, status, immutable);
         let errors = manifest.errors;
         try {
@@ -199,7 +248,7 @@ export function createWorker(originFetch = (...args) => fetch(...args), now = Da
         } catch (error) {
           if (!(error instanceof RouteError)) throw error;
           const page = errors[String(error.status)];
-          return await send(url.pathname.startsWith('/api/') ? page.json : page.html, error.status);
+          return await send(apiResponse ? page.json : page.html, error.status);
         }
       } catch {
         console.error(JSON.stringify({ event: 'static_origin_failure', route: '/{static-resource}' }));
