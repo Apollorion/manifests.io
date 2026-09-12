@@ -41,6 +41,10 @@ describe('browser telemetry', () => {
       expect(telemetryScript(`${script.src}?private=value#secret`)).toBe(`${window.location.origin}/assets/index-Public01.js`)
       expect(telemetryScript('/assets/customer@example.test.js')).toBe(`${window.location.origin}/assets/:asset`)
       expect(telemetryScript('https://external.invalid/assets/index-Public01.js')).toBe('https://external.invalid/:path')
+      const released = `/releases/${'a'.repeat(40)}/assets/index-Public01.js`
+      script.src = released
+      expect(telemetryScript(`${script.src}?private=value#secret`)).toBe(`${window.location.origin}${released}`)
+      expect(telemetryScript(`/releases/${'a'.repeat(40)}/assets/unknown.js`)).toBe(`${window.location.origin}/releases/:release/assets/:asset`)
     } finally { script.remove() }
   })
   it('sends one private pageview through the actual PostHog SDK transport', async () => {
