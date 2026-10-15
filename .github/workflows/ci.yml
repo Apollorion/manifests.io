@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
           go-version-file: go.mod
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version-file: .node-version
           cache: npm
@@ -45,7 +45,7 @@ jobs:
           cp "$RUNNER_TEMP/static-worker.log" frontend/test-results/static-worker.log
       - name: Upload browser failure artifacts
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: browser-failure
           path: |
@@ -71,7 +71,7 @@ jobs:
           manifest_sha=$(sha256sum build/static/manifest.json | cut -d' ' -f1)
           docker build --platform linux/amd64 --provenance=false --sbom=false -f Dockerfile.static --build-arg VERSION="$GITHUB_SHA" --build-arg STATIC_MANIFEST_SHA256="$manifest_sha" -t manifests:test "$RUNNER_TEMP/static-package"
           docker save manifests:test -o "$RUNNER_TEMP/manifests-image.tar"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: github.repository == 'TheOutdoorProgrammer/manifests.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
           name: verified-image
@@ -97,7 +97,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: verified-image
           path: ${{ runner.temp }}
