@@ -1,0 +1,14 @@
+{
+  "product": "gatewayapi",
+  "version": "1.6.3",
+  "repository": "kubernetes-sigs/gateway-api",
+  "tag": "v1.6.3",
+  "files": [
+    {
+      "path": "standard-install.yaml",
+      "url": "https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/standard-install.yaml",
+      "sha256": "356c2b8e286a964dc20995435659ad1095386329974793af10bbfe3eff977fe5"
+    }
+  ],
+  "target": "ETL/crds/gatewayapi-1.6.3"
+}
