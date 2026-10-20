@@ -1,0 +1,15 @@
+{
+  "product": "istio",
+  "version": "1.31.2",
+  "repository": "istio/istio",
+  "tag": "1.31.2",
+  "commit": "e2f3a7949a358af7dd901a6f9ccd6ecdd7270271",
+  "files": [
+    {
+      "path": "manifests__charts__base__files__crd-all.gen.yaml",
+      "url": "https://raw.githubusercontent.com/istio/istio/e2f3a7949a358af7dd901a6f9ccd6ecdd7270271/manifests/charts/base/files/crd-all.gen.yaml",
+      "sha256": "c0ad59e008658765412badb836e73a523a355e3d792a32ad3c0711a728be5aff"
+    }
+  ],
+  "target": "ETL/crds/istio-1.31.2"
+}
