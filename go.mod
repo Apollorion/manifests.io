@@ -4,7 +4,7 @@ go 1.27.0
 
 require (
 	github.com/dop251/goja v0.0.0-20260903201622-f87b40ad7341
-	github.com/getkin/kin-openapi v0.149.0
+	github.com/getkin/kin-openapi v0.151.0
 	go.opentelemetry.io/contrib/bridges/otelslog v0.21.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.23.0
